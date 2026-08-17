@@ -1,0 +1,6 @@
+{
+  "name": "Sankara PX Bottleneck Tracker",
+  "description": "Dashboard for tracking patient-experience bottleneck resolution across Sankara Eye Hospital's 14 units.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
