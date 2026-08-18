@@ -1,0 +1,12 @@
+node_modules
+pxapp/node_modules
+api-server/node_modules
+dist
+pxapp/dist
+api-server/dist
+.git
+.gitignore
+.DS_Store
+*.zip
+.gemini
+*.log

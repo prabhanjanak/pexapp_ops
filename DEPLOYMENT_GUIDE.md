@@ -1,11 +1,64 @@
 # 🏥 Sankara Eye Hospital — Project Patient Experience (PPE)
 ## Production Deployment & Server Administration Guide
 
-This guide provides step-by-step instructions for the server administrator to deploy, configure, autobuild the database, and run the **Project Patient Experience (PPE)** platform using **PM2** and **PostgreSQL**.
+This guide provides step-by-step instructions for the server administrator to deploy, configure, autobuild the database, and run the **Project Patient Experience (PPE)** platform using **Docker Compose** (recommended) or **PM2 + PostgreSQL** (native).
 
 ---
 
-## 📋 1. System Requirements & Prerequisites
+## 🐳 0. Docker Deployment (Fastest & Recommended)
+
+Running with Docker encapsulates both the **Node.js Application** and **PostgreSQL 16 Database** with automatic health checks, persistent database volumes, and zero manual dependency installation.
+
+### Step 1: Clone Repository & Navigate to Directory
+```bash
+git clone <YOUR_REPO_URL>
+cd operationsapp
+```
+
+### Step 2: Verify `.env` File
+The `.env` file is already pre-configured with secure 32-character hexadecimal credentials:
+```ini
+NODE_ENV=production
+PORT=3000
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=sankara_px
+PGUSER=postgres
+PGPASSWORD=6db2b2f25ce4d72acede4edc42bc96f9
+PGSSL=false
+```
+
+### Step 3: Launch Containers
+```bash
+docker compose up -d --build
+```
+
+### Step 4: Verify Deployment
+- **Application URL**: `http://192.168.1.244:8500` (or `http://localhost:8500`)
+- **API Health Check**: `http://192.168.1.244:8500/api/health`
+- **Units List API**: `http://192.168.1.244:8500/api/units`
+
+### Useful Docker Management Commands:
+```bash
+# Check container status
+docker compose ps
+
+# View live container logs
+docker compose logs -f
+
+# Restart services
+docker compose restart
+
+# Stop services
+docker compose down
+
+# Stop services and remove volumes (Caution: Erases database)
+# docker compose down -v
+```
+
+---
+
+## 📋 1. System Requirements & Prerequisites (Bare Metal / PM2)
 
 Ensure the target server (Ubuntu, Debian, RHEL, CentOS, or macOS) has the following installed:
 

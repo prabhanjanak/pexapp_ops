@@ -566,32 +566,54 @@ export const INITIAL_BOTTLENECKS = [
   }
 ];
 
+// Sleep helper
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Initialize database schema and seeds
-export async function initializeDatabase() {
+export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
   console.log(`[Postgres] Connecting to PostgreSQL at ${DB_HOST}:${DB_PORT}/${DB_NAME}...`);
   
-  if (!process.env.DATABASE_URL) {
+  // Resilient connection retry loop for Docker / Server startups
+  let connectedClient: any = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const adminClient = new Client({
-        user: DB_USER,
-        host: DB_HOST,
-        database: 'postgres',
-        password: DB_PASSWORD,
-        port: DB_PORT
-      });
-      await adminClient.connect();
-      const res = await adminClient.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [DB_NAME]);
-      if (res.rowCount === 0) {
-        console.log(`[Postgres] Creating database '${DB_NAME}'...`);
-        await adminClient.query(`CREATE DATABASE ${DB_NAME}`);
+      if (!process.env.DATABASE_URL) {
+        try {
+          const adminClient = new Client({
+            user: DB_USER,
+            host: DB_HOST,
+            database: 'postgres',
+            password: DB_PASSWORD,
+            port: DB_PORT
+          });
+          await adminClient.connect();
+          const res = await adminClient.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [DB_NAME]);
+          if (res.rowCount === 0) {
+            console.log(`[Postgres] Creating database '${DB_NAME}'...`);
+            await adminClient.query(`CREATE DATABASE ${DB_NAME}`);
+          }
+          await adminClient.end();
+        } catch (e: any) {
+          // Admin DB connect may fail if default db is restricted, continue to main pool
+          console.warn(`[Postgres] Admin DB check notice: ${e.message}`);
+        }
       }
-      await adminClient.end();
-    } catch (e: any) {
-      console.warn(`[Postgres] Admin DB check notice: ${e.message}`);
+
+      connectedClient = await pool.connect();
+      console.log(`[Postgres] Successfully connected to PostgreSQL on attempt ${attempt}`);
+      break;
+    } catch (err: any) {
+      console.warn(`[Postgres] Connection attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+      if (attempt === maxRetries) {
+        console.error(`[Postgres] Failed to connect to PostgreSQL after ${maxRetries} attempts.`);
+        throw err;
+      }
+      console.log(`[Postgres] Waiting ${retryDelayMs / 1000}s before retrying...`);
+      await sleep(retryDelayMs);
     }
   }
 
-  const client = await pool.connect();
+  const client = connectedClient;
   try {
     await client.query('BEGIN');
 

@@ -1,0 +1,51 @@
+services:
+  # ==============================================================================
+  # POSTGRESQL DATABASE SERVICE
+  # ==============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: sankara-pexapp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-sankara_px}
+      POSTGRES_USER: ${PGUSER:-postgres}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-6db2b2f25ce4d72acede4edc42bc96f9}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres} -d ${PGDATABASE:-sankara_px}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  # ==============================================================================
+  # SANKARA PPE OPERATIONS WEB APPLICATION SERVICE
+  # Accessible via internal network at http://192.168.1.244:8500
+  # ==============================================================================
+  app:
+    container_name: sankara-pexapp
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8500:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${PGDATABASE:-sankara_px}
+      PGUSER: ${PGUSER:-postgres}
+      PGPASSWORD: ${PGPASSWORD:-6db2b2f25ce4d72acede4edc42bc96f9}
+      PGSSL: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    driver: local

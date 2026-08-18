@@ -25,7 +25,27 @@ A comprehensive operations management and patient experience tracking platform f
 
 ---
 
-## 🚀 Quick Start for Developers
+## 🐳 1-Command Docker Deployment (Recommended)
+
+To run the full stack (Node.js Application + PostgreSQL Database) in Docker on internal IP **`http://192.168.1.244:8500`**:
+
+```bash
+# 1. Clone or pull the repository
+git clone <YOUR_REPO_URL>
+cd operationsapp
+
+# 2. Launch all services with Docker Compose
+docker compose up -d --build
+```
+
+- **Application URL**: `http://192.168.1.244:8500` (or `http://localhost:8500`)
+- **Health Check API**: `http://192.168.1.244:8500/api/health`
+- **View Container Logs**: `docker compose logs -f`
+- **Stop Containers**: `docker compose down`
+
+---
+
+## 🚀 Local Development (Without Docker)
 
 ```bash
 # 1. Install dependencies
@@ -46,9 +66,9 @@ Visit: `http://localhost:3000`
 
 ---
 
-## 🚢 Production Deployment
+## 🚢 Production Deployment Guide
 
-For step-by-step production deployment instructions with PM2, PostgreSQL setup, and Nginx reverse proxy configuration, please refer to:
+For step-by-step production deployment instructions with Docker, PM2, PostgreSQL setup, and Nginx reverse proxy configuration, please refer to:
 👉 **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)**
 
 ---
