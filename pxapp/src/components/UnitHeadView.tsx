@@ -7,6 +7,7 @@ import { PhotoUploadCell } from './PhotoUploadCell';
 import { ImageLightboxModal } from './ImageLightboxModal';
 import { AssignDeadlineModal } from './AssignDeadlineModal';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
+import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
 import {
   Building2,
   Plus,
@@ -535,6 +536,17 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                           {item.notes}
                         </p>
                       )}
+
+                      {/* Action Checklist Tasks */}
+                      <div className="pt-1">
+                        <BottleneckTaskChecklist
+                          bottleneck={item}
+                          unitId={currentUnit.id}
+                          currentUser={currentUser}
+                          onUpdateBottleneck={onUpdateBottleneck}
+                          defaultExpanded={(item.tasks || []).length > 0}
+                        />
+                      </div>
 
                       {/* Directives & Assignment Buttons */}
                       <div className="flex items-center gap-3 pt-1 flex-wrap">

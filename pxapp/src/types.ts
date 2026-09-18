@@ -33,6 +33,18 @@ export type BottleneckCategory =
   | 'Post-op Care Briefing'
   | string;
 
+export interface BottleneckTask {
+  id: string;
+  text: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  completedBy?: string;
+  completedRole?: string;
+  createdBy?: string;
+  createdRole?: string;
+  dueDate?: string;
+}
+
 export interface BottleneckComment {
   id: string;
   authorName: string;
@@ -59,6 +71,7 @@ export interface Bottleneck {
   beforePhotos?: string[];
   afterPhotos?: string[];
   comments?: BottleneckComment[];
+  tasks?: BottleneckTask[];
 }
 
 export interface HospitalUnit {

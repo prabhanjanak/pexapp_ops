@@ -541,6 +541,7 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS before_photos JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS after_photos JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS tasks JSONB DEFAULT '[]'::jsonb;
       UPDATE bottlenecks SET status = 'Pending' WHERE status = 'Not Started' OR status = 'Acknowledge';
       UPDATE bottlenecks SET status = 'In progress' WHERE status = 'Assigned work' OR status = 'In Progress';
     `);

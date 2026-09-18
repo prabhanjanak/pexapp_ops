@@ -7,6 +7,7 @@ function formatBottleneck(row: any) {
   let beforePhotos: string[] = [];
   let afterPhotos: string[] = [];
   let comments: any[] = [];
+  let tasks: any[] = [];
   try {
     if (typeof row.before_photos === 'string') beforePhotos = JSON.parse(row.before_photos);
     else if (Array.isArray(row.before_photos)) beforePhotos = row.before_photos;
@@ -18,6 +19,10 @@ function formatBottleneck(row: any) {
   try {
     if (typeof row.comments === 'string') comments = JSON.parse(row.comments);
     else if (Array.isArray(row.comments)) comments = row.comments;
+  } catch (_) {}
+  try {
+    if (typeof row.tasks === 'string') tasks = JSON.parse(row.tasks);
+    else if (Array.isArray(row.tasks)) tasks = row.tasks;
   } catch (_) {}
 
   // Normalize status if legacy
@@ -40,7 +45,8 @@ function formatBottleneck(row: any) {
     remarks: row.remarks || '',
     beforePhotos,
     afterPhotos,
-    comments
+    comments,
+    tasks
   };
 }
 
@@ -605,6 +611,7 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     remarks = '',
     beforePhotos = [],
     afterPhotos = [],
+    tasks = [],
     userRole = 'Unit Head'
   } = req.body;
 
@@ -620,8 +627,8 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     const today = new Date().toISOString().split('T')[0];
 
     const insertRes = await client.query(
-      `INSERT INTO bottlenecks (id, unit_id, title, category, status, percent_complete, owner, last_updated, impact_level, target_date, notes, remarks, before_photos, after_photos)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO bottlenecks (id, unit_id, title, category, status, percent_complete, owner, last_updated, impact_level, target_date, notes, remarks, before_photos, after_photos, tasks)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         newId,
@@ -637,7 +644,8 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
         notes,
         remarks,
         JSON.stringify(beforePhotos || []),
-        JSON.stringify(afterPhotos || [])
+        JSON.stringify(afterPhotos || []),
+        JSON.stringify(tasks || [])
       ]
     );
 
@@ -646,7 +654,7 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     await client.query(
       `INSERT INTO audit_logs (unit_id, bottleneck_id, action, details, user_role)
        VALUES ($1, $2, 'CREATE_BOTTLENECK', $3, $4)`,
-      [unitId, newId, JSON.stringify({ title, category, status, percentComplete, owner, remarks, beforeCount: (beforePhotos || []).length }), userRole]
+      [unitId, newId, JSON.stringify({ title, category, status, percentComplete, owner, remarks, tasksCount: (tasks || []).length, beforeCount: (beforePhotos || []).length }), userRole]
     );
 
     await client.query('COMMIT');
@@ -674,6 +682,7 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     remarks,
     beforePhotos,
     afterPhotos,
+    tasks,
     userRole = 'Unit Head'
   } = req.body;
 
@@ -705,13 +714,16 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     const updatedAfterPhotos = afterPhotos !== undefined 
       ? (typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos)) 
       : current.after_photos;
+    const updatedTasks = tasks !== undefined
+      ? (typeof tasks === 'string' ? tasks : JSON.stringify(tasks))
+      : current.tasks;
 
     const updateRes = await client.query(
       `UPDATE bottlenecks
        SET title = $1, category = $2, status = $3, percent_complete = $4, owner = $5,
            impact_level = $6, target_date = $7, notes = $8, remarks = $9, before_photos = $10,
-           after_photos = $11, last_updated = $12, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $13
+           after_photos = $11, tasks = $12, last_updated = $13, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $14
        RETURNING *`,
       [
         updatedTitle,
@@ -725,6 +737,7 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
         updatedRemarks,
         updatedBeforePhotos,
         updatedAfterPhotos,
+        updatedTasks || '[]',
         today,
         id
       ]
@@ -740,6 +753,7 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
           oldStatus: current.status,
           newStatus: updatedStatus,
           remarksUpdated: remarks !== undefined,
+          tasksUpdated: tasks !== undefined,
           photosUpdated: beforePhotos !== undefined || afterPhotos !== undefined
         }),
         userRole

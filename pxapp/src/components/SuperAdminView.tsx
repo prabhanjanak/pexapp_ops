@@ -7,6 +7,7 @@ import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 import { CategoryDeptManager } from './CategoryDeptManager';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { AddBottleneckModal } from './AddBottleneckModal';
+import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
 import { api } from '../services/api';
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import {
@@ -427,6 +428,17 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
                       <h4 className="text-sm font-black text-slate-900">{bottleneck.title}</h4>
                       {bottleneck.notes && <p className="text-xs text-slate-600">{bottleneck.notes}</p>}
+
+                      {/* Action Checklist Tasks */}
+                      <div className="pt-1">
+                        <BottleneckTaskChecklist
+                          bottleneck={bottleneck}
+                          unitId={unit.id}
+                          currentUser={currentUser}
+                          onUpdateBottleneck={onUpdateBottleneck}
+                          defaultExpanded={(bottleneck.tasks || []).length > 0}
+                        />
+                      </div>
 
                       <div className="flex items-center gap-3 pt-1 flex-wrap">
                         <button

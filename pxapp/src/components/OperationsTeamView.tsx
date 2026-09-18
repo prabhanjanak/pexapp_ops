@@ -7,6 +7,7 @@ import { UnitHeadView } from './UnitHeadView';
 import { AddBottleneckModal } from './AddBottleneckModal';
 import { CategoryDeptManager } from './CategoryDeptManager';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
+import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
 import { api } from '../services/api';
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import {
@@ -395,6 +396,17 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
 
                       <h4 className="text-sm font-black text-slate-900">{bottleneck.title}</h4>
                       {bottleneck.notes && <p className="text-xs text-slate-600">{bottleneck.notes}</p>}
+
+                      {/* Action Checklist Tasks */}
+                      <div className="pt-1">
+                        <BottleneckTaskChecklist
+                          bottleneck={bottleneck}
+                          unitId={unit.id}
+                          currentUser={currentUser}
+                          onUpdateBottleneck={onUpdateBottleneck}
+                          defaultExpanded={(bottleneck.tasks || []).length > 0}
+                        />
+                      </div>
 
                       <div className="flex items-center gap-3 pt-1 flex-wrap">
                         <button

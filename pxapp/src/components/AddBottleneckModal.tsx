@@ -35,6 +35,8 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
   const [remarks, setRemarks] = useState('');
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
+  const [tasks, setTasks] = useState<{ id: string; text: string; isCompleted: boolean }[]>([]);
+  const [newPointText, setNewPointText] = useState('');
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<string[]>([...CATEGORIES]);
 
@@ -63,6 +65,21 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleAddPoint = (pointText: string) => {
+    if (!pointText.trim()) return;
+    const newTask = {
+      id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      text: pointText.trim(),
+      isCompleted: false
+    };
+    setTasks(prev => [...prev, newTask]);
+    setNewPointText('');
+  };
+
+  const handleRemovePoint = (idx: number) => {
+    setTasks(prev => prev.filter((_, i) => i !== idx));
+  };
 
   const compressSingleFile = (file: File): Promise<string> => {
     return new Promise((resolve) => {
@@ -142,7 +159,8 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
         notes: notes.trim(),
         remarks: remarks.trim(),
         beforePhotos,
-        afterPhotos
+        afterPhotos,
+        tasks
       },
       selectedTargetUnitId || undefined
     );
@@ -156,6 +174,8 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
     setRemarks('');
     setBeforePhotos([]);
     setAfterPhotos([]);
+    setTasks([]);
+    setNewPointText('');
     onClose();
   };
 
@@ -380,6 +400,81 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
               onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
             />
+          </div>
+
+          {/* Action Checklist & Tasks to Do (Directives & Points) */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-black text-slate-900 uppercase tracking-wider">
+                Action Checklist / Directive Points ({tasks.length})
+              </label>
+              <span className="text-[10px] text-slate-500 font-semibold">
+                Tasks for unit head to mark as done
+              </span>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-bold text-slate-400">Quick:</span>
+              {['OP Flow', 'IP Flow', 'NPS Audit', 'DBCS', 'YTD Review', 'MTD Check', 'SOP Adherence', 'Staff Training'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handleAddPoint(preset)}
+                  className="px-2 py-0.5 rounded-md bg-white hover:bg-orange-50 hover:text-orange-700 text-[10px] font-bold text-slate-600 border border-slate-200 cursor-pointer transition-colors"
+                >
+                  + {preset}
+                </button>
+              ))}
+            </div>
+
+            {/* Points List */}
+            {tasks.length > 0 && (
+              <div className="space-y-1.5 bg-white p-2.5 rounded-xl border border-slate-200">
+                {tasks.map((t, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-bold shrink-0">
+                        {idx + 1}
+                      </span>
+                      <span className="font-bold text-slate-800 truncate">{t.text}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePoint(idx)}
+                      className="text-slate-400 hover:text-rose-600 p-1 transition-colors cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Input to Add Point */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Type specific action point or directive..."
+                value={newPointText}
+                onChange={(e) => setNewPointText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddPoint(newPointText);
+                  }
+                }}
+                className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddPoint(newPointText)}
+                disabled={!newPointText.trim()}
+                className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0"
+              >
+                + Add Point
+              </button>
+            </div>
           </div>
 
           {/* Modal Footer */}
