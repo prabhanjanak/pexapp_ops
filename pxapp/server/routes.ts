@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { pool, SANKARA_INITIAL_UNITS, SANKARA_INITIAL_USERS, INITIAL_BOTTLENECKS } from './db.js';
+import { pool, SANKARA_INITIAL_UNITS, SANKARA_INITIAL_USERS } from './db.js';
 
 export const router = Router();
 
@@ -552,7 +552,7 @@ router.post('/units/:id/unit-head', async (req: Request, res: Response) => {
   }
 });
 
-// 8. Initialize Standard Baseline Assessment
+// 8. Initialize Unit Assessment
 router.post('/units/:id/initialize', async (req: Request, res: Response) => {
   const { id } = req.params;
   const client = await pool.connect();
@@ -566,78 +566,13 @@ router.post('/units/:id/initialize', async (req: Request, res: Response) => {
     }
 
     const unit = unitRes.rows[0];
-    const today = new Date().toISOString().split('T')[0];
-    const target = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const sampleBottlenecks = [
-      {
-        id: `${id}-init-1-${Date.now()}`,
-        unit_id: id,
-        title: `OPD counter waiting time optimization in ${unit.city}`,
-        category: 'OPD Wait Time',
-        status: 'Not Started',
-        percent_complete: 0,
-        owner: unit.contact_head || 'Unit Ops Team',
-        last_updated: today,
-        impact_level: 'High',
-        target_date: target,
-        notes: 'Baseline assessment initiated for morning registration rush.'
-      },
-      {
-        id: `${id}-init-2-${Date.now()}`,
-        unit_id: id,
-        title: `Dilation process alert system implementation`,
-        category: 'Dilation & Buzzer Alert System',
-        status: 'In Progress',
-        percent_complete: 30,
-        owner: 'Quality Incharge',
-        last_updated: today,
-        impact_level: 'Medium',
-        target_date: target,
-        notes: 'Evaluating vibrating buzzer hardware & timer alerts.'
-      },
-      {
-        id: `${id}-init-3-${Date.now()}`,
-        unit_id: id,
-        title: `Discharge clearance & billing turnaround time reduction`,
-        category: 'Discharge Process',
-        status: 'Not Started',
-        percent_complete: 15,
-        owner: 'Admin Lead',
-        last_updated: today,
-        impact_level: 'High',
-        target_date: target,
-        notes: 'Reviewing billing desk workflow and pre-audit checklists.'
-      },
-      {
-        id: `${id}-init-4-${Date.now()}`,
-        unit_id: id,
-        title: `Pre-op holding area workflow and patient identification`,
-        category: 'Pre-op Holding Area Flow',
-        status: 'In Progress',
-        percent_complete: 45,
-        owner: 'Daycare Nursing Lead',
-        last_updated: today,
-        impact_level: 'Medium',
-        target_date: target,
-        notes: 'Standardizing visual wristband markers for surgical eyes.'
-      }
-    ];
-
-    for (const b of sampleBottlenecks) {
-      await client.query(
-        `INSERT INTO bottlenecks (id, unit_id, title, category, status, percent_complete, owner, last_updated, impact_level, target_date, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [b.id, b.unit_id, b.title, b.category, b.status, b.percent_complete, b.owner, b.last_updated, b.impact_level, b.target_date, b.notes]
-      );
-    }
 
     await client.query('UPDATE units SET is_assessed = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
 
     await client.query(
       `INSERT INTO audit_logs (unit_id, action, details, user_role)
        VALUES ($1, 'INITIALIZE_ASSESSMENT', $2, 'Unit Head')`,
-      [id, JSON.stringify({ unitName: unit.name, seededCount: sampleBottlenecks.length })]
+      [id, JSON.stringify({ unitName: unit.name, status: 'Assessment workspace initialized' })]
     );
 
     await client.query('COMMIT');
@@ -645,7 +580,7 @@ router.post('/units/:id/initialize', async (req: Request, res: Response) => {
     const updatedBottlenecks = await pool.query('SELECT * FROM bottlenecks WHERE unit_id = $1 ORDER BY created_at DESC', [id]);
     res.json({
       success: true,
-      unit: formatUnit(unit, updatedBottlenecks.rows)
+      unit: formatUnit({ ...unit, is_assessed: true }, updatedBottlenecks.rows)
     });
   } catch (error: any) {
     await client.query('ROLLBACK');
@@ -860,7 +795,7 @@ router.delete('/bottlenecks/:id', async (req: Request, res: Response) => {
   }
 });
 
-// 12. Reset Database
+// 12. Reset Database (Restores canonical 14 units & users with empty bottleneck table)
 router.post('/db/reset', async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
@@ -873,36 +808,28 @@ router.post('/db/reset', async (req: Request, res: Response) => {
 
     for (const unit of SANKARA_INITIAL_UNITS) {
       await client.query(
-        `INSERT INTO units (id, name, city, state, is_assessed, established_year, bed_capacity, contact_head)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [unit.id, unit.name, unit.city, unit.state, unit.is_assessed, unit.established_year, unit.bed_capacity, unit.contact_head]
+        `INSERT INTO units (id, name, city, state, cmo, unit_head, is_assessed, established_year, bed_capacity, contact_head)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [unit.id, unit.name, unit.city, unit.state, unit.cmo, unit.unit_head, false, unit.established_year, unit.bed_capacity, unit.contact_head]
       );
     }
 
     for (const u of SANKARA_INITIAL_USERS) {
       await client.query(
-        `INSERT INTO users (id, name, email, password, role, unit_id, designation, avatar_initials)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [u.id, u.name, u.email, u.password, u.role, u.unit_id, u.designation, u.avatar_initials]
-      );
-    }
-
-    for (const b of INITIAL_BOTTLENECKS) {
-      await client.query(
-        `INSERT INTO bottlenecks (id, unit_id, title, category, status, percent_complete, owner, last_updated, impact_level, target_date, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [b.id, b.unit_id, b.title, b.category, b.status, b.percent_complete, b.owner, b.last_updated, b.impact_level, b.target_date, b.notes]
+        `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials]
       );
     }
 
     await client.query(
       `INSERT INTO audit_logs (action, details, user_role)
        VALUES ('DB_RESET', $1, 'Super Admin')`,
-      [JSON.stringify({ message: 'Full database reset to initial state' })]
+      [JSON.stringify({ message: 'Database reset to canonical units and users with empty bottlenecks' })]
     );
 
     await client.query('COMMIT');
-    res.json({ success: true, message: 'Database reset successfully' });
+    res.json({ success: true, message: 'Database reset successfully to clean production state.' });
   } catch (error: any) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: error.message });
@@ -911,107 +838,22 @@ router.post('/db/reset', async (req: Request, res: Response) => {
   }
 });
 
-// 13. Seed all 14 Units
+// 13. Activate all 14 Units for Assessment
 router.post('/db/seed-all', async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    const unitsRes = await client.query('SELECT id, name, city, contact_head FROM units');
-    const today = new Date().toISOString().split('T')[0];
-    const target = new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const commonScenarios = [
-      {
-        title: 'Morning OPD registration & token kiosk queue balancing',
-        category: 'Registration Delays',
-        status: 'In Progress',
-        percent: 60,
-        impact: 'High',
-        notes: 'Deploying assisted self-service tablet tokens at front lobby.'
-      },
-      {
-        title: 'Pupil dilation turnaround time in waiting pods',
-        category: 'Dilation & Buzzer Alert System',
-        status: 'In Progress',
-        percent: 45,
-        impact: 'High',
-        notes: 'Equipping patient chairs with automated vibrating buzzer alarms.'
-      },
-      {
-        title: 'Cataract package & Premium Toric/Multifocal IOL counselling conversion',
-        category: 'Counselling Wait Time',
-        status: 'Completed',
-        percent: 100,
-        impact: 'High',
-        notes: 'Installed interactive touch displays with 3D vision simulations.'
-      },
-      {
-        title: 'TPA corporate health insurance pre-authorization speed',
-        category: 'Billing & Insurance Clearance',
-        status: 'In Progress',
-        percent: 35,
-        impact: 'High',
-        notes: 'Integrated digital portal with leading insurance TPAs.'
-      },
-      {
-        title: 'Pre-op holding room dilation & biometry verification audit',
-        category: 'Pre-op Holding Area Flow',
-        status: 'Completed',
-        percent: 100,
-        impact: 'Medium',
-        notes: 'Barcode wristband verification before OT transfer.'
-      },
-      {
-        title: 'Daycare discharge medication kit preparation speed',
-        category: 'Pharmacy Counter Delays',
-        status: 'Not Started',
-        percent: 10,
-        impact: 'Medium',
-        notes: 'Setting up bedside dispensing of standard post-cataract eye drops.'
-      }
-    ];
-
-    let totalCreated = 0;
-    for (const unit of unitsRes.rows) {
-      const existingRes = await client.query('SELECT COUNT(*) FROM bottlenecks WHERE unit_id = $1', [unit.id]);
-      const count = parseInt(existingRes.rows[0].count, 10);
-
-      if (count === 0) {
-        for (let i = 0; i < commonScenarios.length; i++) {
-          const s = commonScenarios[i];
-          const bId = `${unit.id}-seed-${i + 1}`;
-          await client.query(
-            `INSERT INTO bottlenecks (id, unit_id, title, category, status, percent_complete, owner, last_updated, impact_level, target_date, notes)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-            [
-              bId,
-              unit.id,
-              `${s.title} (${unit.city})`,
-              s.category,
-              s.status,
-              s.percent,
-              unit.contact_head || 'Unit Lead',
-              today,
-              s.impact,
-              target,
-              s.notes
-            ]
-          );
-          totalCreated++;
-        }
-        await client.query('UPDATE units SET is_assessed = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [unit.id]);
-      }
-    }
+    await client.query('UPDATE units SET is_assessed = TRUE, updated_at = CURRENT_TIMESTAMP');
 
     await client.query(
       `INSERT INTO audit_logs (action, details, user_role)
        VALUES ('SEED_ALL_UNITS', $1, 'Super Admin')`,
-      [JSON.stringify({ message: 'Seeded all 14 units with operational data', totalCreated })]
+      [JSON.stringify({ message: 'All 14 hospital units marked active for assessment' })]
     );
 
     await client.query('COMMIT');
-    res.json({ success: true, message: `Seeded ${totalCreated} bottlenecks across network units` });
+    res.json({ success: true, message: 'All 14 hospital units activated successfully.' });
   } catch (error: any) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: error.message });

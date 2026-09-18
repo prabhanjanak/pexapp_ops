@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { HospitalUnit, User } from '../types';
 import { calculateOrgStats, calculateUnitStats } from '../utils/calc';
 import {
@@ -38,14 +38,45 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     u.state.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  // Compute Monthly Stats from all bottlenecks
-  const monthlyData: Record<string, { total: number; pending: number; inProgress: number; completed: number }> = {
-    'May 2026': { total: 18, pending: 2, inProgress: 4, completed: 12 },
-    'Jun 2026': { total: 24, pending: 3, inProgress: 6, completed: 15 },
-    'Jul 2026': { total: 32, pending: 4, inProgress: 8, completed: 20 },
-    'Aug 2026': { total: 28, pending: 5, inProgress: 11, completed: 12 },
-    'Sep 2026': { total: orgStats.totalBottlenecks, pending: orgStats.pending, inProgress: orgStats.inProgress, completed: orgStats.completed }
-  };
+  // Compute Monthly Stats dynamically from all bottlenecks over recent months
+  const monthlyData: Record<string, { total: number; pending: number; inProgress: number; completed: number }> = useMemo(() => {
+    // Generate the last 5 calendar months dynamically
+    const months: Record<string, { total: number; pending: number; inProgress: number; completed: number }> = {};
+    const now = new Date();
+    
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      months[key] = { total: 0, pending: 0, inProgress: 0, completed: 0 };
+    }
+
+    // Tally all actual bottlenecks across units into their respective months
+    units.forEach(u => {
+      u.bottlenecks.forEach(b => {
+        let bDate = new Date();
+        if (b.lastUpdated) {
+          const parsed = new Date(b.lastUpdated);
+          if (!isNaN(parsed.getTime())) {
+            bDate = parsed;
+          }
+        }
+        const mKey = bDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        if (!months[mKey]) {
+          months[mKey] = { total: 0, pending: 0, inProgress: 0, completed: 0 };
+        }
+        months[mKey].total += 1;
+        if (b.status === 'Completed') {
+          months[mKey].completed += 1;
+        } else if (b.status === 'In progress') {
+          months[mKey].inProgress += 1;
+        } else {
+          months[mKey].pending += 1;
+        }
+      });
+    });
+
+    return months;
+  }, [units]);
 
   // Top category hotspots
   const categoryCounts: Record<string, number> = {};
@@ -184,9 +215,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   
                   {/* Stacked Mini Bar */}
                   <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden flex mb-3">
-                    <div style={{ width: `${(data.completed / data.total) * 100}%` }} className="bg-emerald-500 h-full" title={`Completed: ${data.completed}`} />
-                    <div style={{ width: `${(data.inProgress / data.total) * 100}%` }} className="bg-amber-500 h-full" title={`In Progress: ${data.inProgress}`} />
-                    <div style={{ width: `${(data.pending / data.total) * 100}%` }} className="bg-slate-400 h-full" title={`Pending: ${data.pending}`} />
+                    <div style={{ width: `${data.total > 0 ? (data.completed / data.total) * 100 : 0}%` }} className="bg-emerald-500 h-full transition-all" title={`Completed: ${data.completed}`} />
+                    <div style={{ width: `${data.total > 0 ? (data.inProgress / data.total) * 100 : 0}%` }} className="bg-amber-500 h-full transition-all" title={`In Progress: ${data.inProgress}`} />
+                    <div style={{ width: `${data.total > 0 ? (data.pending / data.total) * 100 : 0}%` }} className="bg-slate-400 h-full transition-all" title={`Pending: ${data.pending}`} />
                   </div>
                 </div>
 

@@ -37,7 +37,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Shruthi Tara',
     unit_head: 'Ms. Binitha Harish',
     contact_head: 'Ms. Binitha Harish',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 1977,
     bed_capacity: 250
   },
@@ -49,7 +49,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Devi Priya',
     unit_head: 'Ms. Kanmani S',
     contact_head: 'Ms. Kanmani S',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 1985,
     bed_capacity: 80
   },
@@ -61,7 +61,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Sudhakar Potti',
     unit_head: 'Ms. Tripura / Ms. Madhavi Machavarapu',
     contact_head: 'Ms. Tripura / Ms. Madhavi Machavarapu',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2014,
     bed_capacity: 115
   },
@@ -73,7 +73,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Yeddula Umesh',
     unit_head: 'Lt. Col. S. Guruprasad (Retd.)',
     contact_head: 'Lt. Col. S. Guruprasad (Retd.)',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2008,
     bed_capacity: 150
   },
@@ -85,7 +85,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. S. Mahesha',
     unit_head: 'Ms. Gayatri Shantharam / Ms. Anitha',
     contact_head: 'Ms. Gayatri Shantharam / Ms. Anitha',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2011,
     bed_capacity: 100
   },
@@ -97,7 +97,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Nisha Vadhyamal Ahuja',
     unit_head: 'Col. Sudeepkumar D. Mehta (Retd.)',
     contact_head: 'Col. Sudeepkumar D. Mehta (Retd.)',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2017,
     bed_capacity: 100
   },
@@ -109,7 +109,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Puneet Johri',
     unit_head: 'Dr. Rahul Singh',
     contact_head: 'Dr. Rahul Singh',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2020,
     bed_capacity: 110
   },
@@ -121,7 +121,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Neeraj Shah',
     unit_head: 'Dr. Nishant Jain',
     contact_head: 'Dr. Nishant Jain',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2022,
     bed_capacity: 105
   },
@@ -133,7 +133,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Manoj Gupta',
     unit_head: 'Dr. Manoj Gupta',
     contact_head: 'Dr. Manoj Gupta',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2019,
     bed_capacity: 100
   },
@@ -145,7 +145,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Ankit Deokar',
     unit_head: 'Dr. Rituraj Sharma',
     contact_head: 'Dr. Rituraj Sharma',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2021,
     bed_capacity: 95
   },
@@ -157,7 +157,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Girish Budhrani',
     unit_head: 'Dr. Rajesh Kapse',
     contact_head: 'Dr. Rajesh Kapse',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2018,
     bed_capacity: 120
   },
@@ -169,7 +169,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Simakurthy Sriram',
     unit_head: 'Mr. Gannamraju Viswamohan',
     contact_head: 'Mr. Gannamraju Viswamohan',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2023,
     bed_capacity: 130
   },
@@ -181,7 +181,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Saptagirish Rambhatla',
     unit_head: 'Lt. Col. (Dr.) Bharat Singh',
     contact_head: 'Lt. Col. (Dr.) Bharat Singh',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2021,
     bed_capacity: 85
   },
@@ -193,7 +193,7 @@ export const SANKARA_INITIAL_UNITS = [
     cmo: 'Dr. Sudha N',
     unit_head: 'Mr. Aswathaman R',
     contact_head: 'Mr. Aswathaman R',
-    is_assessed: true,
+    is_assessed: false,
     established_year: 2004,
     bed_capacity: 110
   }
@@ -402,209 +402,6 @@ export const SANKARA_INITIAL_USERS = [
   }
 ];
 
-export const INITIAL_BOTTLENECKS = [
-  // Coimbatore HQ
-  {
-    id: 'coimbatore-1',
-    unit_id: 'unit-coimbatore',
-    title: 'Super-specialty OPD consultation wait time > 90 mins',
-    category: 'OPD Wait Time',
-    status: 'In Progress',
-    percent_complete: 70,
-    owner: 'Dr. R. Ramakrishnan (Medical Dir)',
-    last_updated: '2026-07-28',
-    impact_level: 'High',
-    target_date: '2026-08-10',
-    notes: 'Implementing strict appointment slotting for Retina and Cornea clinics.'
-  },
-  {
-    id: 'coimbatore-2',
-    unit_id: 'unit-coimbatore',
-    title: 'Real-time patient location tracking across 4 floors',
-    category: 'Real-time Patient Tracking',
-    status: 'In Progress',
-    percent_complete: 90,
-    owner: 'Senthil V. (IT Infrastructure)',
-    last_updated: '2026-07-27',
-    impact_level: 'High',
-    target_date: '2026-08-01',
-    notes: 'BLE beacon tags tested on 500 patients; dashboard active.'
-  },
-  {
-    id: 'coimbatore-3',
-    unit_id: 'unit-coimbatore',
-    title: 'Private ward deluxe room cleaning turnaround time',
-    category: 'Private Room Capacity',
-    status: 'Completed',
-    percent_complete: 100,
-    owner: 'Lakshmi N. (Facility Mgr)',
-    last_updated: '2026-07-19',
-    impact_level: 'Medium',
-    target_date: '2026-07-19',
-    notes: 'Housekeeping turnaround reduced from 50 min to 22 min.'
-  },
-  {
-    id: 'coimbatore-4',
-    unit_id: 'unit-coimbatore',
-    title: 'Dilation queue management during peak retina morning clinics',
-    category: 'Dilation & Buzzer Alert System',
-    status: 'Completed',
-    percent_complete: 100,
-    owner: 'Dr. Chitra M. (Retina Head)',
-    last_updated: '2026-07-22',
-    impact_level: 'High',
-    target_date: '2026-07-22',
-    notes: 'Smart vibrating buzzers auto-trigger when dilation timer completes.'
-  },
-  {
-    id: 'coimbatore-5',
-    unit_id: 'unit-coimbatore',
-    title: 'Pre-surgery systemic blood test report delays',
-    category: 'Lab Turnaround',
-    status: 'In Progress',
-    percent_complete: 80,
-    owner: 'Dr. S. Sundar (Lab Incharge)',
-    last_updated: '2026-07-26',
-    impact_level: 'High',
-    target_date: '2026-08-05',
-    notes: 'STAT lab counter established inside daycare surgical ward.'
-  },
-  {
-    id: 'coimbatore-6',
-    unit_id: 'unit-coimbatore',
-    title: 'Monthly surgical complication & redo audit review',
-    category: 'Surgical Redo Audits',
-    status: 'Completed',
-    percent_complete: 100,
-    owner: 'Dr. R. Ramakrishnan (Medical Dir)',
-    last_updated: '2026-07-14',
-    impact_level: 'High',
-    target_date: '2026-07-14',
-    notes: 'Digital audit log integrated into EMR with root cause classification.'
-  },
-  {
-    id: 'coimbatore-7',
-    unit_id: 'unit-coimbatore',
-    title: 'Express registration counter for repeat/follow-up patients',
-    category: 'Registration Delays',
-    status: 'Completed',
-    percent_complete: 100,
-    owner: 'Karthik P. (Patient Experience)',
-    last_updated: '2026-07-18',
-    impact_level: 'Medium',
-    target_date: '2026-07-18',
-    notes: 'QR-code self-check-in station launched at lobby entrance.'
-  },
-
-  // Panvel Unit
-  {
-    id: 'panvel-1',
-    unit_id: 'unit-panvel',
-    title: 'Peak hour registration counter queue bottleneck',
-    category: 'Registration Delays',
-    status: 'In Progress',
-    percent_complete: 65,
-    owner: 'Ramesh K. (Front Desk Mgr)',
-    last_updated: '2026-07-24',
-    impact_level: 'High',
-    target_date: '2026-08-15',
-    notes: 'Installing 2 additional self-kiosks and token system.'
-  },
-  {
-    id: 'panvel-2',
-    unit_id: 'unit-panvel',
-    title: 'Dilation room waiting time exceeding 45 mins',
-    category: 'Dilation & Buzzer Alert System',
-    status: 'In Progress',
-    percent_complete: 40,
-    owner: 'Dr. Neha V. (OPD Lead)',
-    last_updated: '2026-07-26',
-    impact_level: 'High',
-    target_date: '2026-08-30',
-    notes: 'Trialing color-coded wristband tracking for dilation start times.'
-  },
-  {
-    id: 'panvel-3',
-    unit_id: 'unit-panvel',
-    title: 'Paper-based OPD patient flow causing lost files',
-    category: 'Real-time Patient Tracking',
-    status: 'Not Started',
-    percent_complete: 0,
-    owner: 'IT Ops (Suresh B.)',
-    last_updated: '2026-07-10',
-    impact_level: 'High',
-    target_date: '2026-09-15',
-    notes: 'Awaiting tablet roll-out for nursing staff.'
-  },
-  {
-    id: 'panvel-4',
-    unit_id: 'unit-panvel',
-    title: 'Private room bed occupancy clearance delay during discharge',
-    category: 'Private Room Capacity',
-    status: 'Completed',
-    percent_complete: 100,
-    owner: 'Sunita M. (Nursing Supv)',
-    last_updated: '2026-07-20',
-    impact_level: 'Medium',
-    target_date: '2026-07-20',
-    notes: 'SOP updated: Fast-track house-keeping alert via WhatsApp bot.'
-  },
-  {
-    id: 'panvel-5',
-    unit_id: 'unit-panvel',
-    title: 'Pathology & Blood report turnaround time > 3 hours',
-    category: 'Lab Turnaround',
-    status: 'In Progress',
-    percent_complete: 75,
-    owner: 'Dr. Anand S. (Pathologist)',
-    last_updated: '2026-07-27',
-    impact_level: 'Medium',
-    target_date: '2026-08-05',
-    notes: 'Auto-analyzer integration with LIS almost complete.'
-  },
-
-  // Shimoga Unit
-  {
-    id: 'shimoga-1',
-    unit_id: 'unit-shimoga',
-    title: 'Kannada/English audio buzzer system for OPD patient calling',
-    category: 'Dilation & Buzzer Alert System',
-    status: 'In Progress',
-    percent_complete: 85,
-    owner: 'Dr. B. Hegde (Unit Director)',
-    last_updated: '2026-07-27',
-    impact_level: 'High',
-    target_date: '2026-08-01',
-    notes: 'Bilingual voice announcements integrated in waiting area 2.'
-  },
-  {
-    id: 'shimoga-2',
-    unit_id: 'unit-shimoga',
-    title: 'Private room booking allocation transparency',
-    category: 'Private Room Capacity',
-    status: 'Completed',
-    percent_complete: 100,
-    owner: 'Vidya Rao (Ops Admin)',
-    last_updated: '2026-07-15',
-    impact_level: 'Medium',
-    target_date: '2026-07-15',
-    notes: 'Live LED display installed outside bed management office.'
-  },
-  {
-    id: 'shimoga-3',
-    unit_id: 'unit-shimoga',
-    title: 'Outpatient token desk congestion during morning clinic',
-    category: 'OPD Wait Time',
-    status: 'In Progress',
-    percent_complete: 55,
-    owner: 'Girish M. (Front Desk)',
-    last_updated: '2026-07-26',
-    impact_level: 'High',
-    target_date: '2026-08-18',
-    notes: 'Added token counter for rural camps follow-ups.'
-  }
-];
-
 // Sleep helper
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -707,6 +504,7 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
         remarks TEXT,
         before_photos JSONB DEFAULT '[]'::jsonb,
         after_photos JSONB DEFAULT '[]'::jsonb,
+        comments JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
@@ -846,19 +644,6 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
            avatar_initials = EXCLUDED.avatar_initials`,
         [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials]
       );
-    }
-
-    // Seed bottlenecks if empty
-    const bCountRes = await client.query('SELECT COUNT(*) FROM bottlenecks');
-    if (parseInt(bCountRes.rows[0].count, 10) === 0) {
-      for (const b of INITIAL_BOTTLENECKS) {
-        await client.query(
-          `INSERT INTO bottlenecks (id, unit_id, title, category, status, percent_complete, owner, last_updated, impact_level, target_date, notes)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-           ON CONFLICT (id) DO NOTHING`,
-          [b.id, b.unit_id, b.title, b.category, b.status, b.percent_complete, b.owner, b.last_updated, b.impact_level, b.target_date, b.notes]
-        );
-      }
     }
 
   } catch (err: any) {
