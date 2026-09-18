@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               />
               <div className="truncate">
                 <h2 className="text-sm font-black text-white leading-tight truncate">
-                  PPE Operations
+                  Patient Experience
                 </h2>
                 <p className="text-[10px] font-bold text-orange-400 uppercase tracking-wider truncate">
                   {currentUser.role}
@@ -157,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title="Switch Workspace Portal"
           >
             <ArrowLeft className="w-4 h-4 text-orange-400 shrink-0" />
-            {!isCollapsed && <span>Switch Portal (5S / PPE)</span>}
+            {!isCollapsed && <span>Switch Workspace</span>}
           </button>
         </div>
 

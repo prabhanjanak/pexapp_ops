@@ -86,7 +86,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
             <div>
               <span className="text-xs sm:text-sm font-black tracking-tight text-slate-900 block uppercase">
-                Sankara Eye Care Institutions
+                Sankara Eye Foundation, India
               </span>
               <span className="text-[11px] text-orange-600 font-bold block">
                 Sri Kanchi Kamakoti Medical Trust • Est. 1977
@@ -99,7 +99,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <span className="hidden sm:inline">14 Hospital Units Active</span>
             <span className="sm:hidden">14 Units</span>
             <span className="text-orange-300">•</span>
-            <span className="text-orange-600 font-black">PPE Portal</span>
+            <span className="text-orange-600 font-black">Business Excellence</span>
           </div>
 
         </div>
@@ -127,16 +127,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <div className="p-3 bg-white rounded-2xl shadow-md border border-orange-100 max-w-[220px] sm:max-w-[260px] w-full flex items-center justify-center">
                   <img
                     src="/sankara-logo.png"
-                    alt="Sankara Eye Foundation India"
+                    alt="Sankara Eye Foundation, India"
                     className="w-full h-auto max-h-12 object-contain"
                   />
                 </div>
                 <div>
                   <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                    Project Patient Experience (PPE)
+                    Business Excellence Platform
                   </h1>
                   <p className="text-xs text-slate-500 font-medium">
-                    Operational Quality & Clinical Workflow Governance
+                    Business Excellence Application • Operations & Quality Governance
                   </p>
                 </div>
               </div>
