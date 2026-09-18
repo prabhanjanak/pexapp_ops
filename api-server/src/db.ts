@@ -27,147 +27,175 @@ export const pool = new Pool(
       }
 );
 
-// Comprehensive list of 14 Sankara Eye Hospital Units
+// Comprehensive list of 14 Sankara Eye Hospital Units with CMO and Unit Head Leadership
 export const SANKARA_INITIAL_UNITS = [
   {
-    id: 'unit-anand',
-    name: 'Sankara Eye Hospital – Anand',
-    city: 'Anand',
-    state: 'Gujarat',
-    is_assessed: true,
-    established_year: 2017,
-    bed_capacity: 100,
-    contact_head: 'Dr. H. Patel'
-  },
-  {
-    id: 'unit-bangalore',
-    name: 'Sankara Eye Hospital – Bangalore',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    is_assessed: true,
-    established_year: 2008,
-    bed_capacity: 150,
-    contact_head: 'Dr. M. Swaminathan'
-  },
-  {
     id: 'unit-coimbatore',
-    name: 'Sankara Eye Hospital – Coimbatore',
+    name: 'Sankara Eye Hospital',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
+    cmo: 'Dr. Shruthi Tara',
+    unit_head: 'Ms. Binitha Harish',
+    contact_head: 'Ms. Binitha Harish',
     is_assessed: true,
     established_year: 1977,
-    bed_capacity: 250,
-    contact_head: 'Dr. R. Ramakrishnan'
+    bed_capacity: 250
   },
   {
     id: 'unit-coimbatore-city',
-    name: 'Sankara Eye Centre – Coimbatore City (R.S. Puram)',
+    name: 'Sankara Eye Hospital – Coimbatore City',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
+    cmo: 'Dr. Devi Priya',
+    unit_head: 'Ms. Kanmani S',
+    contact_head: 'Ms. Kanmani S',
     is_assessed: true,
     established_year: 1985,
-    bed_capacity: 80,
-    contact_head: 'Dr. S. K. Narayanan'
+    bed_capacity: 80
   },
   {
     id: 'unit-guntur',
-    name: 'Sankara Eye Hospital – Guntur',
+    name: 'Sankara Eye Hospital',
     city: 'Guntur',
     state: 'Andhra Pradesh',
+    cmo: 'Dr. Sudhakar Potti',
+    unit_head: 'Ms. Tripura / Ms. Madhavi Machavarapu',
+    contact_head: 'Ms. Tripura / Ms. Madhavi Machavarapu',
     is_assessed: true,
     established_year: 2014,
-    bed_capacity: 115,
-    contact_head: 'Dr. C. Prasad'
+    bed_capacity: 115
   },
   {
-    id: 'unit-jaipur',
-    name: 'Sankara Eye Hospital – Jaipur',
-    city: 'Jaipur',
-    state: 'Rajasthan',
+    id: 'unit-bangalore',
+    name: 'Sankara Eye Hospital',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    cmo: 'Dr. Yeddula Umesh',
+    unit_head: 'Lt. Col. S. Guruprasad (Retd.)',
+    contact_head: 'Lt. Col. S. Guruprasad (Retd.)',
     is_assessed: true,
-    established_year: 2022,
-    bed_capacity: 105,
-    contact_head: 'Dr. V. Rathore'
-  },
-  {
-    id: 'unit-kanpur',
-    name: 'Sankara Eye Hospital – Kanpur',
-    city: 'Kanpur',
-    state: 'Uttar Pradesh',
-    is_assessed: true,
-    established_year: 2020,
-    bed_capacity: 110,
-    contact_head: 'Dr. A. Agarwal'
-  },
-  {
-    id: 'unit-krishnankoil',
-    name: 'Sankara Eye Hospital – Krishnankoil',
-    city: 'Krishnankoil',
-    state: 'Tamil Nadu',
-    is_assessed: true,
-    established_year: 2004,
-    bed_capacity: 110,
-    contact_head: 'Dr. S. Vijay'
-  },
-  {
-    id: 'unit-ludhiana',
-    name: 'Sankara Eye Hospital – Ludhiana',
-    city: 'Ludhiana',
-    state: 'Punjab',
-    is_assessed: true,
-    established_year: 2019,
-    bed_capacity: 100,
-    contact_head: 'Dr. G. Singh'
+    established_year: 2008,
+    bed_capacity: 150
   },
   {
     id: 'unit-shimoga',
-    name: 'Sankara Eye Hospital – Shimoga',
-    city: 'Shivamogga (Shimoga)',
+    name: 'Sankara Eye Hospital',
+    city: 'Shivamogga',
     state: 'Karnataka',
+    cmo: 'Dr. S. Mahesha',
+    unit_head: 'Ms. Gayatri Shantharam / Ms. Anitha',
+    contact_head: 'Ms. Gayatri Shantharam / Ms. Anitha',
     is_assessed: true,
     established_year: 2011,
-    bed_capacity: 100,
-    contact_head: 'Dr. B. Hegde'
+    bed_capacity: 100
+  },
+  {
+    id: 'unit-anand',
+    name: 'Sankara Eye Hospital',
+    city: 'Anand',
+    state: 'Gujarat',
+    cmo: 'Dr. Nisha Vadhyamal Ahuja',
+    unit_head: 'Col. Sudeepkumar D. Mehta (Retd.)',
+    contact_head: 'Col. Sudeepkumar D. Mehta (Retd.)',
+    is_assessed: true,
+    established_year: 2017,
+    bed_capacity: 100
+  },
+  {
+    id: 'unit-kanpur',
+    name: 'Sankara Eye Hospital',
+    city: 'Kanpur',
+    state: 'Uttar Pradesh',
+    cmo: 'Dr. Puneet Johri',
+    unit_head: 'Dr. Rahul Singh',
+    contact_head: 'Dr. Rahul Singh',
+    is_assessed: true,
+    established_year: 2020,
+    bed_capacity: 110
+  },
+  {
+    id: 'unit-jaipur',
+    name: 'Sankara Eye Hospital',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    cmo: 'Dr. Neeraj Shah',
+    unit_head: 'Dr. Nishant Jain',
+    contact_head: 'Dr. Nishant Jain',
+    is_assessed: true,
+    established_year: 2022,
+    bed_capacity: 105
+  },
+  {
+    id: 'unit-ludhiana',
+    name: 'Sankara Eye Hospital',
+    city: 'Ludhiana',
+    state: 'Punjab',
+    cmo: 'Dr. Manoj Gupta',
+    unit_head: 'Dr. Manoj Gupta',
+    contact_head: 'Dr. Manoj Gupta',
+    is_assessed: true,
+    established_year: 2019,
+    bed_capacity: 100
   },
   {
     id: 'unit-indore',
-    name: 'Sankara Eye Centre – Indore',
+    name: 'Sankara Eye Centre',
     city: 'Indore',
     state: 'Madhya Pradesh',
+    cmo: 'Dr. Ankit Deokar',
+    unit_head: 'Dr. Rituraj Sharma',
+    contact_head: 'Dr. Rituraj Sharma',
     is_assessed: true,
     established_year: 2021,
-    bed_capacity: 95,
-    contact_head: 'Dr. R. Sharma'
+    bed_capacity: 95
   },
   {
     id: 'unit-panvel',
-    name: 'RJ Sankara Eye Hospital – Panvel',
-    city: 'Panvel / Navi Mumbai',
+    name: 'R. Jhunjhunwala Sankara Eye Hospital',
+    city: 'Panvel',
     state: 'Maharashtra',
+    cmo: 'Dr. Girish Budhrani',
+    unit_head: 'Dr. Rajesh Kapse',
+    contact_head: 'Dr. Rajesh Kapse',
     is_assessed: true,
     established_year: 2018,
-    bed_capacity: 120,
-    contact_head: 'Dr. Neha V.'
+    bed_capacity: 120
   },
   {
     id: 'unit-hyderabad',
-    name: 'Sankara Eye Hospital – Hyderabad',
+    name: 'Sankara Eye Hospital',
     city: 'Hyderabad',
     state: 'Telangana',
+    cmo: 'Dr. Simakurthy Sriram',
+    unit_head: 'Mr. Gannamraju Viswamohan',
+    contact_head: 'Mr. Gannamraju Viswamohan',
     is_assessed: true,
     established_year: 2023,
-    bed_capacity: 130,
-    contact_head: 'Dr. K. Reddy'
+    bed_capacity: 130
   },
   {
     id: 'unit-varanasi',
-    name: 'RJ Sankara Eye Hospital – Varanasi',
+    name: 'R. J. Sankara Eye Hospital',
     city: 'Varanasi',
     state: 'Uttar Pradesh',
+    cmo: 'Dr. Saptagirish Rambhatla',
+    unit_head: 'Lt. Col. (Dr.) Bharat Singh',
+    contact_head: 'Lt. Col. (Dr.) Bharat Singh',
     is_assessed: true,
     established_year: 2021,
-    bed_capacity: 85,
-    contact_head: 'Dr. T. Rao'
+    bed_capacity: 85
+  },
+  {
+    id: 'unit-krishnankoil',
+    name: 'Sankara Eye Hospital',
+    city: 'Krishnankoil',
+    state: 'Tamil Nadu',
+    cmo: 'Dr. Sudha N',
+    unit_head: 'Mr. Aswathaman R',
+    contact_head: 'Mr. Aswathaman R',
+    is_assessed: true,
+    established_year: 2004,
+    bed_capacity: 110
   }
 ];
 
@@ -217,160 +245,160 @@ export const SANKARA_INITIAL_USERS = [
     designation: 'Patient Experience & Quality Lead',
     avatar_initials: 'OP'
   },
-  // 14 Unit Heads
-  {
-    id: 'user-anand-head',
-    name: 'Dr. H. Patel',
-    email: 'unithead.anand@sankara.com',
-    emp_id: 'UH-AND-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-anand',
-    designation: 'Anand Unit Head / Medical Director',
-    avatar_initials: 'HP'
-  },
-  {
-    id: 'user-bangalore-head',
-    name: 'Dr. M. Swaminathan',
-    email: 'unithead.bangalore@sankara.com',
-    emp_id: 'UH-BLR-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-bangalore',
-    designation: 'Bangalore Unit Head / Medical Director',
-    avatar_initials: 'MS'
-  },
+  // 14 Official Unit Heads
   {
     id: 'user-coimbatore-head',
-    name: 'Dr. R. Ramakrishnan',
+    name: 'Ms. Binitha Harish',
     email: 'unithead.coimbatore@sankara.com',
     emp_id: 'UH-CBE-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-coimbatore',
-    designation: 'Coimbatore HQ Unit Head / Medical Director',
-    avatar_initials: 'RR'
+    designation: 'Coimbatore Unit Head',
+    avatar_initials: 'BH'
   },
   {
     id: 'user-coimbatore-city-head',
-    name: 'Dr. S. K. Narayanan',
+    name: 'Ms. Kanmani S',
     email: 'unithead.coimbatorecity@sankara.com',
     emp_id: 'UH-CBC-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-coimbatore-city',
-    designation: 'Coimbatore City (R.S. Puram) Unit Head',
-    avatar_initials: 'SN'
+    designation: 'Coimbatore City Unit Head',
+    avatar_initials: 'KS'
   },
   {
     id: 'user-guntur-head',
-    name: 'Dr. C. Prasad',
+    name: 'Ms. Tripura / Ms. Madhavi Machavarapu',
     email: 'unithead.guntur@sankara.com',
     emp_id: 'UH-GNT-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-guntur',
-    designation: 'Guntur Unit Head / Medical Director',
-    avatar_initials: 'CP'
+    designation: 'Guntur Unit Head',
+    avatar_initials: 'TM'
   },
   {
-    id: 'user-jaipur-head',
-    name: 'Dr. V. Rathore',
-    email: 'unithead.jaipur@sankara.com',
-    emp_id: 'UH-JPR-01',
+    id: 'user-bangalore-head',
+    name: 'Lt. Col. S. Guruprasad (Retd.)',
+    email: 'unithead.bangalore@sankara.com',
+    emp_id: 'UH-BLR-01',
     password: 'unit123',
     role: 'Unit Head',
-    unit_id: 'unit-jaipur',
-    designation: 'Jaipur Unit Head / Medical Director',
-    avatar_initials: 'VR'
-  },
-  {
-    id: 'user-kanpur-head',
-    name: 'Dr. A. Agarwal',
-    email: 'unithead.kanpur@sankara.com',
-    emp_id: 'UH-KNP-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-kanpur',
-    designation: 'Kanpur Unit Head / Medical Director',
-    avatar_initials: 'AA'
-  },
-  {
-    id: 'user-krishnankoil-head',
-    name: 'Dr. S. Vijay',
-    email: 'unithead.krishnankoil@sankara.com',
-    emp_id: 'UH-KRK-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-krishnankoil',
-    designation: 'Krishnankoil Unit Head / Medical Director',
-    avatar_initials: 'SV'
-  },
-  {
-    id: 'user-ludhiana-head',
-    name: 'Dr. G. Singh',
-    email: 'unithead.ludhiana@sankara.com',
-    emp_id: 'UH-LDH-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-ludhiana',
-    designation: 'Ludhiana Unit Head / Medical Director',
-    avatar_initials: 'GS'
+    unit_id: 'unit-bangalore',
+    designation: 'Bengaluru Unit Head',
+    avatar_initials: 'SG'
   },
   {
     id: 'user-shimoga-head',
-    name: 'Dr. B. Hegde',
+    name: 'Ms. Gayatri Shantharam / Ms. Anitha',
     email: 'unithead.shimoga@sankara.com',
     emp_id: 'UH-SHM-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-shimoga',
-    designation: 'Shimoga Unit Head / Medical Director',
-    avatar_initials: 'BH'
+    designation: 'Shivamogga Unit Head',
+    avatar_initials: 'GA'
+  },
+  {
+    id: 'user-anand-head',
+    name: 'Col. Sudeepkumar D. Mehta (Retd.)',
+    email: 'unithead.anand@sankara.com',
+    emp_id: 'UH-AND-01',
+    password: 'unit123',
+    role: 'Unit Head',
+    unit_id: 'unit-anand',
+    designation: 'Anand Unit Head',
+    avatar_initials: 'SM'
+  },
+  {
+    id: 'user-kanpur-head',
+    name: 'Dr. Rahul Singh',
+    email: 'unithead.kanpur@sankara.com',
+    emp_id: 'UH-KNP-01',
+    password: 'unit123',
+    role: 'Unit Head',
+    unit_id: 'unit-kanpur',
+    designation: 'Kanpur Unit Head',
+    avatar_initials: 'RS'
+  },
+  {
+    id: 'user-jaipur-head',
+    name: 'Dr. Nishant Jain',
+    email: 'unithead.jaipur@sankara.com',
+    emp_id: 'UH-JPR-01',
+    password: 'unit123',
+    role: 'Unit Head',
+    unit_id: 'unit-jaipur',
+    designation: 'Jaipur Unit Head',
+    avatar_initials: 'NJ'
+  },
+  {
+    id: 'user-ludhiana-head',
+    name: 'Dr. Manoj Gupta',
+    email: 'unithead.ludhiana@sankara.com',
+    emp_id: 'UH-LDH-01',
+    password: 'unit123',
+    role: 'Unit Head',
+    unit_id: 'unit-ludhiana',
+    designation: 'Ludhiana Unit Head',
+    avatar_initials: 'MG'
   },
   {
     id: 'user-indore-head',
-    name: 'Dr. R. Sharma',
+    name: 'Dr. Rituraj Sharma',
     email: 'unithead.indore@sankara.com',
     emp_id: 'UH-IND-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-indore',
-    designation: 'Indore Unit Head / Medical Director',
+    designation: 'Indore Unit Head',
     avatar_initials: 'RS'
   },
   {
     id: 'user-panvel-head',
-    name: 'Dr. Neha V.',
+    name: 'Dr. Rajesh Kapse',
     email: 'unithead.panvel@sankara.com',
     emp_id: 'UH-PNV-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-panvel',
-    designation: 'Panvel Unit Head / Medical Director',
-    avatar_initials: 'NV'
+    designation: 'Panvel Unit Head',
+    avatar_initials: 'RK'
   },
   {
     id: 'user-hyderabad-head',
-    name: 'Dr. K. Reddy',
+    name: 'Mr. Gannamraju Viswamohan',
     email: 'unithead.hyderabad@sankara.com',
     emp_id: 'UH-HYD-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-hyderabad',
-    designation: 'Hyderabad Unit Head / Medical Director',
-    avatar_initials: 'KR'
+    designation: 'Hyderabad Unit Head',
+    avatar_initials: 'GV'
   },
   {
     id: 'user-varanasi-head',
-    name: 'Dr. T. Rao',
+    name: 'Lt. Col. (Dr.) Bharat Singh',
     email: 'unithead.varanasi@sankara.com',
     emp_id: 'UH-VNS-01',
     password: 'unit123',
     role: 'Unit Head',
     unit_id: 'unit-varanasi',
-    designation: 'Varanasi Unit Head / Medical Director',
-    avatar_initials: 'TR'
+    designation: 'Varanasi Unit Head',
+    avatar_initials: 'BS'
+  },
+  {
+    id: 'user-krishnankoil-head',
+    name: 'Mr. Aswathaman R',
+    email: 'unithead.krishnankoil@sankara.com',
+    emp_id: 'UH-KRK-01',
+    password: 'unit123',
+    role: 'Unit Head',
+    unit_id: 'unit-krishnankoil',
+    designation: 'Krishnankoil Unit Head',
+    avatar_initials: 'AR'
   }
 ];
 
@@ -635,6 +663,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
         name VARCHAR(255) NOT NULL,
         city VARCHAR(100) NOT NULL,
         state VARCHAR(100) NOT NULL,
+        cmo VARCHAR(150),
+        unit_head VARCHAR(150),
         is_assessed BOOLEAN DEFAULT FALSE,
         established_year INTEGER,
         bed_capacity INTEGER,
@@ -706,6 +736,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
 
     // Schema Migrations if table already existed
     await client.query(`
+      ALTER TABLE units ADD COLUMN IF NOT EXISTS cmo VARCHAR(150);
+      ALTER TABLE units ADD COLUMN IF NOT EXISTS unit_head VARCHAR(150);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS emp_id VARCHAR(50);
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS remarks TEXT;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS before_photos JSONB DEFAULT '[]'::jsonb;
@@ -785,14 +817,16 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
     // Seed units
     for (const unit of SANKARA_INITIAL_UNITS) {
       await client.query(
-        `INSERT INTO units (id, name, city, state, is_assessed, established_year, bed_capacity, contact_head)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO units (id, name, city, state, cmo, unit_head, is_assessed, established_year, bed_capacity, contact_head)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
            city = EXCLUDED.city,
            state = EXCLUDED.state,
-           contact_head = COALESCE(units.contact_head, EXCLUDED.contact_head)`,
-        [unit.id, unit.name, unit.city, unit.state, unit.is_assessed, unit.established_year, unit.bed_capacity, unit.contact_head]
+           cmo = EXCLUDED.cmo,
+           unit_head = EXCLUDED.unit_head,
+           contact_head = EXCLUDED.contact_head`,
+        [unit.id, unit.name, unit.city, unit.state, unit.cmo, unit.unit_head, unit.is_assessed, unit.established_year, unit.bed_capacity, unit.unit_head]
       );
     }
 

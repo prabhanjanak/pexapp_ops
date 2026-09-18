@@ -15,7 +15,8 @@ import {
   Eye,
   KeyRound,
   ShieldCheck,
-  Sparkles,
+  Stethoscope,
+  Activity,
   ArrowRight,
   X
 } from 'lucide-react';
@@ -38,7 +39,8 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Form State for Assigning / Editing Unit Head
+  // Form State for Assigning / Editing Unit Leadership
+  const [cmoName, setCmoName] = useState('');
   const [headName, setHeadName] = useState('');
   const [headEmail, setHeadEmail] = useState('');
   const [headEmpId, setHeadEmpId] = useState('');
@@ -52,12 +54,13 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
 
   const handleOpenAssignModal = (unit: HospitalUnit) => {
     setSelectedUnitForHead(unit);
-    setHeadName(unit.contactHead || '');
+    setCmoName(unit.cmo || '');
+    setHeadName(unit.unitHead || unit.contactHead || '');
     // Generate default suggested email if none exists
     const citySlug = unit.city.toLowerCase().replace(/[^a-z]/g, '');
     setHeadEmail(`unithead.${citySlug}@sankara.com`);
     setHeadEmpId(`UH-${unit.id.replace('unit-', '').toUpperCase().slice(0, 4)}-01`);
-    setHeadDesignation(`${unit.name} • Unit Head / Medical Director`);
+    setHeadDesignation(`${unit.name} • Unit Head`);
     setHeadPassword('unit123');
   };
 
@@ -76,31 +79,34 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
         email: headEmail.trim().toLowerCase(),
         empId: headEmpId.trim(),
         designation: headDesignation.trim(),
-        password: headPassword.trim() || 'unit123'
+        password: headPassword.trim() || 'unit123',
+        cmo: cmoName.trim()
       });
 
-      showToast('success', res.message || `Unit Head ${headName} updated successfully for ${selectedUnitForHead.name}!`);
+      showToast('success', res.message || `Leadership details updated successfully for ${selectedUnitForHead.name}!`);
       setSelectedUnitForHead(null);
       onRefreshUnits();
     } catch (err: any) {
-      showToast('error', err.message || 'Failed to assign Unit Head.');
+      showToast('error', err.message || 'Failed to update leadership details.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter units
+  // Filter units across name, city, state, CMO, and Unit Head
   const filteredUnits = units.filter((u) => {
     const q = searchQuery.toLowerCase();
     return (
       u.name.toLowerCase().includes(q) ||
       u.city.toLowerCase().includes(q) ||
       u.state.toLowerCase().includes(q) ||
-      (u.contactHead || '').toLowerCase().includes(q)
+      (u.cmo || '').toLowerCase().includes(q) ||
+      (u.unitHead || u.contactHead || '').toLowerCase().includes(q)
     );
   });
 
-  const assignedCount = units.filter((u) => u.contactHead && u.contactHead.trim()).length;
+  const cmoCount = units.filter((u) => u.cmo && u.cmo.trim()).length;
+  const headCount = units.filter((u) => (u.unitHead || u.contactHead) && (u.unitHead || u.contactHead)!.trim()).length;
 
   return (
     <div className="space-y-6">
@@ -139,22 +145,22 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
             14 Sankara Eye Hospital Units & Leadership Directory
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl mt-1">
-            Super Admin master directory to view, assign, and manage Unit Heads, login credentials, and contact heads across all 14 hospital locations in India.
+            Master directory displaying official <strong>Chief Medical Officers (CMO)</strong>, <strong>Unit Heads</strong>, and operational access across all 14 hospital locations in India.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center">
+          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center min-w-[90px]">
             <span className="block text-xl font-black text-orange-400">{units.length}</span>
             <span className="text-[10px] text-slate-300 uppercase font-bold">Total Units</span>
           </div>
-          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center">
-            <span className="block text-xl font-black text-emerald-400">{assignedCount}</span>
-            <span className="text-[10px] text-slate-300 uppercase font-bold">Heads Assigned</span>
+          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center min-w-[90px]">
+            <span className="block text-xl font-black text-blue-400">{cmoCount}</span>
+            <span className="text-[10px] text-slate-300 uppercase font-bold">CMOs Active</span>
           </div>
-          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center">
-            <span className="block text-xl font-black text-amber-400">{units.length - assignedCount}</span>
-            <span className="text-[10px] text-slate-300 uppercase font-bold">Pending</span>
+          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center min-w-[90px]">
+            <span className="block text-xl font-black text-emerald-400">{headCount}</span>
+            <span className="text-[10px] text-slate-300 uppercase font-bold">Unit Heads</span>
           </div>
         </div>
       </div>
@@ -165,7 +171,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search unit name, city, state, or unit head..."
+            placeholder="Search unit name, city, state, CMO, or Unit Head..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white"
@@ -180,7 +186,8 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
       {/* 14 Units Grid Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filteredUnits.map((unit, idx) => {
-          const isAssigned = Boolean(unit.contactHead && unit.contactHead.trim());
+          const currentHead = unit.unitHead || unit.contactHead;
+          const isAssigned = Boolean(currentHead && currentHead.trim());
           const activeBottlenecks = unit.bottlenecks?.filter(b => b.status !== 'Completed').length || 0;
           const completedBottlenecks = unit.bottlenecks?.filter(b => b.status === 'Completed').length || 0;
 
@@ -214,7 +221,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                         : 'bg-amber-50 text-amber-700 border border-amber-200'
                     }`}
                   >
-                    {isAssigned ? 'Head Assigned' : 'Unassigned'}
+                    {isAssigned ? 'Active' : 'Unassigned'}
                   </span>
                 </div>
 
@@ -231,43 +238,48 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                 </div>
               </div>
 
-              {/* Unit Head Information Box */}
-              <div className="p-5 space-y-3 bg-white flex-1 flex flex-col justify-between">
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
-                    Unit Head & Medical Leadership
-                  </span>
-
-                  {isAssigned ? (
-                    <div className="bg-orange-50/70 border border-orange-200/80 rounded-2xl p-3.5 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 font-black text-xs text-orange-950">
-                          <UserCheck className="w-4 h-4 text-orange-600 shrink-0" />
-                          <span>{unit.contactHead}</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-orange-700 bg-orange-100/80 px-2 py-0.5 rounded-full">
-                          Unit Head
-                        </span>
+              {/* Leadership Information Box */}
+              <div className="p-5 space-y-3.5 bg-white flex-1 flex flex-col justify-between">
+                <div className="space-y-3">
+                  
+                  {/* Chief Medical Officer (CMO) */}
+                  <div className="bg-sky-50/70 border border-sky-200/80 rounded-2xl p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-sky-800 uppercase tracking-wider">
+                        <Stethoscope className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Chief Medical Officer (CMO)</span>
                       </div>
+                      <span className="text-[9px] font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full">
+                        Clinical Lead
+                      </span>
+                    </div>
+                    <div className="font-black text-xs text-slate-900 pl-0.5">
+                      {unit.cmo || 'Dr. Assigned CMO'}
+                    </div>
+                  </div>
 
-                      <div className="space-y-1 text-[11px] text-slate-600 pt-1 border-t border-orange-100">
-                        <div className="flex items-center gap-1.5 font-medium">
-                          <Mail className="w-3 h-3 text-orange-500 shrink-0" />
-                          <span className="truncate">unithead.{unit.city.toLowerCase().replace(/[^a-z]/g, '')}@sankara.com</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 font-medium text-slate-500 text-[10px]">
-                          <BadgeCheck className="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span>Official Login Role: Unit Head</span>
-                        </div>
+                  {/* Unit Head */}
+                  <div className="bg-orange-50/70 border border-orange-200/80 rounded-2xl p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-orange-900 uppercase tracking-wider">
+                        <UserCheck className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Unit Head (Operations)</span>
+                      </div>
+                      <span className="text-[9px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                        Unit Head
+                      </span>
+                    </div>
+                    <div className="font-black text-xs text-slate-900 pl-0.5">
+                      {currentHead || 'Unassigned'}
+                    </div>
+                    <div className="space-y-0.5 text-[10px] text-slate-600 pt-1 border-t border-orange-100/80">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <Mail className="w-3 h-3 text-orange-500 shrink-0" />
+                        <span className="truncate">unithead.{unit.city.toLowerCase().replace(/[^a-z]/g, '')}@sankara.com</span>
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-3.5 text-center space-y-1">
-                      <UserPlus className="w-5 h-5 text-slate-400 mx-auto" />
-                      <span className="text-xs font-bold text-slate-600 block">No Unit Head Assigned</span>
-                      <span className="text-[10px] text-slate-400 block">Click below to assign leadership credentials</span>
-                    </div>
-                  )}
+                  </div>
+
                 </div>
 
                 {/* Card Action Buttons */}
@@ -277,7 +289,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                     className="py-2.5 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer hover:shadow-orange-500/30"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
-                    <span>{isAssigned ? 'Edit Head' : 'Assign Head'}</span>
+                    <span>Edit Leadership</span>
                   </button>
 
                   <button
@@ -285,7 +297,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                     className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Inspect ({activeBottlenecks})</span>
+                    <span>Bottlenecks ({activeBottlenecks})</span>
                   </button>
                 </div>
               </div>
@@ -294,22 +306,22 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
         })}
       </div>
 
-      {/* Assign / Edit Unit Head Modal */}
+      {/* Assign / Edit Leadership Modal */}
       {selectedUnitForHead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
             
             {/* Modal Header */}
-            <div className="p-6 bg-gradient-to-r from-orange-600 to-amber-500 text-white flex items-center justify-between">
+            <div className="p-6 bg-gradient-to-r from-orange-600 to-amber-500 text-white flex items-center justify-between shrink-0">
               <div>
                 <span className="text-xs font-bold text-orange-100 uppercase tracking-wider block">
                   Super Admin Management
                 </span>
                 <h3 className="text-lg font-black tracking-tight">
-                  Assign Unit Head Details
+                  Unit Leadership & Credentials
                 </h3>
                 <span className="text-xs text-orange-100 font-medium">
-                  {selectedUnitForHead.name} ({selectedUnitForHead.city})
+                  {selectedUnitForHead.name} ({selectedUnitForHead.city}, {selectedUnitForHead.state})
                 </span>
               </div>
               <button
@@ -321,19 +333,36 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSaveUnitHead} className="p-6 space-y-4">
+            <form onSubmit={handleSaveUnitHead} className="p-6 space-y-4 overflow-y-auto flex-1">
               
+              {/* Chief Medical Officer (CMO) */}
+              <div>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                  Chief Medical Officer (CMO)
+                </label>
+                <div className="relative">
+                  <Stethoscope className="w-4 h-4 text-sky-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Dr. Shruthi Tara"
+                    value={cmoName}
+                    onChange={(e) => setCmoName(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
               {/* Unit Head Full Name */}
               <div>
                 <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
-                  Unit Head Full Name *
+                  Unit Head (Operations / Lead) *
                 </label>
                 <div className="relative">
-                  <UserCheck className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <UserCheck className="w-4 h-4 text-orange-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Dr. M. Swaminathan"
+                    placeholder="e.g. Ms. Binitha Harish"
                     value={headName}
                     onChange={(e) => setHeadName(e.target.value)}
                     className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -344,25 +373,25 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
               {/* Official Email */}
               <div>
                 <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
-                  Official Hospital Email *
+                  Official Hospital Email (Login ID) *
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     required
-                    placeholder="e.g. unithead.bangalore@sankara.com"
+                    placeholder="e.g. unithead.coimbatore@sankara.com"
                     value={headEmail}
                     onChange={(e) => setHeadEmail(e.target.value)}
                     className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
-                  The Unit Head will use this email address to log in to the portal.
+                  The Unit Head uses this email address to log in to the portal.
                 </span>
               </div>
 
-              {/* Employee ID (Emp ID) */}
+              {/* Employee ID (Emp ID) & Password */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
@@ -372,7 +401,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                     <BadgeCheck className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="e.g. UH-BLR-01"
+                      placeholder="e.g. UH-CBE-01"
                       value={headEmpId}
                       onChange={(e) => setHeadEmpId(e.target.value)}
                       className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -380,7 +409,6 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                   </div>
                 </div>
 
-                {/* Password */}
                 <div>
                   <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
                     Default Password
@@ -401,11 +429,11 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
               {/* Designation */}
               <div>
                 <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
-                  Official Designation / Role Title
+                  Official Designation
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Unit Head / Chief Medical Director"
+                  placeholder="e.g. Unit Head / General Manager"
                   value={headDesignation}
                   onChange={(e) => setHeadDesignation(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -415,11 +443,11 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
               {/* Security Banner */}
               <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-2 text-[11px] text-orange-950 font-medium">
                 <ShieldCheck className="w-4 h-4 text-orange-600 shrink-0" />
-                <span>Assigning this Unit Head creates/updates their login credentials scoped exclusively to <strong>{selectedUnitForHead.name}</strong>.</span>
+                <span>Assigning this Unit Head updates their login account scoped exclusively to <strong>{selectedUnitForHead.name}</strong>.</span>
               </div>
 
               {/* Submit & Cancel Buttons */}
-              <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
+              <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100 shrink-0">
                 <button
                   type="button"
                   onClick={() => setSelectedUnitForHead(null)}
@@ -432,7 +460,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                   disabled={loading}
                   className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-black shadow-md shadow-orange-500/30 transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>{loading ? 'Saving...' : 'Save Unit Head Details'}</span>
+                  <span>{loading ? 'Saving...' : 'Save Leadership Details'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

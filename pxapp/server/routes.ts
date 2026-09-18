@@ -50,10 +50,12 @@ function formatUnit(row: any, bottlenecks: any[] = []) {
     name: row.name,
     city: row.city,
     state: row.state,
+    cmo: row.cmo || undefined,
+    unitHead: row.unit_head || row.contact_head || undefined,
     isAssessed: Boolean(row.is_assessed) || bottlenecks.length > 0,
     establishedYear: row.established_year,
     bedCapacity: row.bed_capacity,
-    contactHead: row.contact_head,
+    contactHead: row.unit_head || row.contact_head,
     bottlenecks: bottlenecks.map(formatBottleneck)
   };
 }
@@ -430,7 +432,7 @@ router.get('/units/:id', async (req: Request, res: Response) => {
 // 7b. Update Unit Metadata (Super Admin)
 router.put('/units/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, city, state, contactHead, establishedYear, bedCapacity } = req.body;
+  const { name, city, state, cmo, unitHead, contactHead, establishedYear, bedCapacity } = req.body;
 
   try {
     const existing = await pool.query('SELECT * FROM units WHERE id = $1', [id]);
@@ -442,16 +444,18 @@ router.put('/units/:id', async (req: Request, res: Response) => {
     const newName = name || current.name;
     const newCity = city || current.city;
     const newState = state || current.state;
-    const newContactHead = contactHead !== undefined ? contactHead : current.contact_head;
+    const newCmo = cmo !== undefined ? cmo : current.cmo;
+    const newUnitHead = unitHead !== undefined ? unitHead : (contactHead !== undefined ? contactHead : (current.unit_head || current.contact_head));
+    const newContactHead = newUnitHead;
     const newYear = establishedYear !== undefined ? establishedYear : current.established_year;
     const newBedCapacity = bedCapacity !== undefined ? bedCapacity : current.bed_capacity;
 
     const updateRes = await pool.query(`
       UPDATE units
-      SET name = $1, city = $2, state = $3, contact_head = $4, established_year = $5, bed_capacity = $6, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $7
+      SET name = $1, city = $2, state = $3, cmo = $4, unit_head = $5, contact_head = $6, established_year = $7, bed_capacity = $8, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $9
       RETURNING *
-    `, [newName, newCity, newState, newContactHead, newYear, newBedCapacity, id]);
+    `, [newName, newCity, newState, newCmo, newUnitHead, newContactHead, newYear, newBedCapacity, id]);
 
     res.json(formatUnit(updateRes.rows[0]));
   } catch (error: any) {
@@ -459,10 +463,10 @@ router.put('/units/:id', async (req: Request, res: Response) => {
   }
 });
 
-// 7c. Super Admin: Assign or Update Unit Head for a Unit
+// 7c. Super Admin: Assign or Update Unit Head & CMO for a Unit
 router.post('/units/:id/unit-head', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, email, empId, password, designation } = req.body;
+  const { name, email, empId, password, designation, cmo } = req.body;
 
   const headName = (name || '').trim();
   const headEmail = (email || '').trim().toLowerCase();
@@ -485,11 +489,18 @@ router.post('/units/:id/unit-head', async (req: Request, res: Response) => {
     }
     const unit = unitRes.rows[0];
 
-    // 1. Update unit contact_head
-    await client.query(
-      `UPDATE units SET contact_head = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [headName, id]
-    );
+    // 1. Update unit unit_head, contact_head, and optional cmo
+    if (cmo !== undefined) {
+      await client.query(
+        `UPDATE units SET unit_head = $1, contact_head = $1, cmo = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+        [headName, cmo, id]
+      );
+    } else {
+      await client.query(
+        `UPDATE units SET unit_head = $1, contact_head = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [headName, id]
+      );
+    }
 
     // 2. Check if a Unit Head user for this unit already exists OR email already exists
     const existingUser = await client.query(
@@ -530,7 +541,7 @@ router.post('/units/:id/unit-head', async (req: Request, res: Response) => {
     res.json({
       success: true,
       message: `Unit Head ${headName} successfully assigned to ${unit.name}`,
-      unit: formatUnit({ ...unit, contact_head: headName }),
+      unit: formatUnit({ ...unit, unit_head: headName, contact_head: headName, cmo: cmo !== undefined ? cmo : unit.cmo }),
       user: formatUser(userRecord)
     });
   } catch (error: any) {

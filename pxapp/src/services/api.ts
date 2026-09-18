@@ -141,6 +141,7 @@ export const api = {
     empId?: string;
     designation?: string;
     password?: string;
+    cmo?: string;
   }): Promise<{ success: boolean; message: string; unit: HospitalUnit; user: User }> => {
     return fetchJson<{ success: boolean; message: string; unit: HospitalUnit; user: User }>(`/units/${unitId}/unit-head`, {
       method: 'POST',

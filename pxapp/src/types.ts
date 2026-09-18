@@ -71,6 +71,8 @@ export interface HospitalUnit {
   establishedYear?: number;
   bedCapacity?: number;
   contactHead?: string;
+  cmo?: string;
+  unitHead?: string;
 }
 
 export interface CategoryItem {
