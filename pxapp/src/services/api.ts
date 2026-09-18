@@ -128,6 +128,26 @@ export const api = {
     return fetchJson<HospitalUnit>(`/units/${id}`);
   },
 
+  updateUnit: async (id: string, updates: Partial<HospitalUnit>): Promise<HospitalUnit> => {
+    return fetchJson<HospitalUnit>(`/units/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  assignUnitHead: async (unitId: string, headData: {
+    name: string;
+    email: string;
+    empId?: string;
+    designation?: string;
+    password?: string;
+  }): Promise<{ success: boolean; message: string; unit: HospitalUnit; user: User }> => {
+    return fetchJson<{ success: boolean; message: string; unit: HospitalUnit; user: User }>(`/units/${unitId}/unit-head`, {
+      method: 'POST',
+      body: JSON.stringify(headData)
+    });
+  },
+
   initializeUnitAssessment: async (unitId: string): Promise<{ success: boolean; unit: HospitalUnit }> => {
     return fetchJson<{ success: boolean; unit: HospitalUnit }>(`/units/${unitId}/initialize`, {
       method: 'POST'

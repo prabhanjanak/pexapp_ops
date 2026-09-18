@@ -427,6 +427,120 @@ router.get('/units/:id', async (req: Request, res: Response) => {
   }
 });
 
+// 7b. Update Unit Metadata (Super Admin)
+router.put('/units/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, city, state, contactHead, establishedYear, bedCapacity } = req.body;
+
+  try {
+    const existing = await pool.query('SELECT * FROM units WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: `Unit ${id} not found` });
+    }
+
+    const current = existing.rows[0];
+    const newName = name || current.name;
+    const newCity = city || current.city;
+    const newState = state || current.state;
+    const newContactHead = contactHead !== undefined ? contactHead : current.contact_head;
+    const newYear = establishedYear !== undefined ? establishedYear : current.established_year;
+    const newBedCapacity = bedCapacity !== undefined ? bedCapacity : current.bed_capacity;
+
+    const updateRes = await pool.query(`
+      UPDATE units
+      SET name = $1, city = $2, state = $3, contact_head = $4, established_year = $5, bed_capacity = $6, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+      RETURNING *
+    `, [newName, newCity, newState, newContactHead, newYear, newBedCapacity, id]);
+
+    res.json(formatUnit(updateRes.rows[0]));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 7c. Super Admin: Assign or Update Unit Head for a Unit
+router.post('/units/:id/unit-head', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, email, empId, password, designation } = req.body;
+
+  const headName = (name || '').trim();
+  const headEmail = (email || '').trim().toLowerCase();
+  const headEmpId = (empId || '').trim();
+  const headPassword = (password || '').trim() || 'unit123';
+  const headDesignation = (designation || '').trim() || `${headName} (Unit Head)`;
+
+  if (!headName || !headEmail) {
+    return res.status(400).json({ error: 'Unit Head Name and Official Email are required' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const unitRes = await client.query('SELECT * FROM units WHERE id = $1', [id]);
+    if (unitRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: `Unit ${id} not found` });
+    }
+    const unit = unitRes.rows[0];
+
+    // 1. Update unit contact_head
+    await client.query(
+      `UPDATE units SET contact_head = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [headName, id]
+    );
+
+    // 2. Check if a Unit Head user for this unit already exists OR email already exists
+    const existingUser = await client.query(
+      `SELECT * FROM users WHERE (unit_id = $1 AND role = 'Unit Head') OR LOWER(email) = LOWER($2) LIMIT 1`,
+      [id, headEmail]
+    );
+
+    const initials = headName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'UH';
+
+    let userRecord: any;
+    if (existingUser.rows.length > 0) {
+      const existingId = existingUser.rows[0].id;
+      const updateRes = await client.query(`
+        UPDATE users
+        SET name = $1, email = $2, emp_id = $3, password = COALESCE($4, password), role = 'Unit Head', unit_id = $5, designation = $6, avatar_initials = $7
+        WHERE id = $8
+        RETURNING *
+      `, [headName, headEmail, headEmpId || existingUser.rows[0].emp_id, password ? headPassword : null, id, headDesignation, initials, existingId]);
+      userRecord = updateRes.rows[0];
+    } else {
+      const newUserId = `user-${id}-head-${Date.now()}`;
+      const insertRes = await client.query(`
+        INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
+        VALUES ($1, $2, $3, $4, $5, 'Unit Head', $6, $7, $8)
+        RETURNING *
+      `, [newUserId, headName, headEmail, headEmpId || `UH-${String(id).toUpperCase()}`, headPassword, id, headDesignation, initials]);
+      userRecord = insertRes.rows[0];
+    }
+
+    // 3. Log to audit logs
+    await client.query(`
+      INSERT INTO audit_logs (unit_id, action, details, user_role)
+      VALUES ($1, 'UNIT_HEAD_ASSIGNED', $2, 'Super Admin')
+    `, [id, JSON.stringify({ unitId: id, unitName: unit.name, headName, headEmail, headEmpId })]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: `Unit Head ${headName} successfully assigned to ${unit.name}`,
+      unit: formatUnit({ ...unit, contact_head: headName }),
+      user: formatUser(userRecord)
+    });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
 // 8. Initialize Standard Baseline Assessment
 router.post('/units/:id/initialize', async (req: Request, res: Response) => {
   const { id } = req.params;

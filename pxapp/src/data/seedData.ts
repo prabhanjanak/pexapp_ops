@@ -645,8 +645,30 @@ const coimbatoreBottlenecks: Bottleneck[] = [
 
 export const INITIAL_UNITS: HospitalUnit[] = [
   {
+    id: 'unit-anand',
+    name: 'Sankara Eye Hospital – Anand',
+    city: 'Anand',
+    state: 'Gujarat',
+    isAssessed: true,
+    bottlenecks: [],
+    establishedYear: 2017,
+    bedCapacity: 100,
+    contactHead: 'Dr. H. Patel'
+  },
+  {
+    id: 'unit-bangalore',
+    name: 'Sankara Eye Hospital – Bangalore',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    isAssessed: true,
+    bottlenecks: [],
+    establishedYear: 2008,
+    bedCapacity: 150,
+    contactHead: 'Dr. M. Swaminathan'
+  },
+  {
     id: 'unit-coimbatore',
-    name: 'Coimbatore HQ',
+    name: 'Sankara Eye Hospital – Coimbatore',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
     isAssessed: true,
@@ -656,20 +678,75 @@ export const INITIAL_UNITS: HospitalUnit[] = [
     contactHead: 'Dr. R. Ramakrishnan'
   },
   {
-    id: 'unit-panvel',
-    name: 'Panvel Unit',
-    city: 'Panvel (Navi Mumbai)',
-    state: 'Maharashtra',
+    id: 'unit-coimbatore-city',
+    name: 'Sankara Eye Centre – Coimbatore City (R.S. Puram)',
+    city: 'Coimbatore',
+    state: 'Tamil Nadu',
     isAssessed: true,
-    bottlenecks: panvelBottlenecks,
-    establishedYear: 2018,
-    bedCapacity: 120,
-    contactHead: 'Dr. Neha V.'
+    bottlenecks: [],
+    establishedYear: 1985,
+    bedCapacity: 80,
+    contactHead: 'Dr. S. K. Narayanan'
+  },
+  {
+    id: 'unit-guntur',
+    name: 'Sankara Eye Hospital – Guntur',
+    city: 'Guntur',
+    state: 'Andhra Pradesh',
+    isAssessed: true,
+    bottlenecks: [],
+    establishedYear: 2014,
+    bedCapacity: 115,
+    contactHead: 'Dr. C. Prasad'
+  },
+  {
+    id: 'unit-jaipur',
+    name: 'Sankara Eye Hospital – Jaipur',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    isAssessed: true,
+    bottlenecks: [],
+    establishedYear: 2022,
+    bedCapacity: 105,
+    contactHead: 'Dr. V. Rathore'
+  },
+  {
+    id: 'unit-kanpur',
+    name: 'Sankara Eye Hospital – Kanpur',
+    city: 'Kanpur',
+    state: 'Uttar Pradesh',
+    isAssessed: true,
+    bottlenecks: [],
+    establishedYear: 2020,
+    bedCapacity: 110,
+    contactHead: 'Dr. A. Agarwal'
+  },
+  {
+    id: 'unit-krishnankoil',
+    name: 'Sankara Eye Hospital – Krishnankoil',
+    city: 'Krishnankoil',
+    state: 'Tamil Nadu',
+    isAssessed: true,
+    bottlenecks: [],
+    establishedYear: 2004,
+    bedCapacity: 110,
+    contactHead: 'Dr. S. Vijay'
+  },
+  {
+    id: 'unit-ludhiana',
+    name: 'Sankara Eye Hospital – Ludhiana',
+    city: 'Ludhiana',
+    state: 'Punjab',
+    isAssessed: true,
+    bottlenecks: [],
+    establishedYear: 2019,
+    bedCapacity: 100,
+    contactHead: 'Dr. G. Singh'
   },
   {
     id: 'unit-shimoga',
-    name: 'Shimoga Unit',
-    city: 'Shimoga',
+    name: 'Sankara Eye Hospital – Shimoga',
+    city: 'Shivamogga (Shimoga)',
     state: 'Karnataka',
     isAssessed: true,
     bottlenecks: shimogaBottlenecks,
@@ -678,99 +755,33 @@ export const INITIAL_UNITS: HospitalUnit[] = [
     contactHead: 'Dr. B. Hegde'
   },
   {
-    id: 'unit-krishnankoil',
-    name: 'Krishnankoil Unit',
-    city: 'Krishnankoil',
-    state: 'Tamil Nadu',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2004,
-    bedCapacity: 110,
-    contactHead: 'Dr. S. Vijay'
-  },
-  {
-    id: 'unit-guntur',
-    name: 'Guntur Unit',
-    city: 'Guntur',
-    state: 'Andhra Pradesh',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2014,
-    bedCapacity: 115,
-    contactHead: 'Dr. C. Prasad'
-  },
-  {
-    id: 'unit-bengaluru',
-    name: 'Bengaluru - Electronic City',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2008,
-    bedCapacity: 150,
-    contactHead: 'Dr. M. Swaminathan'
-  },
-  {
-    id: 'unit-anand',
-    name: 'Anand Unit',
-    city: 'Anand',
-    state: 'Gujarat',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2017,
-    bedCapacity: 90,
-    contactHead: 'Dr. H. Patel'
-  },
-  {
-    id: 'unit-ludhiana',
-    name: 'Ludhiana Unit',
-    city: 'Ludhiana',
-    state: 'Punjab',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2019,
-    bedCapacity: 100,
-    contactHead: 'Dr. G. Singh'
-  },
-  {
-    id: 'unit-kanpur',
-    name: 'Kanpur Unit',
-    city: 'Kanpur',
-    state: 'Uttar Pradesh',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2020,
-    bedCapacity: 110,
-    contactHead: 'Dr. A. Agarwal'
-  },
-  {
     id: 'unit-indore',
-    name: 'Indore Unit',
+    name: 'Sankara Eye Centre – Indore',
     city: 'Indore',
     state: 'Madhya Pradesh',
-    isAssessed: false,
+    isAssessed: true,
     bottlenecks: [],
     establishedYear: 2021,
     bedCapacity: 95,
     contactHead: 'Dr. R. Sharma'
   },
   {
-    id: 'unit-jaipur',
-    name: 'Jaipur Unit',
-    city: 'Jaipur',
-    state: 'Rajasthan',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2022,
-    bedCapacity: 105,
-    contactHead: 'Dr. V. Rathore'
+    id: 'unit-panvel',
+    name: 'RJ Sankara Eye Hospital – Panvel',
+    city: 'Panvel / Navi Mumbai',
+    state: 'Maharashtra',
+    isAssessed: true,
+    bottlenecks: panvelBottlenecks,
+    establishedYear: 2018,
+    bedCapacity: 120,
+    contactHead: 'Dr. Neha V.'
   },
   {
     id: 'unit-hyderabad',
-    name: 'Hyderabad Unit',
+    name: 'Sankara Eye Hospital – Hyderabad',
     city: 'Hyderabad',
     state: 'Telangana',
-    isAssessed: false,
+    isAssessed: true,
     bottlenecks: [],
     establishedYear: 2023,
     bedCapacity: 130,
@@ -778,24 +789,13 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-varanasi',
-    name: 'Varanasi Unit',
+    name: 'RJ Sankara Eye Hospital – Varanasi',
     city: 'Varanasi',
     state: 'Uttar Pradesh',
-    isAssessed: false,
+    isAssessed: true,
     bottlenecks: [],
     establishedYear: 2021,
     bedCapacity: 85,
     contactHead: 'Dr. T. Rao'
-  },
-  {
-    id: 'unit-salem',
-    name: 'Salem Unit',
-    city: 'Salem',
-    state: 'Tamil Nadu',
-    isAssessed: false,
-    bottlenecks: [],
-    establishedYear: 2015,
-    bedCapacity: 80,
-    contactHead: 'Dr. M. Elangovan'
   }
 ];

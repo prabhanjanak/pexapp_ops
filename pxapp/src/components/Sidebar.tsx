@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)') {
       return [
         { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard },
-        { id: 'units', label: 'Hospital Units (14)', icon: Building2 },
+        { id: 'units', label: '14 Units & Unit Heads', icon: Building2 },
         { id: 'bottlenecks', label: 'Network Bottlenecks', icon: Activity, count: activeCount, countColor: 'bg-amber-500 text-slate-950' },
         { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
         { id: 'evidence', label: 'Evidence Approvals', icon: Camera },
@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     // Super Admin
     return [
       { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
-      { id: 'units', label: '14 Hospital Units', icon: Building2 },
+      { id: 'units', label: '14 Units & Unit Heads', icon: Building2 },
       { id: 'bottlenecks', label: 'Active Bottlenecks', icon: Activity, count: activeCount, countColor: 'bg-amber-500 text-slate-950' },
       { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
       { id: 'evidence', label: 'Photo Approvals', icon: Camera },

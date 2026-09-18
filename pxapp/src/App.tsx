@@ -417,6 +417,7 @@ export default function App() {
               onSelectUnitHead={setSelectedUnitId}
               onInitializeUnitAssessment={handleInitializeUnitAssessment}
               onUpdateBottleneck={handleUpdateBottleneck}
+              onRefreshUnits={() => loadData(true)}
             />
           )}
 
@@ -436,6 +437,7 @@ export default function App() {
               onResetData={handleResetData}
               onSeedAllUnits={handleSeedAllUnits}
               onOpenAuditLogs={() => setIsAuditModalOpen(true)}
+              onRefreshUnits={() => loadData(true)}
             />
           )}
 

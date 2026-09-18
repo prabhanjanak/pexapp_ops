@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HospitalUnit, SuperAdminTab, User, Bottleneck, DbHealthStatus, UserRole } from '../types';
 import { DashboardOverview } from './DashboardOverview';
+import { UnitsManagementView } from './UnitsManagementView';
 import { UnitHeadView } from './UnitHeadView';
 import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 import { CategoryDeptManager } from './CategoryDeptManager';
@@ -53,6 +54,7 @@ interface SuperAdminViewProps {
   onResetData: () => void;
   onSeedAllUnits: () => void;
   onOpenAuditLogs: () => void;
+  onRefreshUnits?: () => void;
 }
 
 export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
@@ -68,7 +70,8 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   onInitializeUnitAssessment,
   onResetData,
   onSeedAllUnits,
-  onOpenAuditLogs
+  onOpenAuditLogs,
+  onRefreshUnits
 }) => {
   const [usersList, setUsersList] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -289,12 +292,22 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
         </div>
       )}
 
-      {/* 1. DASHBOARD OR UNITS OVERVIEW */}
-      {(activeTab === 'dashboard' || activeTab === 'units') && (
+      {/* 1. EXECUTIVE DASHBOARD OVERVIEW */}
+      {activeTab === 'dashboard' && (
         <DashboardOverview
           units={units}
           currentUser={currentUser}
           onSelectUnit={(id) => setInspectedUnitId(id)}
+        />
+      )}
+
+      {/* 1b. 14 UNITS & UNIT HEADS DIRECTORY */}
+      {activeTab === 'units' && (
+        <UnitsManagementView
+          units={units}
+          currentUser={currentUser}
+          onRefreshUnits={onRefreshUnits || (() => {})}
+          onInspectUnit={(id) => setInspectedUnitId(id)}
         />
       )}
 

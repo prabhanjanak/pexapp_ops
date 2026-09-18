@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { HospitalUnit, OpsTeamTab, AuditLog, Bottleneck, User } from '../types';
 import { DashboardOverview } from './DashboardOverview';
+import { UnitsManagementView } from './UnitsManagementView';
 import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 import { UnitHeadView } from './UnitHeadView';
 import { CategoryDeptManager } from './CategoryDeptManager';
@@ -34,6 +35,7 @@ interface OperationsTeamViewProps {
   onSelectUnitHead: (unitId: string) => void;
   onInitializeUnitAssessment: (unitId: string) => void;
   onUpdateBottleneck?: (unitId: string, bottleneckId: string, updates: Partial<Bottleneck>) => void;
+  onRefreshUnits?: () => void;
   currentUser?: User;
 }
 
@@ -43,6 +45,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   onSelectUnitHead,
   onInitializeUnitAssessment,
   onUpdateBottleneck,
+  onRefreshUnits,
   currentUser = {
     id: 'user-opsteam',
     name: 'Central Operations Directorate',
@@ -145,12 +148,13 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
         />
       )}
 
-      {/* 2. HOSPITAL UNITS (14) BENCHMARKING TAB */}
+      {/* 2. HOSPITAL UNITS (14) DIRECTORY & BENCHMARKING */}
       {activeTab === 'units' && (
-        <DashboardOverview
+        <UnitsManagementView
           units={units}
           currentUser={currentUser}
-          onSelectUnit={(id) => setInspectedUnitId(id)}
+          onRefreshUnits={onRefreshUnits || (() => {})}
+          onInspectUnit={(id) => setInspectedUnitId(id)}
         />
       )}
 
