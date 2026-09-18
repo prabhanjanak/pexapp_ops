@@ -498,17 +498,23 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                       <div className="flex items-center gap-3">
                         <PhotoUploadCell
                           label="Before Evidence"
+                          type="before"
+                          bottleneckTitle={item.title}
                           photos={item.beforePhotos || []}
                           onPhotosChange={(photos) => handleBeforePhotosChange(item.id, photos)}
+                          onOpenLightbox={(photos, idx, title, type) => openLightbox(photos, idx, title, type)}
                           onViewPhoto={(idx) => openLightbox(item.beforePhotos || [], idx, item.title, 'before')}
-                          readOnly={viewOnly}
+                          readOnly={viewOnly || (currentUser.role !== 'Super Admin' && currentUser.role !== 'Unit Head')}
                         />
                         <PhotoUploadCell
                           label="After Evidence"
+                          type="after"
+                          bottleneckTitle={item.title}
                           photos={item.afterPhotos || []}
                           onPhotosChange={(photos) => handleAfterPhotosChange(item.id, photos)}
+                          onOpenLightbox={(photos, idx, title, type) => openLightbox(photos, idx, title, type)}
                           onViewPhoto={(idx) => openLightbox(item.afterPhotos || [], idx, item.title, 'after')}
-                          readOnly={viewOnly}
+                          readOnly={viewOnly || (currentUser.role !== 'Super Admin' && currentUser.role !== 'Unit Head')}
                         />
                       </div>
 

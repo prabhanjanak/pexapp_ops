@@ -14,20 +14,27 @@ import {
   AlertCircle,
   ChevronRight,
   ArrowRight,
-  Filter
+  Filter,
+  Plus,
+  Trash2,
+  X,
+  Edit2
 } from 'lucide-react';
 import { ImageLightboxModal } from './ImageLightboxModal';
+import { PhotoUploadCell } from './PhotoUploadCell';
 
 interface EvidenceApprovalGridProps {
   units: HospitalUnit[];
   selectedUnitId?: string;
   onUpdateBottleneck?: (unitId: string, bottleneckId: string, updates: Partial<Bottleneck>) => void;
+  currentUserRole?: string;
 }
 
 export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
   units,
   selectedUnitId,
-  onUpdateBottleneck
+  onUpdateBottleneck,
+  currentUserRole = 'Operations Team'
 }) => {
   const [filterUnitId, setFilterUnitId] = useState<string>(selectedUnitId || 'ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -44,6 +51,8 @@ export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
     title: '',
     type: 'evidence'
   });
+
+  const isSuperAdmin = currentUserRole === 'Super Admin';
 
   // Extract all bottlenecks with their unit metadata
   const allBottlenecksWithUnit = units.flatMap((u) =>
@@ -62,7 +71,8 @@ export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
     const hasEvidence =
       (item.beforePhotos && item.beforePhotos.length > 0) ||
       (item.afterPhotos && item.afterPhotos.length > 0) ||
-      Boolean(item.remarks);
+      Boolean(item.remarks) ||
+      isSuperAdmin; // Super Admin sees all bottlenecks to add/modify photos if needed
 
     return matchesUnit && matchesStatus && hasEvidence;
   });
@@ -82,6 +92,24 @@ export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
       onUpdateBottleneck(unitId, bottleneckId, {
         status: 'Completed',
         percentComplete: 100,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      });
+    }
+  };
+
+  const handleBeforePhotosChange = (unitId: string, bottleneckId: string, newPhotos: string[]) => {
+    if (onUpdateBottleneck) {
+      onUpdateBottleneck(unitId, bottleneckId, {
+        beforePhotos: newPhotos,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      });
+    }
+  };
+
+  const handleAfterPhotosChange = (unitId: string, bottleneckId: string, newPhotos: string[]) => {
+    if (onUpdateBottleneck) {
+      onUpdateBottleneck(unitId, bottleneckId, {
+        afterPhotos: newPhotos,
         lastUpdated: new Date().toISOString().split('T')[0]
       });
     }
@@ -107,11 +135,20 @@ export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
               <Camera className="w-5 h-5" />
             </span>
             <div>
-              <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                Management Evidence & Before/After Photo Review
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                  Management Evidence & Before/After Photo Review
+                </h2>
+                {isSuperAdmin && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-600 text-white shadow-2xs">
+                    Super Admin Edit Mode
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 font-medium">
-                Review on-ground visual evidence uploaded by Unit Heads and grant management sign-off
+                {isSuperAdmin
+                  ? 'View and modify/upload Before and After photographic evidence across all 14 hospital units.'
+                  : 'Review on-ground visual evidence uploaded by Unit Heads and inspect high-resolution comparison proofs.'}
               </p>
             </div>
           </div>
@@ -137,10 +174,9 @@ export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
             className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-xs text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
-            <option value="Verifying the progress">Verifying Progress</option>
-            <option value="Assigned work">Assigned Work</option>
+            <option value="In progress">In Progress</option>
             <option value="Completed">Completed</option>
-            <option value="Pending">Pending</option>
+            <option value="Pending">Pending / Not Started</option>
           </select>
         </div>
       </div>
@@ -220,91 +256,121 @@ export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   
                   {/* Column 1: Before Photos */}
-                  <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                        <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">
-                          Before Photos ({beforePhotos.length})
-                        </h4>
+                  <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-200 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">
+                            Before Photos ({beforePhotos.length})
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
+                          Initial State Evidence
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100/70 px-2 py-0.5 rounded-md">
-                        Initial Bottleneck State
-                      </span>
-                    </div>
 
-                    {beforePhotos.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {beforePhotos.map((photo, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => openLightbox(beforePhotos, idx, item.title, 'before')}
-                            className="relative group rounded-xl overflow-hidden aspect-video bg-slate-200 border border-amber-200 cursor-pointer shadow-2xs hover:border-amber-500 transition-all"
-                          >
-                            <img
-                              src={photo}
-                              alt={`Before photo ${idx + 1}`}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Maximize2 className="w-4 h-4" />
+                      {/* Photo Grid / Upload Cell */}
+                      {isSuperAdmin ? (
+                        <div className="space-y-3">
+                          <PhotoUploadCell
+                            label="Before Photos"
+                            type="before"
+                            bottleneckTitle={item.title}
+                            photos={beforePhotos}
+                            onPhotosChange={(photos) => handleBeforePhotosChange(item.unitActualId, item.id, photos)}
+                            onOpenLightbox={(photos, idx, title, type) => openLightbox(photos, idx, title, type)}
+                            readOnly={false}
+                          />
+                        </div>
+                      ) : beforePhotos.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                          {beforePhotos.map((photo, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => openLightbox(beforePhotos, idx, item.title, 'before')}
+                              className="relative group rounded-xl overflow-hidden aspect-video bg-slate-200 border border-amber-200 cursor-pointer shadow-2xs hover:border-amber-500 transition-all"
+                            >
+                              <img
+                                src={photo}
+                                alt={`Before photo ${idx + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                <Maximize2 className="w-4 h-4" />
+                              </div>
+                              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                #{idx + 1}
+                              </span>
                             </div>
-                            <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                              #{idx + 1}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-6 text-center text-xs text-amber-700/70 italic border border-dashed border-amber-200 rounded-xl bg-white/50">
-                        No before photos uploaded yet
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-6 text-center text-xs text-amber-700/70 italic border border-dashed border-amber-200 rounded-xl bg-white/50">
+                          No before photos uploaded yet
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Column 2: After Photos */}
-                  <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                        <h4 className="text-xs font-black text-emerald-900 uppercase tracking-wider">
-                          After Photos ({afterPhotos.length})
-                        </h4>
+                  <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-200 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                          <h4 className="text-xs font-black text-emerald-900 uppercase tracking-wider">
+                            After Photos ({afterPhotos.length})
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                          Resolved Proof
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
-                        Resolved State Proof
-                      </span>
-                    </div>
 
-                    {afterPhotos.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {afterPhotos.map((photo, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => openLightbox(afterPhotos, idx, item.title, 'after')}
-                            className="relative group rounded-xl overflow-hidden aspect-video bg-slate-200 border border-emerald-200 cursor-pointer shadow-2xs hover:border-emerald-500 transition-all"
-                          >
-                            <img
-                              src={photo}
-                              alt={`After photo ${idx + 1}`}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Maximize2 className="w-4 h-4" />
+                      {/* Photo Grid / Upload Cell */}
+                      {isSuperAdmin ? (
+                        <div className="space-y-3">
+                          <PhotoUploadCell
+                            label="After Photos"
+                            type="after"
+                            bottleneckTitle={item.title}
+                            photos={afterPhotos}
+                            onPhotosChange={(photos) => handleAfterPhotosChange(item.unitActualId, item.id, photos)}
+                            onOpenLightbox={(photos, idx, title, type) => openLightbox(photos, idx, title, type)}
+                            readOnly={false}
+                          />
+                        </div>
+                      ) : afterPhotos.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                          {afterPhotos.map((photo, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => openLightbox(afterPhotos, idx, item.title, 'after')}
+                              className="relative group rounded-xl overflow-hidden aspect-video bg-slate-200 border border-emerald-200 cursor-pointer shadow-2xs hover:border-emerald-500 transition-all"
+                            >
+                              <img
+                                src={photo}
+                                alt={`After photo ${idx + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                <Maximize2 className="w-4 h-4" />
+                              </div>
+                              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                #{idx + 1}
+                              </span>
                             </div>
-                            <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                              #{idx + 1}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-6 text-center text-xs text-emerald-700/70 italic border border-dashed border-emerald-200 rounded-xl bg-white/50">
-                        {item.status === 'Completed'
-                          ? 'Resolved without after photos'
-                          : 'Awaiting resolution photos from Unit Head'}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-6 text-center text-xs text-emerald-700/70 italic border border-dashed border-emerald-200 rounded-xl bg-white/50">
+                          {item.status === 'Completed'
+                            ? 'Resolved without after photos'
+                            : 'Awaiting resolution photos from Unit Head'}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                 </div>

@@ -1,12 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { Camera, Plus, Trash2, Maximize2, X, Loader2, Link2, UploadCloud, Check } from 'lucide-react';
 
-interface PhotoUploadCellProps {
+export interface PhotoUploadCellProps {
   photos?: string[];
-  type: 'before' | 'after';
-  bottleneckTitle: string;
+  type?: 'before' | 'after';
+  label?: string;
+  bottleneckTitle?: string;
   readOnly?: boolean;
   onPhotosChange?: (photos: string[]) => void;
+  onViewPhoto?: (index: number) => void;
   onOpenLightbox?: (photos: string[], initialIndex: number, title: string, type: 'before' | 'after') => void;
 }
 
@@ -62,9 +64,11 @@ const compressImageFile = (file: File): Promise<string> => {
 export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
   photos = [],
   type,
-  bottleneckTitle,
+  label,
+  bottleneckTitle = 'Operational Evidence',
   readOnly = false,
   onPhotosChange,
+  onViewPhoto,
   onOpenLightbox
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +76,19 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInputValue, setUrlInputValue] = useState('');
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Determine photo category type (before or after)
+  const resolvedType: 'before' | 'after' = type || (label && label.toLowerCase().includes('before') ? 'before' : 'after');
+  const isBefore = resolvedType === 'before';
+  const displayLabel = label || (isBefore ? 'Before Evidence' : 'After Evidence');
+
+  const handleThumbnailClick = (idx: number) => {
+    if (onViewPhoto) {
+      onViewPhoto(idx);
+    } else if (onOpenLightbox) {
+      onOpenLightbox(photos, idx, bottleneckTitle, resolvedType);
+    }
+  };
 
   // Handle local file selection & multi-upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,8 +147,6 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
     onPhotosChange(updated);
   };
 
-  const isBefore = type === 'before';
-
   return (
     <div className="flex flex-col gap-1 relative">
       {/* Hidden file input */}
@@ -146,19 +161,24 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
         />
       )}
 
+      {/* Label indicator */}
+      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+        {displayLabel}
+      </span>
+
       {/* Thumbnails preview strip */}
       <div className="flex items-center gap-2 flex-wrap">
         {photos && photos.length > 0 && (
           photos.slice(0, 3).map((photoUrl, idx) => (
             <div
               key={idx}
-              onClick={() => onOpenLightbox && onOpenLightbox(photos, idx, bottleneckTitle, type)}
+              onClick={() => handleThumbnailClick(idx)}
               className="relative group/thumb w-12 h-12 rounded-xl overflow-hidden border border-slate-300 bg-slate-100 shadow-xs cursor-pointer hover:border-orange-500 hover:scale-105 transition-all shrink-0"
-              title={`Click to preview ${type} photo #${idx + 1}`}
+              title={`Click to preview ${resolvedType} photo #${idx + 1}`}
             >
               <img
                 src={photoUrl}
-                alt={`${type} evidence ${idx + 1}`}
+                alt={`${resolvedType} evidence ${idx + 1}`}
                 className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform duration-200"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
@@ -182,7 +202,7 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
         {/* Count badge if > 3 photos */}
         {photos && photos.length > 3 && (
           <div
-            onClick={() => onOpenLightbox && onOpenLightbox(photos, 3, bottleneckTitle, type)}
+            onClick={() => handleThumbnailClick(3)}
             className="w-10 h-10 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-black flex items-center justify-center cursor-pointer border border-slate-300 shadow-2xs shrink-0"
             title={`+${photos.length - 3} more photos`}
           >
@@ -212,7 +232,7 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
                   ? 'border-dashed border-amber-300 text-amber-900 bg-amber-50/50 hover:bg-amber-100 hover:border-amber-400'
                   : 'border-dashed border-emerald-300 text-emerald-900 bg-emerald-50/50 hover:bg-emerald-100 hover:border-emerald-400'
               }`}
-              title={`Upload ${type} photo from device`}
+              title={`Upload ${resolvedType} photo from device`}
             >
               {photos && photos.length > 0 ? (
                 <>
@@ -222,7 +242,7 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
               ) : (
                 <>
                   <Camera className="w-4 h-4" />
-                  <span>+ {isBefore ? 'Before Photo' : 'After Photo'}</span>
+                  <span>+ {isBefore ? 'Before' : 'After'}</span>
                 </>
               )}
             </button>
@@ -241,7 +261,7 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
 
         {/* Read-only empty state */}
         {readOnly && (!photos || photos.length === 0) && (
-          <span className="text-xs text-slate-400 italic font-medium">No {type} photos</span>
+          <span className="text-xs text-slate-400 italic font-medium">No {resolvedType} photos</span>
         )}
       </div>
 
