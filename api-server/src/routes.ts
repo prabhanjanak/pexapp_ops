@@ -6,6 +6,7 @@ export const router = Router();
 function formatBottleneck(row: any) {
   let beforePhotos: string[] = [];
   let afterPhotos: string[] = [];
+  let comments: any[] = [];
   try {
     if (typeof row.before_photos === 'string') beforePhotos = JSON.parse(row.before_photos);
     else if (Array.isArray(row.before_photos)) beforePhotos = row.before_photos;
@@ -14,13 +15,22 @@ function formatBottleneck(row: any) {
     if (typeof row.after_photos === 'string') afterPhotos = JSON.parse(row.after_photos);
     else if (Array.isArray(row.after_photos)) afterPhotos = row.after_photos;
   } catch (_) {}
+  try {
+    if (typeof row.comments === 'string') comments = JSON.parse(row.comments);
+    else if (Array.isArray(row.comments)) comments = row.comments;
+  } catch (_) {}
+
+  // Normalize status if legacy
+  let status = row.status;
+  if (status === 'Acknowledge' || status === 'Not Started') status = 'Pending';
+  if (status === 'Assigned work' || status === 'In Progress') status = 'In progress';
 
   return {
     id: row.id,
     unitId: row.unit_id,
     title: row.title,
     category: row.category,
-    status: row.status,
+    status,
     percentComplete: Number(row.percent_complete) || 0,
     owner: row.owner,
     lastUpdated: row.last_updated,
@@ -29,7 +39,8 @@ function formatBottleneck(row: any) {
     notes: row.notes || '',
     remarks: row.remarks || '',
     beforePhotos,
-    afterPhotos
+    afterPhotos,
+    comments
   };
 }
 
@@ -916,6 +927,173 @@ router.get('/audit-logs', async (req: Request, res: Response) => {
       userRole: r.user_role,
       createdAt: r.created_at
     })));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 15. Post Management / Operations Comment on Bottleneck
+router.post('/bottlenecks/:id/comments', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { authorName, authorRole, authorEmail, message } = req.body;
+
+  if (!message || !message.trim()) {
+    return res.status(400).json({ error: 'Comment message is required' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const checkRes = await client.query('SELECT * FROM bottlenecks WHERE id = $1', [id]);
+    if (checkRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: `Bottleneck ${id} not found` });
+    }
+
+    const item = checkRes.rows[0];
+    let comments: any[] = [];
+    try {
+      if (typeof item.comments === 'string') comments = JSON.parse(item.comments);
+      else if (Array.isArray(item.comments)) comments = item.comments;
+    } catch (_) {}
+
+    const newComment = {
+      id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      authorName: authorName || 'Central Operations',
+      authorRole: authorRole || 'Operations Team',
+      authorEmail: authorEmail || '',
+      message: message.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    comments.push(newComment);
+
+    const updateRes = await client.query(
+      `UPDATE bottlenecks
+       SET comments = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING *`,
+      [JSON.stringify(comments), id]
+    );
+
+    await client.query(
+      `INSERT INTO audit_logs (unit_id, bottleneck_id, action, details, user_role)
+       VALUES ($1, $2, 'DIRECTIVE_COMMENT_ADDED', $3, $4)`,
+      [item.unit_id, id, JSON.stringify({ author: authorName, role: authorRole, text: message.trim().slice(0, 80) }), authorRole || 'Operations Team']
+    );
+
+    await client.query('COMMIT');
+    res.status(201).json(formatBottleneck(updateRes.rows[0]));
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// 16. Categories Management API
+router.get('/categories', async (req: Request, res: Response) => {
+  try {
+    const catsRes = await pool.query('SELECT * FROM categories ORDER BY name ASC');
+    res.json(catsRes.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      department: r.department,
+      description: r.description || '',
+      createdAt: r.created_at
+    })));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/categories', async (req: Request, res: Response) => {
+  const { name, department, description } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Category name is required' });
+  }
+
+  const catId = `cat-${Date.now()}`;
+  try {
+    const insertRes = await pool.query(
+      `INSERT INTO categories (id, name, department, description)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [catId, name.trim(), department || 'General Operations', description || '']
+    );
+
+    await pool.query(
+      `INSERT INTO audit_logs (action, details, user_role)
+       VALUES ('CREATE_CATEGORY', $1, 'Super Admin')`,
+      [JSON.stringify({ name: name.trim(), department })]
+    );
+
+    res.status(201).json(insertRes.rows[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/categories/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM categories WHERE id = $1', [id]);
+    res.json({ success: true, deletedId: id });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 17. Departments Management API
+router.get('/departments', async (req: Request, res: Response) => {
+  try {
+    const deptsRes = await pool.query('SELECT * FROM departments ORDER BY name ASC');
+    res.json(deptsRes.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      code: r.code || '',
+      headContact: r.head_contact || '',
+      createdAt: r.created_at
+    })));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/departments', async (req: Request, res: Response) => {
+  const { name, code, headContact } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Department name is required' });
+  }
+
+  const deptId = `dept-${Date.now()}`;
+  try {
+    const insertRes = await pool.query(
+      `INSERT INTO departments (id, name, code, head_contact)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [deptId, name.trim(), code || '', headContact || '']
+    );
+
+    await pool.query(
+      `INSERT INTO audit_logs (action, details, user_role)
+       VALUES ('CREATE_DEPARTMENT', $1, 'Super Admin')`,
+      [JSON.stringify({ name: name.trim(), code })]
+    );
+
+    res.status(201).json(insertRes.rows[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/departments/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM departments WHERE id = $1', [id]);
+    res.json({ success: true, deletedId: id });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
