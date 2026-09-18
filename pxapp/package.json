@@ -5,10 +5,10 @@
   "description": "Sankara Eye Care Institutions - Project Patient Experience (PPE) Operations App",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n \"API,VITE\" -c \"yellow,cyan\" \"tsx watch server/index.ts\" \"vite --port=3000 --host=0.0.0.0\"",
+    "dev": "concurrently -n \"API,VITE\" -c \"yellow,cyan\" \"PORT=3001 tsx watch server/index.ts\" \"vite --port=3000 --host=0.0.0.0\"",
     "build": "vite build",
     "start": "tsx server/index.ts",
-    "server": "tsx watch server/index.ts",
+    "server": "PORT=3001 tsx watch server/index.ts",
     "client": "vite --port=3000 --host=0.0.0.0",
     "preview": "vite preview",
     "db:init": "tsx server/initDb.ts",

@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const distPath = path.resolve(__dirname, '../dist');
 
 const app = express();
-const PORT = parseInt(process.env.PORT || '3000', 10);
+const PORT = parseInt(process.env.PORT || process.env.API_PORT || '3000', 10);
 
 // Middleware
 app.use(cors({
