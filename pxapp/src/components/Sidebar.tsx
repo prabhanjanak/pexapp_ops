@@ -17,7 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,6 +30,8 @@ interface SidebarProps {
   units: HospitalUnit[];
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onLogout?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -37,7 +41,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onBackToPortal,
   units,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onLogout,
+  onOpenProfile
 }) => {
   // Compute badge counts
   let activeCount = 0;
@@ -101,8 +107,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         isCollapsed ? 'w-20' : 'w-64 sm:w-72'
       }`}
     >
-      {/* Top Brand & Portal Switcher */}
-      <div>
+      {/* Top Brand & Portal Switcher & Navigation */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           {!isCollapsed && (
             <div className="flex items-center space-x-3 overflow-hidden">
@@ -160,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="mx-3 mb-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-[11px] text-orange-300">
             <p className="font-bold flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-              <span>{currentUser.unitName}</span>
+              <span className="truncate">{currentUser.unitName}</span>
             </p>
           </div>
         )}
@@ -197,19 +203,87 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500">
-        {!isCollapsed ? (
-          <div>
-            <p className="font-bold text-slate-400 truncate">Sankara Operations</p>
-            <p className="text-[10px] text-slate-600">v2.0 • PostgreSQL DB</p>
+      {/* Left Bottom Panel Bar: Employee Details & Sign Out Button */}
+      {!isCollapsed ? (
+        <div className="p-3 border-t border-slate-800 bg-slate-950/80 space-y-2.5 shrink-0">
+          {/* Employee Info Card */}
+          <div
+            onClick={onOpenProfile}
+            className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-orange-500/40 hover:bg-slate-800/90 transition-all cursor-pointer group"
+            title="Click to view employee profile & change password"
+          >
+            {/* Avatar with gradient & online dot */}
+            <div className="relative shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 via-amber-500 to-amber-400 text-white font-black text-sm flex items-center justify-center shadow-md shadow-orange-600/20 group-hover:scale-105 transition-transform">
+                {currentUser.avatarInitials || (currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : 'SK')}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full" />
+            </div>
+
+            {/* Details */}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black text-white truncate group-hover:text-orange-400 transition-colors">
+                {currentUser.name}
+              </p>
+              
+              <p className="text-[10px] font-bold text-orange-400/90 truncate">
+                {currentUser.empId ? `EMP ID: ${currentUser.empId}` : currentUser.designation || currentUser.role}
+              </p>
+
+              <p className="text-[9px] text-slate-400 truncate">
+                {currentUser.role === 'Unit Head' && currentUser.unitName ? currentUser.unitName : currentUser.email}
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="text-center">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" title="Online" />
+
+          {/* Sign Out Action Button */}
+          {onLogout && (
+            <button
+              type="button"
+              id="sidebar-signout-btn"
+              onClick={onLogout}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 hover:border-rose-600 text-xs font-bold transition-all duration-200 cursor-pointer shadow-xs group"
+              title="Sign Out of Portal"
+            >
+              <LogOut className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Sign Out</span>
+            </button>
+          )}
+
+          {/* Subtext Footer */}
+          <div className="px-1 flex items-center justify-between text-[9px] text-slate-500">
+            <span>Sankara Eye Foundation</span>
+            <span>v2.0</span>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* Collapsed Bottom Bar */
+        <div className="p-2 border-t border-slate-800 bg-slate-950/80 flex flex-col items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="relative group cursor-pointer p-1"
+            title={`${currentUser.name} (${currentUser.empId ? `EMP: ${currentUser.empId} • ` : ''}${currentUser.role})`}
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-600 via-amber-500 to-amber-400 text-white font-black text-xs flex items-center justify-center shadow-md">
+              {currentUser.avatarInitials || (currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : 'SK')}
+            </div>
+            <span className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full" />
+          </button>
+
+          {onLogout && (
+            <button
+              type="button"
+              id="sidebar-collapsed-signout-btn"
+              onClick={onLogout}
+              className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white transition-all cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
     </aside>
   );
