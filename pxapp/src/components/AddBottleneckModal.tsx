@@ -1,24 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bottleneck, BottleneckCategory, BottleneckStatus, STATUS_PERCENT_MAP } from '../types';
+import { Bottleneck, BottleneckCategory, BottleneckStatus, HospitalUnit, STATUS_PERCENT_MAP } from '../types';
 import { CATEGORIES } from '../data/seedData';
 import { api } from '../services/api';
-import { X, PlusCircle, Camera, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { X, PlusCircle, Camera, Image as ImageIcon, Trash2, Building2 } from 'lucide-react';
 
 interface AddBottleneckModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>) => void;
-  unitName: string;
+  onAdd: (newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>, targetUnitId?: string) => void;
+  unitName?: string;
+  units?: HospitalUnit[];
+  defaultUnitId?: string;
 }
 
 export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
   isOpen,
   onClose,
   onAdd,
-  unitName
+  unitName,
+  units,
+  defaultUnitId
 }) => {
+  const [selectedTargetUnitId, setSelectedTargetUnitId] = useState<string>(
+    defaultUnitId || (units && units.length > 0 ? units[0].id : '')
+  );
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<BottleneckCategory>('OPD Wait Time');
+  const [department, setDepartment] = useState('');
   const [status, setStatus] = useState<BottleneckStatus>('Pending');
   const [owner, setOwner] = useState('');
   const [impactLevel, setImpactLevel] = useState<'High' | 'Medium' | 'Low'>('High');
@@ -29,6 +37,14 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<string[]>([...CATEGORIES]);
+
+  useEffect(() => {
+    if (defaultUnitId) {
+      setSelectedTargetUnitId(defaultUnitId);
+    } else if (units && units.length > 0 && !selectedTargetUnitId) {
+      setSelectedTargetUnitId(units[0].id);
+    }
+  }, [defaultUnitId, units]);
 
   const beforeInputRef = useRef<HTMLInputElement>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
@@ -113,30 +129,37 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
 
     const percent = STATUS_PERCENT_MAP[status] || 0;
 
-    onAdd({
-      title: title.trim(),
-      category,
-      status,
-      percentComplete: percent,
-      owner: owner.trim() || 'Unit PX Team',
-      impactLevel,
-      targetDate: targetDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      notes: notes.trim(),
-      remarks: remarks.trim(),
-      beforePhotos,
-      afterPhotos
-    });
+    onAdd(
+      {
+        title: title.trim(),
+        category,
+        department: department.trim() || undefined,
+        status,
+        percentComplete: percent,
+        owner: owner.trim() || 'Unit PX Team',
+        impactLevel,
+        targetDate: targetDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notes: notes.trim(),
+        remarks: remarks.trim(),
+        beforePhotos,
+        afterPhotos
+      },
+      selectedTargetUnitId || undefined
+    );
 
     // Reset form
     setTitle('');
     setStatus('Pending');
     setOwner('');
+    setDepartment('');
     setNotes('');
     setRemarks('');
     setBeforePhotos([]);
     setAfterPhotos([]);
     onClose();
   };
+
+  const currentUnitDisplay = units?.find(u => u.id === selectedTargetUnitId)?.name || unitName || 'Hospital Unit';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
@@ -160,9 +183,34 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
-          <div className="bg-orange-50/80 p-3 rounded-2xl border border-orange-100 text-xs text-orange-950 font-medium">
-            Registering bottleneck for <span className="font-extrabold text-orange-900">{unitName}</span>
-          </div>
+          {/* Target Hospital Unit Selector */}
+          {units && units.length > 0 ? (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Target Hospital Unit *
+              </label>
+              <div className="relative">
+                <Building2 className="w-4 h-4 text-orange-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <select
+                  required
+                  id="add-bottleneck-unit-select"
+                  value={selectedTargetUnitId}
+                  onChange={(e) => setSelectedTargetUnitId(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-orange-50/50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} — {u.city}, {u.state}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-orange-50/80 p-3 rounded-2xl border border-orange-100 text-xs text-orange-950 font-medium">
+              Registering bottleneck for <span className="font-extrabold text-orange-900">{currentUnitDisplay}</span>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -200,6 +248,37 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Impact Level
+              </label>
+              <select
+                id="add-bottleneck-impact"
+                value={impactLevel}
+                onChange={(e) => setImpactLevel(e.target.value as 'High' | 'Medium' | 'Low')}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+              >
+                <option value="High">🔴 High Priority / Critical</option>
+                <option value="Medium">🟡 Medium Priority</option>
+                <option value="Low">🟢 Low / Operational</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Department / Section (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Outpatient Department / Lab"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Initial Workflow Status
               </label>
               <select
@@ -209,7 +288,7 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-800"
               >
                 <option value="Pending">🟡 1. Pending / Not Started (0%)</option>
-                <option value="In progress">🔵 2. In progress (50-70%)</option>
+                <option value="In progress">🔵 2. In progress (50%)</option>
                 <option value="Completed">🟢 3. Completed (100%)</option>
               </select>
             </div>

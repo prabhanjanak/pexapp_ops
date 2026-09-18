@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { HospitalUnit, User } from '../types';
+import { HospitalUnit, User, Bottleneck } from '../types';
 import { api } from '../services/api';
+import { AddBottleneckModal } from './AddBottleneckModal';
 import {
   Building2,
   MapPin,
@@ -18,7 +19,8 @@ import {
   Stethoscope,
   Activity,
   ArrowRight,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 
 interface UnitsManagementViewProps {
@@ -26,16 +28,19 @@ interface UnitsManagementViewProps {
   currentUser: User;
   onRefreshUnits: () => void;
   onInspectUnit: (unitId: string) => void;
+  onAddBottleneck?: (unitId: string, newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>) => void;
 }
 
 export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
   units,
   currentUser,
   onRefreshUnits,
-  onInspectUnit
+  onInspectUnit,
+  onAddBottleneck
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnitForHead, setSelectedUnitForHead] = useState<HospitalUnit | null>(null);
+  const [selectedUnitForAddBottleneck, setSelectedUnitForAddBottleneck] = useState<HospitalUnit | null>(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -283,22 +288,35 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                 </div>
 
                 {/* Card Action Buttons */}
-                <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => handleOpenAssignModal(unit)}
-                    className="py-2.5 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer hover:shadow-orange-500/30"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>Edit Leadership</span>
-                  </button>
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleOpenAssignModal(unit)}
+                      className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Edit Leadership</span>
+                    </button>
 
-                  <button
-                    onClick={() => onInspectUnit(unit.id)}
-                    className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Bottlenecks ({activeBottlenecks})</span>
-                  </button>
+                    <button
+                      onClick={() => onInspectUnit(unit.id)}
+                      className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Bottlenecks ({activeBottlenecks})</span>
+                    </button>
+                  </div>
+
+                  {onAddBottleneck && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUnitForAddBottleneck(unit)}
+                      className="w-full py-2 px-3 rounded-xl bg-orange-50 hover:bg-orange-100/80 border border-orange-200 text-orange-800 font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-orange-600" />
+                      <span>Log Bottleneck for {unit.city}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -469,6 +487,24 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
 
           </div>
         </div>
+      )}
+
+      {/* Add Bottleneck Modal */}
+      {selectedUnitForAddBottleneck && (
+        <AddBottleneckModal
+          isOpen={Boolean(selectedUnitForAddBottleneck)}
+          onClose={() => setSelectedUnitForAddBottleneck(null)}
+          unitName={selectedUnitForAddBottleneck.name}
+          units={units}
+          defaultUnitId={selectedUnitForAddBottleneck.id}
+          onAdd={(newB, targetUnitId) => {
+            const destUnitId = targetUnitId || selectedUnitForAddBottleneck.id;
+            if (onAddBottleneck) {
+              onAddBottleneck(destUnitId, newB);
+            }
+            setSelectedUnitForAddBottleneck(null);
+          }}
+        />
       )}
 
     </div>

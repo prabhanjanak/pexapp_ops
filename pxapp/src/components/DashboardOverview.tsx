@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { HospitalUnit, User } from '../types';
+import { HospitalUnit, User, Bottleneck } from '../types';
 import { calculateOrgStats, calculateUnitStats } from '../utils/calc';
+import { AddBottleneckModal } from './AddBottleneckModal';
 import {
   Building2,
   TrendingUp,
@@ -14,21 +15,26 @@ import {
   ArrowUpRight,
   Filter,
   Check,
-  Search
+  Search,
+  Plus
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
   units: HospitalUnit[];
   currentUser: User;
   onSelectUnit?: (unitId: string) => void;
+  onAddBottleneck?: (unitId: string, newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>) => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   units,
   currentUser,
-  onSelectUnit
+  onSelectUnit,
+  onAddBottleneck
 }) => {
   const [searchFilter, setSearchFilter] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [targetUnitForAdd, setTargetUnitForAdd] = useState<string | undefined>(currentUser.unitId);
   const orgStats = calculateOrgStats(units);
 
   // Filter units
@@ -247,15 +253,33 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </p>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search hospital unit..."
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search hospital unit..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            {onAddBottleneck && (
+              <button
+                type="button"
+                id="dash-add-bottleneck-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTargetUnitForAdd(currentUser.unitId || units[0]?.id);
+                  setIsAddModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/20 hover:scale-[1.02] transition-all shrink-0 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Log Bottleneck</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -370,6 +394,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Add Bottleneck Modal */}
+      {isAddModalOpen && (
+        <AddBottleneckModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          units={units}
+          defaultUnitId={targetUnitForAdd || currentUser.unitId || units[0]?.id}
+          onAdd={(newB, targetUnitId) => {
+            const destUnit = targetUnitId || targetUnitForAdd || currentUser.unitId || units[0]?.id;
+            if (destUnit && onAddBottleneck) {
+              onAddBottleneck(destUnit, newB);
+            }
+            setIsAddModalOpen(false);
+          }}
+        />
+      )}
 
     </div>
   );

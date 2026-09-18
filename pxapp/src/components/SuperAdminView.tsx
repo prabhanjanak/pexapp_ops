@@ -6,6 +6,7 @@ import { UnitHeadView } from './UnitHeadView';
 import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 import { CategoryDeptManager } from './CategoryDeptManager';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
+import { AddBottleneckModal } from './AddBottleneckModal';
 import { api } from '../services/api';
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import {
@@ -80,6 +81,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const [deleteTargetUser, setDeleteTargetUser] = useState<User | null>(null);
   const [inspectedUnitId, setInspectedUnitId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isAddBottleneckModalOpen, setIsAddBottleneckModalOpen] = useState(false);
 
   // Active / Completed Bottleneck state
   const [searchQuery, setSearchQuery] = useState('');
@@ -298,6 +300,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           units={units}
           currentUser={currentUser}
           onSelectUnit={(id) => setInspectedUnitId(id)}
+          onAddBottleneck={onAddBottleneck}
         />
       )}
 
@@ -308,6 +311,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           currentUser={currentUser}
           onRefreshUnits={onRefreshUnits || (() => {})}
           onInspectUnit={(id) => setInspectedUnitId(id)}
+          onAddBottleneck={onAddBottleneck}
         />
       )}
 
@@ -360,6 +364,18 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                 <option value="targetDate">Sort: Target Date</option>
                 <option value="impact">Sort: Impact Level</option>
               </select>
+
+              {activeTab === 'bottlenecks' && onAddBottleneck && (
+                <button
+                  type="button"
+                  id="admin-add-bottleneck-btn"
+                  onClick={() => setIsAddBottleneckModalOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/20 hover:scale-[1.02] transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Log Bottleneck</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -746,6 +762,23 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           onCommentAdded={(updated) => {
             onUpdateBottleneck(activeCommentBottleneck.unitId, updated.id, updated);
             setActiveCommentBottleneck({ unitId: activeCommentBottleneck.unitId, bottleneck: updated });
+          }}
+        />
+      )}
+
+      {/* Add Bottleneck Modal */}
+      {isAddBottleneckModalOpen && (
+        <AddBottleneckModal
+          isOpen={isAddBottleneckModalOpen}
+          onClose={() => setIsAddBottleneckModalOpen(false)}
+          units={units}
+          defaultUnitId={selectedUnitFilter !== 'ALL' ? selectedUnitFilter : (selectedUnitId || units[0]?.id)}
+          onAdd={(newB, targetUnitId) => {
+            const destUnit = targetUnitId || (selectedUnitFilter !== 'ALL' ? selectedUnitFilter : (selectedUnitId || units[0]?.id));
+            if (destUnit && onAddBottleneck) {
+              onAddBottleneck(destUnit, newB);
+            }
+            setIsAddBottleneckModalOpen(false);
           }}
         />
       )}

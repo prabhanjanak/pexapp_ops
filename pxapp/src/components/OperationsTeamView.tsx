@@ -4,6 +4,7 @@ import { DashboardOverview } from './DashboardOverview';
 import { UnitsManagementView } from './UnitsManagementView';
 import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 import { UnitHeadView } from './UnitHeadView';
+import { AddBottleneckModal } from './AddBottleneckModal';
 import { CategoryDeptManager } from './CategoryDeptManager';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { api } from '../services/api';
@@ -26,7 +27,8 @@ import {
   MessageSquare,
   ArrowLeft,
   Search,
-  ArrowUpDown
+  ArrowUpDown,
+  Plus
 } from 'lucide-react';
 
 interface OperationsTeamViewProps {
@@ -35,6 +37,8 @@ interface OperationsTeamViewProps {
   onSelectUnitHead: (unitId: string) => void;
   onInitializeUnitAssessment: (unitId: string) => void;
   onUpdateBottleneck?: (unitId: string, bottleneckId: string, updates: Partial<Bottleneck>) => void;
+  onAddBottleneck?: (unitId: string, newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>) => void;
+  onDeleteBottleneck?: (unitId: string, bottleneckId: string) => void;
   onRefreshUnits?: () => void;
   currentUser?: User;
 }
@@ -45,6 +49,8 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   onSelectUnitHead,
   onInitializeUnitAssessment,
   onUpdateBottleneck,
+  onAddBottleneck,
+  onDeleteBottleneck,
   onRefreshUnits,
   currentUser = {
     id: 'user-opsteam',
@@ -61,6 +67,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   const [selectedUnitFilter, setSelectedUnitFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'targetDate' | 'impact'>('newest');
   const [activeCommentBottleneck, setActiveCommentBottleneck] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
+  const [isAddBottleneckModalOpen, setIsAddBottleneckModalOpen] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'activity') {
@@ -129,6 +136,8 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
           currentUser={currentUser}
           activeTab="bottlenecks"
           onUpdateBottleneck={onUpdateBottleneck}
+          onAddBottleneck={onAddBottleneck}
+          onDeleteBottleneck={onDeleteBottleneck}
           viewOnly={false}
           onBackToDashboard={() => setInspectedUnitId(null)}
         />
@@ -145,6 +154,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
           units={units}
           currentUser={currentUser}
           onSelectUnit={(id) => setInspectedUnitId(id)}
+          onAddBottleneck={onAddBottleneck}
         />
       )}
 
@@ -155,6 +165,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
           currentUser={currentUser}
           onRefreshUnits={onRefreshUnits || (() => {})}
           onInspectUnit={(id) => setInspectedUnitId(id)}
+          onAddBottleneck={onAddBottleneck}
         />
       )}
 
@@ -177,7 +188,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
               </h2>
             </div>
 
-            {/* Filter Bar */}
+            {/* Filter Bar & Add Action */}
             <div className="flex flex-wrap items-center gap-2.5">
               <div className="relative w-full sm:w-64">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -208,6 +219,18 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                 <option value="targetDate">Sort: Target Date</option>
                 <option value="impact">Sort: Impact Level</option>
               </select>
+
+              {activeTab === 'bottlenecks' && onAddBottleneck && (
+                <button
+                  type="button"
+                  id="ops-add-bottleneck-btn"
+                  onClick={() => setIsAddBottleneckModalOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/20 hover:scale-[1.02] transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Log Bottleneck</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -350,6 +373,23 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
           onCommentAdded={(updated) => {
             onUpdateBottleneck?.(activeCommentBottleneck.unitId, updated.id, updated);
             setActiveCommentBottleneck({ unitId: activeCommentBottleneck.unitId, bottleneck: updated });
+          }}
+        />
+      )}
+
+      {/* Add Bottleneck Modal */}
+      {isAddBottleneckModalOpen && (
+        <AddBottleneckModal
+          isOpen={isAddBottleneckModalOpen}
+          onClose={() => setIsAddBottleneckModalOpen(false)}
+          units={units}
+          defaultUnitId={selectedUnitFilter !== 'ALL' ? selectedUnitFilter : units[0]?.id}
+          onAdd={(newB, targetUnitId) => {
+            const destUnit = targetUnitId || (selectedUnitFilter !== 'ALL' ? selectedUnitFilter : units[0]?.id);
+            if (destUnit && onAddBottleneck) {
+              onAddBottleneck(destUnit, newB);
+            }
+            setIsAddBottleneckModalOpen(false);
           }}
         />
       )}

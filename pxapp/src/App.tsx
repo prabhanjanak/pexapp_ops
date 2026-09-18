@@ -417,6 +417,8 @@ export default function App() {
               onSelectUnitHead={setSelectedUnitId}
               onInitializeUnitAssessment={handleInitializeUnitAssessment}
               onUpdateBottleneck={handleUpdateBottleneck}
+              onAddBottleneck={handleAddBottleneck}
+              onDeleteBottleneck={handleDeleteBottleneck}
               onRefreshUnits={() => loadData(true)}
             />
           )}
