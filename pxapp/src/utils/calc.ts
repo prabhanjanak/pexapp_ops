@@ -1,6 +1,7 @@
 import { HospitalUnit, Bottleneck, UnitStats, OrgStats, BottleneckStatus, STATUS_PERCENT_MAP } from '../types';
 
-export function normalizeStatus(status: string): BottleneckStatus {
+export function normalizeStatus(status: string, percentComplete?: number): BottleneckStatus {
+  if (percentComplete !== undefined && percentComplete >= 100) return 'Completed';
   if (!status) return 'Pending';
   const s = status.trim().toLowerCase();
   if (s.includes('complete') || s.includes('resolved') || s.includes('done')) {

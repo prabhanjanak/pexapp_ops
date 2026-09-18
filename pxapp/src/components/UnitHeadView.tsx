@@ -77,7 +77,18 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'targetDate' | 'impact' | 'updated'>('newest');
+  const [viewScope, setViewScope] = useState<'active' | 'completed' | 'all'>(
+    activeTab === 'completed' ? 'completed' : 'active'
+  );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'completed') {
+      setViewScope('completed');
+    } else if (activeTab === 'bottlenecks') {
+      setViewScope('active');
+    }
+  }, [activeTab]);
 
   // Comments Modal state
   const [activeCommentBottleneck, setActiveCommentBottleneck] = useState<Bottleneck | null>(null);
@@ -125,7 +136,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     const catMap = new Map<string, { total: number; resolved: number; inProgress: number; pending: number }>();
     
     for (const b of currentUnit.bottlenecks) {
-      const norm = normalizeStatus(b.status);
+      const norm = normalizeStatus(b.status, b.percentComplete);
       if (!catMap.has(b.category)) {
         catMap.set(b.category, { total: 0, resolved: 0, inProgress: 0, pending: 0 });
       }
@@ -156,12 +167,11 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
         (item.notes && item.notes.toLowerCase().includes(query)) ||
         (item.remarks && item.remarks.toLowerCase().includes(query));
 
-      const norm = normalizeStatus(item.status);
+      const norm = normalizeStatus(item.status, item.percentComplete);
       
-      // In active tab 'bottlenecks', filter out 'Completed' items
-      if (activeTab === 'bottlenecks' && norm === 'Completed') return false;
-      // In 'completed' tab, show only 'Completed' items
-      if (activeTab === 'completed' && norm !== 'Completed') return false;
+      // Filter based on viewScope
+      if (viewScope === 'active' && norm === 'Completed') return false;
+      if (viewScope === 'completed' && norm !== 'Completed') return false;
 
       const matchesStatus =
         selectedStatusFilter === 'ALL' ||
@@ -193,22 +203,35 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     });
 
     return list;
-  }, [currentUnit, searchQuery, selectedStatusFilter, selectedCategoryFilter, activeTab, sortBy]);
+  }, [currentUnit, searchQuery, selectedStatusFilter, selectedCategoryFilter, viewScope, sortBy]);
 
-  // Handle Status Change
+  // Handle Status Change directly
   const handleStatusChange = (bottleneck: Bottleneck, targetStatus: BottleneckStatus) => {
-    if (targetStatus === 'In progress') {
-      setAssignModalState({
-        isOpen: true,
-        bottleneck: { ...bottleneck, status: 'In progress' }
-      });
-      return;
+    let newPercent = 0;
+    if (targetStatus === 'Completed') newPercent = 100;
+    else if (targetStatus === 'In progress') {
+      newPercent = bottleneck.percentComplete > 0 && bottleneck.percentComplete < 100 ? bottleneck.percentComplete : 50;
+    } else {
+      newPercent = 0;
     }
 
-    const newPercent = STATUS_PERCENT_MAP[targetStatus] ?? bottleneck.percentComplete;
     onUpdateBottleneck?.(currentUnit.id, bottleneck.id, {
       status: targetStatus,
       percentComplete: newPercent,
+      lastUpdated: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  // Handle direct percentage updates
+  const handlePercentChange = (bottleneck: Bottleneck, percent: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+    let targetStatus: BottleneckStatus = 'In progress';
+    if (clamped >= 100) targetStatus = 'Completed';
+    else if (clamped <= 0) targetStatus = 'Pending';
+
+    onUpdateBottleneck?.(currentUnit.id, bottleneck.id, {
+      status: targetStatus,
+      percentComplete: clamped,
       lastUpdated: new Date().toISOString().split('T')[0]
     });
   };
@@ -375,16 +398,55 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
           {/* Filter & Sort Toolbar */}
           <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             
-            {/* Search Input */}
-            <div className="relative w-full md:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder={activeTab === 'completed' ? "Search completed archive..." : "Search active bottlenecks..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
+            {/* Left: Search Input & Scope Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={viewScope === 'completed' ? "Search completed archive..." : "Search active bottlenecks..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              {/* View Scope Toggle: Active vs Completed vs All */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewScope('active')}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    viewScope === 'active'
+                      ? 'bg-white text-orange-800 shadow-xs border border-orange-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ⚡ Active ({Math.max(0, stats.total - stats.completed)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewScope('completed')}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    viewScope === 'completed'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ✅ Completed ({stats.completed})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewScope('all')}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    viewScope === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  📋 All ({stats.total})
+                </button>
+              </div>
             </div>
 
             {/* Category Filter & Chronological Sorting */}
@@ -422,13 +484,13 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
           {displayedBottlenecks.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center">
               <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 mx-auto flex items-center justify-center mb-3">
-                {activeTab === 'completed' ? <CheckCircle2 className="w-7 h-7" /> : <Activity className="w-7 h-7" />}
+                {viewScope === 'completed' ? <CheckCircle2 className="w-7 h-7 text-emerald-600" /> : <Activity className="w-7 h-7 text-orange-600" />}
               </div>
               <h3 className="text-base font-black text-slate-900">
-                {activeTab === 'completed' ? 'No Completed Bottlenecks Found' : 'No Active Bottlenecks Matching Filter'}
+                {viewScope === 'completed' ? 'No Completed Bottlenecks Found' : 'No Active Bottlenecks Matching Filter'}
               </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                {activeTab === 'completed'
+                {viewScope === 'completed'
                   ? 'Resolved bottlenecks will automatically be archived and displayed here.'
                   : 'All operational items in this unit are either resolved or match another filter.'}
               </p>
@@ -474,8 +536,8 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                         </p>
                       )}
 
-                      {/* Directives & Comments Button */}
-                      <div className="flex items-center gap-2 pt-1">
+                      {/* Directives & Assignment Buttons */}
+                      <div className="flex items-center gap-3 pt-1 flex-wrap">
                         <button
                           onClick={() => setActiveCommentBottleneck(item)}
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-xs font-bold text-slate-700 hover:text-orange-700 transition-colors cursor-pointer"
@@ -488,6 +550,16 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                             </span>
                           )}
                         </button>
+
+                        {!viewOnly && (
+                          <button
+                            type="button"
+                            onClick={() => setAssignModalState({ isOpen: true, bottleneck: item })}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 cursor-pointer"
+                          >
+                            <span>🎯 {item.targetDate ? `Due ${item.targetDate}` : 'Assign Deadline'}</span>
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -518,20 +590,26 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                         />
                       </div>
 
-                      {/* Status Stage Switcher */}
-                      <div className="min-w-[170px] space-y-1.5">
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          Workflow Status
-                        </label>
+                      {/* Status Stage Switcher & Quick Progress Buttons */}
+                      <div className="min-w-[210px] space-y-2 bg-slate-50/80 p-3 rounded-2xl border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Workflow Progress
+                          </label>
+                          <span className="text-xs font-black text-slate-900">
+                            {item.percentComplete || 0}%
+                          </span>
+                        </div>
+
                         {!viewOnly ? (
                           <select
-                            value={normalizeStatus(item.status)}
+                            value={normalizeStatus(item.status, item.percentComplete)}
                             onChange={(e) => handleStatusChange(item, e.target.value as BottleneckStatus)}
                             className={`w-full px-3 py-1.5 rounded-xl text-xs font-black border cursor-pointer ${badge.badge}`}
                           >
-                            <option value="Pending">🟡 Pending / Not Started (0%)</option>
-                            <option value="In progress">🔵 In Progress (50-70%)</option>
-                            <option value="Completed">🟢 Completed (100%)</option>
+                            <option value="Pending">🟡 1. Pending / Not Started (0%)</option>
+                            <option value="In progress">🔵 2. In Progress (50%)</option>
+                            <option value="Completed">🟢 3. Completed (100%)</option>
                           </select>
                         ) : (
                           <span className={`inline-block px-3 py-1 rounded-xl text-xs font-black border ${badge.badge}`}>
@@ -539,16 +617,37 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                           </span>
                         )}
 
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              style={{ width: `${item.percentComplete || 0}%` }}
-                              className={`h-full ${badge.bar}`}
-                            />
+                        {/* Quick Progress Buttons (0%, 25%, 50%, 75%, 100%) */}
+                        {!viewOnly && (
+                          <div className="flex items-center justify-between gap-1 pt-0.5">
+                            {[0, 25, 50, 75, 100].map((pct) => (
+                              <button
+                                key={pct}
+                                type="button"
+                                onClick={() => handlePercentChange(item, pct)}
+                                className={`flex-1 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer text-center ${
+                                  (item.percentComplete || 0) === pct
+                                    ? pct === 100
+                                      ? 'bg-emerald-600 text-white shadow-xs'
+                                      : pct > 0
+                                      ? 'bg-amber-500 text-white shadow-xs'
+                                      : 'bg-slate-700 text-white shadow-xs'
+                                    : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
+                                }`}
+                                title={`Set progress to ${pct}%`}
+                              >
+                                {pct}%
+                              </button>
+                            ))}
                           </div>
-                          <span className="text-[10px] font-black text-slate-700 w-7 text-right">
-                            {item.percentComplete || 0}%
-                          </span>
+                        )}
+
+                        {/* Progress Bar */}
+                        <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                          <div
+                            style={{ width: `${item.percentComplete || 0}%` }}
+                            className={`h-full transition-all duration-300 ${badge.bar}`}
+                          />
                         </div>
                       </div>
 
