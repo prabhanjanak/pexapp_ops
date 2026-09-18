@@ -34,11 +34,19 @@ async function bootstrap() {
   console.log('====================================================');
   try {
     await initializeDatabase();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`[Server] Express API running on http://localhost:${PORT}`);
       console.log(`[Server] Health Endpoint: http://localhost:${PORT}/api/health`);
       console.log(`[Server] Units Endpoint:  http://localhost:${PORT}/api/units`);
       console.log('====================================================\n');
+    });
+
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`[Server] Note: Port ${PORT} is already in use by active API server instance.`);
+      } else {
+        console.error('[Server] Server error:', err);
+      }
     });
   } catch (error) {
     console.error('[Server] Failed to initialize database connection:', error);

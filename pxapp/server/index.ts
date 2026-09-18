@@ -74,11 +74,19 @@ async function startServer() {
     
     await initializeDatabase();
     
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`[Server] Express & SPA running on http://0.0.0.0:${PORT}`);
       console.log(`[Server] Health Endpoint: http://localhost:${PORT}/api/health`);
       console.log(`[Server] Units Endpoint:  http://localhost:${PORT}/api/units`);
       console.log('====================================================\n');
+    });
+
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`[Server] Note: Port ${PORT} is already in use by active API server instance.`);
+      } else {
+        console.error('[Server] Server error:', err);
+      }
     });
   } catch (error: any) {
     console.error('[Server] Fatal error initializing server/database:', error);
