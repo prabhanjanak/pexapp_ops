@@ -671,14 +671,37 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       );
     `);
 
+    // Categories Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        department VARCHAR(100) DEFAULT 'General Operations',
+        description TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Departments Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS departments (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(20),
+        head_contact VARCHAR(150),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Schema Migrations if table already existed
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS emp_id VARCHAR(50);
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS remarks TEXT;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS before_photos JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS after_photos JSONB DEFAULT '[]'::jsonb;
-      UPDATE bottlenecks SET status = 'Pending' WHERE status = 'Not Started';
-      UPDATE bottlenecks SET status = 'Assigned work' WHERE status = 'In Progress';
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
+      UPDATE bottlenecks SET status = 'Pending' WHERE status = 'Not Started' OR status = 'Acknowledge';
+      UPDATE bottlenecks SET status = 'In progress' WHERE status = 'Assigned work' OR status = 'In Progress';
     `);
 
     // Audit Logs Table
@@ -693,6 +716,57 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Seed default departments
+    const defaultDepts = [
+      { id: 'dept-opd', name: 'Outpatient (OPD)', code: 'OPD', head_contact: 'Dr. Head OPD' },
+      { id: 'dept-inpatient', name: 'Inpatient & Daycare', code: 'IPD', head_contact: 'Nursing Supervisor' },
+      { id: 'dept-ot', name: 'Operating Theatre (OT)', code: 'OT', head_contact: 'Chief Surgeon' },
+      { id: 'dept-lab', name: 'Diagnostic & Laboratory', code: 'LAB', head_contact: 'Lab Director' },
+      { id: 'dept-pharmacy', name: 'Pharmacy & Dispensary', code: 'PHARM', head_contact: 'Chief Pharmacist' },
+      { id: 'dept-billing', name: 'Billing & TPA Insurance', code: 'BILL', head_contact: 'Finance Lead' },
+      { id: 'dept-counselling', name: 'Patient Counselling', code: 'COUNS', head_contact: 'PX Head' },
+      { id: 'dept-facility', name: 'Facility & Housekeeping', code: 'FAC', head_contact: 'Facility Manager' },
+      { id: 'dept-quality', name: 'Quality Assurance & Audit', code: 'QA', head_contact: 'Quality Lead' },
+      { id: 'dept-it', name: 'IT & Digital Infrastructure', code: 'IT', head_contact: 'IT Ops Lead' }
+    ];
+
+    for (const d of defaultDepts) {
+      await client.query(
+        `INSERT INTO departments (id, name, code, head_contact)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (id) DO NOTHING`,
+        [d.id, d.name, d.code, d.head_contact]
+      );
+    }
+
+    // Seed default categories
+    const defaultCats = [
+      { id: 'cat-opd-wait', name: 'OPD Wait Time', department: 'Outpatient (OPD)' },
+      { id: 'cat-room-cap', name: 'Private Room Capacity', department: 'Inpatient & Daycare' },
+      { id: 'cat-tracking', name: 'Real-time Patient Tracking', department: 'IT & Digital Infrastructure' },
+      { id: 'cat-buzzer', name: 'Dilation & Buzzer Alert System', department: 'Outpatient (OPD)' },
+      { id: 'cat-lab', name: 'Lab Turnaround', department: 'Diagnostic & Laboratory' },
+      { id: 'cat-surgical-audit', name: 'Surgical Redo Audits', department: 'Operating Theatre (OT)' },
+      { id: 'cat-reg-delays', name: 'Registration Delays', department: 'Outpatient (OPD)' },
+      { id: 'cat-counselling', name: 'Counselling Wait Time', department: 'Patient Counselling' },
+      { id: 'cat-discharge', name: 'Discharge Process', department: 'Inpatient & Daycare' },
+      { id: 'cat-pharmacy', name: 'Pharmacy Counter Delays', department: 'Pharmacy & Dispensary' },
+      { id: 'cat-billing', name: 'Billing & Insurance Clearance', department: 'Billing & TPA Insurance' },
+      { id: 'cat-triage', name: 'Optometry & Triage Queue', department: 'Outpatient (OPD)' },
+      { id: 'cat-preop', name: 'Pre-op Holding Area Flow', department: 'Operating Theatre (OT)' },
+      { id: 'cat-diag', name: 'Diagnostics Scheduling', department: 'Diagnostic & Laboratory' },
+      { id: 'cat-postop', name: 'Post-op Care Briefing', department: 'Operating Theatre (OT)' }
+    ];
+
+    for (const c of defaultCats) {
+      await client.query(
+        `INSERT INTO categories (id, name, department)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (id) DO NOTHING`,
+        [c.id, c.name, c.department]
+      );
+    }
 
     await client.query('COMMIT');
     console.log('[Postgres] Tables units, users, bottlenecks, audit_logs verified & migrated.');

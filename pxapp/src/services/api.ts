@@ -1,4 +1,4 @@
-import { HospitalUnit, Bottleneck, AuditLog, DbHealthStatus, User, AuthSession } from '../types';
+import { HospitalUnit, Bottleneck, AuditLog, DbHealthStatus, User, AuthSession, CategoryItem, DepartmentItem } from '../types';
 
 const API_BASE = '/api';
 
@@ -139,6 +139,7 @@ export const api = {
     unitId: string;
     title: string;
     category: string;
+    department?: string;
     status?: string;
     percentComplete?: number;
     owner?: string;
@@ -173,6 +174,55 @@ export const api = {
         method: 'DELETE'
       }
     );
+  },
+
+  // Directives & Comments
+  addComment: async (bottleneckId: string, commentData: {
+    authorName: string;
+    authorRole: string;
+    authorEmail?: string;
+    message: string;
+  }): Promise<Bottleneck> => {
+    return fetchJson<Bottleneck>(`/bottlenecks/${bottleneckId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(commentData)
+    });
+  },
+
+  // Categories API
+  getCategories: async (): Promise<CategoryItem[]> => {
+    return fetchJson<CategoryItem[]>('/categories');
+  },
+
+  createCategory: async (categoryData: { name: string; department?: string; description?: string }): Promise<CategoryItem> => {
+    return fetchJson<CategoryItem>('/categories', {
+      method: 'POST',
+      body: JSON.stringify(categoryData)
+    });
+  },
+
+  deleteCategory: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
+    return fetchJson<{ success: boolean; deletedId: string }>(`/categories/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // Departments API
+  getDepartments: async (): Promise<DepartmentItem[]> => {
+    return fetchJson<DepartmentItem[]>('/departments');
+  },
+
+  createDepartment: async (deptData: { name: string; code?: string; headContact?: string }): Promise<DepartmentItem> => {
+    return fetchJson<DepartmentItem>('/departments', {
+      method: 'POST',
+      body: JSON.stringify(deptData)
+    });
+  },
+
+  deleteDepartment: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
+    return fetchJson<{ success: boolean; deletedId: string }>(`/departments/${id}`, {
+      method: 'DELETE'
+    });
   },
 
   // Database Utilities

@@ -1,17 +1,17 @@
 export type BottleneckStatus = 
-  | 'Acknowledge' 
+  | 'Pending' 
   | 'In progress' 
   | 'Completed';
 
 export const STATUS_STAGES: BottleneckStatus[] = [
-  'Acknowledge',
+  'Pending',
   'In progress',
   'Completed'
 ];
 
 export const STATUS_PERCENT_MAP: Record<BottleneckStatus, number> = {
-  'Acknowledge': 30,
-  'In progress': 70,
+  'Pending': 0,
+  'In progress': 50,
   'Completed': 100
 };
 
@@ -30,13 +30,24 @@ export type BottleneckCategory =
   | 'Optometry & Triage Queue'
   | 'Pre-op Holding Area Flow'
   | 'Diagnostics Scheduling'
-  | 'Post-op Care Briefing';
+  | 'Post-op Care Briefing'
+  | string;
+
+export interface BottleneckComment {
+  id: string;
+  authorName: string;
+  authorRole: string;
+  authorEmail?: string;
+  message: string;
+  createdAt: string;
+}
 
 export interface Bottleneck {
   id: string;
   unitId?: string;
   title: string;
   category: BottleneckCategory;
+  department?: string;
   status: BottleneckStatus;
   percentComplete: number; // 0 to 100
   owner: string;
@@ -47,6 +58,7 @@ export interface Bottleneck {
   remarks?: string;
   beforePhotos?: string[];
   afterPhotos?: string[];
+  comments?: BottleneckComment[];
 }
 
 export interface HospitalUnit {
@@ -59,6 +71,22 @@ export interface HospitalUnit {
   establishedYear?: number;
   bedCapacity?: number;
   contactHead?: string;
+}
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  department?: string;
+  description?: string;
+  createdAt?: string;
+}
+
+export interface DepartmentItem {
+  id: string;
+  name: string;
+  code?: string;
+  headContact?: string;
+  createdAt?: string;
 }
 
 export type UserRole = 'Unit Head' | 'Operations Team' | 'Super Admin' | 'Super Admin (View Only)';
@@ -106,11 +134,11 @@ export interface DbHealthStatus {
 
 export interface UnitStats {
   total: number;
-  acknowledge: number;
+  pending: number;
   inProgress: number;
   completed: number;
-  // Aliases for compatibility
-  pending: number;
+  // Aliases for backwards compatibility
+  acknowledge: number;
   acknowledged: number;
   assignedWork: number;
   verifying: number;
@@ -123,11 +151,11 @@ export interface OrgStats {
   assessedUnits: number;
   pendingUnits: number;
   totalBottlenecks: number;
-  acknowledge: number;
+  pending: number;
   inProgress: number;
   completed: number;
-  // Aliases for compatibility
-  pending: number;
+  // Aliases for backwards compatibility
+  acknowledge: number;
   acknowledged: number;
   assignedWork: number;
   verifying: number;
@@ -135,8 +163,10 @@ export interface OrgStats {
   orgAvgPercent: number;
 }
 
-// Tab navigation definitions for role workspaces
-export type UnitHeadTab = 'bottlenecks' | 'analytics' | 'profile';
-export type OpsTeamTab = 'dashboard' | 'evidence' | 'categories' | 'compliance' | 'activity';
-export type SuperAdminTab = 'dashboard' | 'evidence' | 'operations' | 'analytics' | 'users' | 'database';
+// Module Portal selection
+export type PortalView = 'portal' | '5s' | 'bottleneck';
 
+// Tab navigation definitions for role workspaces in the left sidebar
+export type UnitHeadTab = 'dashboard' | 'bottlenecks' | 'completed' | 'analytics' | 'profile';
+export type OpsTeamTab = 'dashboard' | 'units' | 'bottlenecks' | 'completed' | 'evidence' | 'categories' | 'compliance' | 'activity';
+export type SuperAdminTab = 'dashboard' | 'units' | 'bottlenecks' | 'completed' | 'evidence' | 'categories' | 'users' | 'database';

@@ -6,12 +6,16 @@ import {
   DbHealthStatus,
   UnitHeadTab,
   OpsTeamTab,
-  SuperAdminTab
+  SuperAdminTab,
+  PortalView
 } from './types';
 import { calculateOrgStats } from './utils/calc';
 import { INITIAL_UNITS } from './data/seedData';
 import { api } from './services/api';
 import { LoginPage } from './components/LoginPage';
+import { PortalSelector } from './components/PortalSelector';
+import { FiveSInProgressView } from './components/FiveSInProgressView';
+import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { UnitHeadView } from './components/UnitHeadView';
 import { OperationsTeamView } from './components/OperationsTeamView';
@@ -37,8 +41,14 @@ export default function App() {
     }
   });
 
-  // Tab selections per role
-  const [activeUnitTab, setActiveUnitTab] = useState<UnitHeadTab>('bottlenecks');
+  // Dual-Portal Selection State: 'portal' | '5s' | 'bottleneck'
+  const [portalView, setPortalView] = useState<PortalView>('portal');
+
+  // Sidebar Collapse state
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+
+  // Left Sidebar Tab selections per role
+  const [activeUnitTab, setActiveUnitTab] = useState<UnitHeadTab>('dashboard');
   const [activeOpsTab, setActiveOpsTab] = useState<OpsTeamTab>('dashboard');
   const [activeAdminTab, setActiveAdminTab] = useState<SuperAdminTab>('dashboard');
 
@@ -105,6 +115,7 @@ export default function App() {
   const handleLogout = () => {
     api.logout();
     setCurrentUser(null);
+    setPortalView('portal');
     addToast('Logged out successfully', 'info');
   };
 
@@ -114,6 +125,7 @@ export default function App() {
     if (user.unitId) {
       setSelectedUnitId(user.unitId);
     }
+    setPortalView('portal');
     addToast(`Welcome back, ${user.name}! Logged in as ${user.role}.`, 'success');
   };
 
@@ -144,7 +156,7 @@ export default function App() {
         userRole: currentUser?.role || 'Unit Head'
       });
       if (updates.percentComplete === 100) {
-        addToast('Bottleneck marked as 100% resolved!', 'success');
+        addToast('Bottleneck resolved and moved to Completed archive!', 'success');
       }
     } catch (err: any) {
       console.error('Failed to sync bottleneck update:', err);
@@ -182,6 +194,7 @@ export default function App() {
         unitId,
         title: newBottleneck.title,
         category: newBottleneck.category,
+        department: newBottleneck.department,
         status: newBottleneck.status,
         percentComplete: newBottleneck.percentComplete,
         owner: newBottleneck.owner,
@@ -204,7 +217,7 @@ export default function App() {
         })
       );
 
-      addToast('Bottleneck created and logged successfully!', 'success');
+      addToast('Bottleneck created and logged in registry!', 'success');
     } catch (err: any) {
       console.error('Failed to create bottleneck:', err);
       addToast(`Creation failed: ${err.message}`, 'error');
@@ -285,107 +298,167 @@ export default function App() {
     }
   };
 
-  // If not logged in, render Login Page
+  // Step 1: Render Login Page if not authenticated
   if (!currentUser) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased flex flex-col selection:bg-orange-500 selection:text-white">
-      
-      {/* Top Header with User Profile, Role Badge, and Role Tabs */}
-      <Header
+  // Step 2: Render Dual-Portal Selection Screen
+  if (portalView === 'portal') {
+    return (
+      <>
+        <PortalSelector
+          currentUser={currentUser}
+          onSelectPortal={(portal) => setPortalView(portal)}
+          onLogout={handleLogout}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+        />
+        <UserProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
+        />
+      </>
+    );
+  }
+
+  // Step 3: Render 5S Kaizen Audit In-Progress View
+  if (portalView === '5s') {
+    return (
+      <FiveSInProgressView
         currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenProfile={() => setIsProfileModalOpen(true)}
-        activeUnitTab={activeUnitTab}
-        onUnitTabChange={(tab) => {
-          if (tab === 'profile') {
-            setIsProfileModalOpen(true);
-          } else {
-            setActiveUnitTab(tab);
-          }
-        }}
-        activeOpsTab={activeOpsTab}
-        onOpsTabChange={setActiveOpsTab}
-        activeAdminTab={activeAdminTab}
-        onAdminTabChange={setActiveAdminTab}
-        onRefreshData={() => {
-          loadData();
-          addToast('Refreshed live network records', 'info');
-        }}
-        assessedCount={orgStats.assessedUnits}
-        totalUnits={orgStats.totalUnits}
-        orgAvgPercent={orgStats.orgAvgPercent}
-        isLoading={isLoading}
+        onBack={() => setPortalView('portal')}
+      />
+    );
+  }
+
+  // Step 4: Render Full Bottleneck (PPE) Workspace with Left Sidebar Pane
+  const currentTab = currentUser.role === 'Unit Head'
+    ? activeUnitTab
+    : (currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)')
+    ? activeOpsTab
+    : activeAdminTab;
+
+  const handleTabChange = (tab: any) => {
+    if (currentUser.role === 'Unit Head') {
+      if (tab === 'profile') setIsProfileModalOpen(true);
+      else setActiveUnitTab(tab);
+    } else if (currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)') {
+      setActiveOpsTab(tab);
+    } else {
+      setActiveAdminTab(tab);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased flex selection:bg-orange-500 selection:text-white">
+      
+      {/* Left Sidebar Pane Navigation */}
+      <Sidebar
+        currentUser={currentUser}
+        activeTab={currentTab}
+        onTabChange={handleTabChange}
+        onBackToPortal={() => setPortalView('portal')}
+        units={units}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      {/* Main Role-Specific Workspace Panel */}
-      <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-8 lg:px-10 py-6">
+      {/* Main App Container */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         
-        {/* Tier 1: Unit Head View (Scoped Strictly to Assigned Unit Only) */}
-        {currentUser.role === 'Unit Head' && (
-          <UnitHeadView
-            units={units}
-            selectedUnitId={currentUser.unitId || selectedUnitId}
-            currentUser={currentUser}
-            activeTab={activeUnitTab}
-            onUpdateBottleneck={handleUpdateBottleneck}
-            onAddBottleneck={handleAddBottleneck}
-            onDeleteBottleneck={handleDeleteBottleneck}
-            onInitializeUnitAssessment={handleInitializeUnitAssessment}
-            allowUnitSwitch={false}
-          />
-        )}
+        {/* Top Header with Breadcrumbs, Global Back Button & User Profile */}
+        <Header
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+          onRefreshData={() => {
+            loadData();
+            addToast('Refreshed live network records', 'info');
+          }}
+          onGlobalBack={() => setPortalView('portal')}
+          canGoBack={true}
+          backLabel="Switch Module Portal"
+          pageTitle={
+            currentUser.role === 'Unit Head'
+              ? `${currentUser.unitName || 'Hospital Unit'} • Patient Experience`
+              : 'Project Patient Experience (PPE) • Operations Directorate'
+          }
+          assessedCount={orgStats.assessedUnits}
+          totalUnits={orgStats.totalUnits}
+          orgAvgPercent={orgStats.orgAvgPercent}
+          isLoading={isLoading}
+        />
 
-        {/* Tier 2: Operations Team / Super Admin View Only (Management & Cross-Unit Insights) */}
-        {(currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)') && (
-          <OperationsTeamView
-            units={units}
-            activeTab={activeOpsTab}
-            onSelectUnitHead={setSelectedUnitId}
-            onInitializeUnitAssessment={handleInitializeUnitAssessment}
-            onUpdateBottleneck={handleUpdateBottleneck}
-          />
-        )}
+        {/* Main Workspace Body */}
+        <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-8 py-6">
+          
+          {/* Tier 1: Unit Head Workspace */}
+          {currentUser.role === 'Unit Head' && (
+            <UnitHeadView
+              units={units}
+              selectedUnitId={currentUser.unitId || selectedUnitId}
+              currentUser={currentUser}
+              activeTab={activeUnitTab}
+              onUpdateBottleneck={handleUpdateBottleneck}
+              onAddBottleneck={handleAddBottleneck}
+              onDeleteBottleneck={handleDeleteBottleneck}
+              onInitializeUnitAssessment={handleInitializeUnitAssessment}
+              allowUnitSwitch={false}
+            />
+          )}
 
-        {/* Tier 3: Super Admin View (Full Read/Write/Delete/CRUD Control Across 14 Units) */}
-        {currentUser.role === 'Super Admin' && (
-          <SuperAdminView
-            units={units}
-            activeTab={activeAdminTab}
-            currentUser={currentUser}
-            dbHealth={dbHealth}
-            selectedUnitId={selectedUnitId}
-            onSelectUnit={setSelectedUnitId}
-            onUpdateBottleneck={handleUpdateBottleneck}
-            onAddBottleneck={handleAddBottleneck}
-            onDeleteBottleneck={handleDeleteBottleneck}
-            onInitializeUnitAssessment={handleInitializeUnitAssessment}
-            onResetData={handleResetData}
-            onSeedAllUnits={handleSeedAllUnits}
-            onOpenAuditLogs={() => setIsAuditModalOpen(true)}
-          />
-        )}
+          {/* Tier 2: Operations Team / Super Admin View Only */}
+          {(currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)') && (
+            <OperationsTeamView
+              units={units}
+              activeTab={activeOpsTab}
+              currentUser={currentUser}
+              onSelectUnitHead={setSelectedUnitId}
+              onInitializeUnitAssessment={handleInitializeUnitAssessment}
+              onUpdateBottleneck={handleUpdateBottleneck}
+            />
+          )}
 
-      </main>
+          {/* Tier 3: Super Admin Workspace */}
+          {currentUser.role === 'Super Admin' && (
+            <SuperAdminView
+              units={units}
+              activeTab={activeAdminTab}
+              currentUser={currentUser}
+              dbHealth={dbHealth}
+              selectedUnitId={selectedUnitId}
+              onSelectUnit={setSelectedUnitId}
+              onUpdateBottleneck={handleUpdateBottleneck}
+              onAddBottleneck={handleAddBottleneck}
+              onDeleteBottleneck={handleDeleteBottleneck}
+              onInitializeUnitAssessment={handleInitializeUnitAssessment}
+              onResetData={handleResetData}
+              onSeedAllUnits={handleSeedAllUnits}
+              onOpenAuditLogs={() => setIsAuditModalOpen(true)}
+            />
+          )}
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 mt-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-          <div className="flex items-center gap-2">
-            <img src="/sankara-emblem.png" alt="Sankara" className="w-5 h-5 object-contain" />
-            <span className="font-black text-slate-800">Sankara Eye Foundation India</span>
-            <span>•</span>
-            <span>Sri Kanchi Kamakoti Medical Trust</span>
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-slate-200 py-4 mt-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+            <div className="flex items-center gap-2">
+              <img src="/sankara-emblem.png" alt="Sankara" className="w-5 h-5 object-contain" />
+              <span className="font-black text-slate-800">Sankara Eye Foundation India</span>
+              <span>•</span>
+              <span>Sri Kanchi Kamakoti Medical Trust</span>
+            </div>
+            <div className="font-semibold text-slate-600 flex items-center gap-2">
+              <span>PPE - Project Patient Experience & Kaizen Systems</span>
+              <span>•</span>
+              <span>All rights reserved</span>
+            </div>
           </div>
-          <div className="font-semibold text-slate-600 flex items-center gap-2">
-            <span>PPE - Project Patient Experience</span>
-            <span>•</span>
-            <span>All rights reserved to Sankara Eye Foundation India</span>
-          </div>
-        </div>
-      </footer>
+        </footer>
+
+      </div>
 
       {/* User Profile & Change Password Modal */}
       <UserProfileModal

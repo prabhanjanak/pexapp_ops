@@ -1,7 +1,7 @@
 import { HospitalUnit, Bottleneck, UnitStats, OrgStats, BottleneckStatus, STATUS_PERCENT_MAP } from '../types';
 
 export function normalizeStatus(status: string): BottleneckStatus {
-  if (!status) return 'Acknowledge';
+  if (!status) return 'Pending';
   const s = status.trim().toLowerCase();
   if (s.includes('complete') || s.includes('resolved') || s.includes('done')) {
     return 'Completed';
@@ -9,17 +9,17 @@ export function normalizeStatus(status: string): BottleneckStatus {
   if (s.includes('progress') || s.includes('assigned') || s.includes('verifying') || s.includes('working')) {
     return 'In progress';
   }
-  return 'Acknowledge';
+  return 'Pending';
 }
 
 export function calculateUnitStats(bottlenecks: Bottleneck[]): UnitStats {
   if (!bottlenecks || bottlenecks.length === 0) {
     return {
       total: 0,
-      acknowledge: 0,
+      pending: 0,
       inProgress: 0,
       completed: 0,
-      pending: 0,
+      acknowledge: 0,
       acknowledged: 0,
       assignedWork: 0,
       verifying: 0,
@@ -28,20 +28,20 @@ export function calculateUnitStats(bottlenecks: Bottleneck[]): UnitStats {
     };
   }
 
-  let acknowledge = 0;
+  let pending = 0;
   let inProgress = 0;
   let completed = 0;
   let totalPercentSum = 0;
 
   for (const b of bottlenecks) {
     const normStatus = normalizeStatus(b.status);
-    if (normStatus === 'Acknowledge') acknowledge++;
+    if (normStatus === 'Pending') pending++;
     else if (normStatus === 'In progress') inProgress++;
     else if (normStatus === 'Completed') completed++;
 
-    const percent = b.percentComplete !== undefined && b.percentComplete > 0 
+    const percent = b.percentComplete !== undefined && b.percentComplete >= 0 
       ? b.percentComplete 
-      : (STATUS_PERCENT_MAP[normStatus] ?? 30);
+      : (STATUS_PERCENT_MAP[normStatus] ?? 0);
 
     totalPercentSum += Math.min(100, Math.max(0, percent));
   }
@@ -50,14 +50,14 @@ export function calculateUnitStats(bottlenecks: Bottleneck[]): UnitStats {
 
   return {
     total: bottlenecks.length,
-    acknowledge,
+    pending,
     inProgress,
     completed,
-    pending: acknowledge,
-    acknowledged: acknowledge,
+    acknowledge: pending,
+    acknowledged: pending,
     assignedWork: inProgress,
     verifying: 0,
-    notStarted: acknowledge,
+    notStarted: pending,
     avgPercent
   };
 }
@@ -65,7 +65,7 @@ export function calculateUnitStats(bottlenecks: Bottleneck[]): UnitStats {
 export function calculateOrgStats(units: HospitalUnit[]): OrgStats {
   let assessedUnits = 0;
   let totalBottlenecks = 0;
-  let acknowledge = 0;
+  let pending = 0;
   let inProgress = 0;
   let completed = 0;
   let unitAvgSum = 0;
@@ -76,7 +76,7 @@ export function calculateOrgStats(units: HospitalUnit[]): OrgStats {
       assessedUnits++;
       const stats = calculateUnitStats(unit.bottlenecks);
       totalBottlenecks += stats.total;
-      acknowledge += stats.acknowledge;
+      pending += stats.pending;
       inProgress += stats.inProgress;
       completed += stats.completed;
       unitAvgSum += stats.avgPercent;
@@ -91,14 +91,14 @@ export function calculateOrgStats(units: HospitalUnit[]): OrgStats {
     assessedUnits,
     pendingUnits,
     totalBottlenecks,
-    acknowledge,
+    pending,
     inProgress,
     completed,
-    pending: acknowledge,
-    acknowledged: acknowledge,
+    acknowledge: pending,
+    acknowledged: pending,
     assignedWork: inProgress,
     verifying: 0,
-    notStarted: acknowledge,
+    notStarted: pending,
     orgAvgPercent
   };
 }
@@ -118,15 +118,15 @@ export function getStatusBadgeStyle(status: string) {
         badge: 'bg-amber-50 text-amber-950 border-amber-300 hover:bg-amber-100/90',
         dot: 'bg-amber-500',
         bar: 'bg-gradient-to-r from-orange-500 via-amber-500 to-amber-400',
-        label: 'In progress'
+        label: 'In Progress'
       };
-    case 'Acknowledge':
+    case 'Pending':
     default:
       return {
-        badge: 'bg-blue-50 text-blue-950 border-blue-300 hover:bg-blue-100/90',
-        dot: 'bg-blue-500',
-        bar: 'bg-gradient-to-r from-blue-400 to-indigo-500',
-        label: 'Acknowledge'
+        badge: 'bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200/90',
+        dot: 'bg-slate-500',
+        bar: 'bg-gradient-to-r from-slate-400 to-slate-500',
+        label: 'Pending / Not Started'
       };
   }
 }
@@ -142,4 +142,3 @@ export function getImpactBadgeStyle(impact: string = 'Medium') {
       return 'bg-slate-100 text-slate-700 border-slate-200';
   }
 }
-

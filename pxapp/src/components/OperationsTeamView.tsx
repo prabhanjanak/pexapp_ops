@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { HospitalUnit, OpsTeamTab, AuditLog, Bottleneck } from '../types';
-import { LeadershipView } from './LeadershipView';
+import { HospitalUnit, OpsTeamTab, AuditLog, Bottleneck, User } from '../types';
+import { DashboardOverview } from './DashboardOverview';
 import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 import { UnitHeadView } from './UnitHeadView';
+import { CategoryDeptManager } from './CategoryDeptManager';
+import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { api } from '../services/api';
-import { CATEGORIES } from '../data/seedData';
+import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import {
   TrendingUp,
   Layers,
@@ -18,7 +20,12 @@ import {
   ShieldAlert,
   ArrowUpRight,
   Filter,
-  Camera
+  Camera,
+  Activity,
+  MessageSquare,
+  ArrowLeft,
+  Search,
+  ArrowUpDown
 } from 'lucide-react';
 
 interface OperationsTeamViewProps {
@@ -27,6 +34,7 @@ interface OperationsTeamViewProps {
   onSelectUnitHead: (unitId: string) => void;
   onInitializeUnitAssessment: (unitId: string) => void;
   onUpdateBottleneck?: (unitId: string, bottleneckId: string, updates: Partial<Bottleneck>) => void;
+  currentUser?: User;
 }
 
 export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
@@ -34,11 +42,22 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   activeTab,
   onSelectUnitHead,
   onInitializeUnitAssessment,
-  onUpdateBottleneck
+  onUpdateBottleneck,
+  currentUser = {
+    id: 'user-opsteam',
+    name: 'Central Operations Directorate',
+    email: 'ops@sankara.org',
+    role: 'Operations Team',
+    avatarInitials: 'OP'
+  }
 }) => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [inspectedUnitId, setInspectedUnitId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUnitFilter, setSelectedUnitFilter] = useState('ALL');
+  const [sortBy, setSortBy] = useState<'newest' | 'targetDate' | 'impact'>('newest');
+  const [activeCommentBottleneck, setActiveCommentBottleneck] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
 
   useEffect(() => {
     if (activeTab === 'activity') {
@@ -50,304 +69,264 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
     }
   }, [activeTab]);
 
-  // Aggregate Category Analytics across all 14 units for Tab 2
-  const categoryHeatmap = useMemo(() => {
-    const map = new Map<string, { total: number; completed: number; inProgress: number; notStarted: number; unitsCount: Set<string> }>();
-
+  // Flattened Bottlenecks for Network Active or Completed Tab
+  const allBottlenecks = useMemo(() => {
+    const list: { unit: HospitalUnit; bottleneck: Bottleneck }[] = [];
     for (const u of units) {
       for (const b of u.bottlenecks) {
-        if (!map.has(b.category)) {
-          map.set(b.category, { total: 0, completed: 0, inProgress: 0, notStarted: 0, unitsCount: new Set() });
+        const norm = normalizeStatus(b.status);
+        if (activeTab === 'bottlenecks' && norm === 'Completed') continue;
+        if (activeTab === 'completed' && norm !== 'Completed') continue;
+        if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
+
+        const q = searchQuery.toLowerCase();
+        if (
+          q &&
+          !b.title.toLowerCase().includes(q) &&
+          !b.category.toLowerCase().includes(q) &&
+          !u.name.toLowerCase().includes(q) &&
+          !b.owner.toLowerCase().includes(q)
+        ) {
+          continue;
         }
-        const row = map.get(b.category)!;
-        row.total++;
-        row.unitsCount.add(u.id);
-        if (b.status === 'Completed') row.completed++;
-        else if (b.status === 'In Progress') row.inProgress++;
-        else row.notStarted++;
+
+        list.push({ unit: u, bottleneck: b });
       }
     }
 
-    return Array.from(map.entries()).map(([category, stats]) => ({
-      category,
-      total: stats.total,
-      completed: stats.completed,
-      inProgress: stats.inProgress,
-      notStarted: stats.notStarted,
-      affectedUnits: stats.unitsCount.size,
-      resolutionRate: Math.round((stats.completed / (stats.total || 1)) * 100)
-    })).sort((a, b) => b.total - a.total);
-  }, [units]);
+    return list.sort((a, b) => {
+      if (sortBy === 'newest') return (b.bottleneck.id || '').localeCompare(a.bottleneck.id || '');
+      if (sortBy === 'targetDate') return (a.bottleneck.targetDate || '9999').localeCompare(b.bottleneck.targetDate || '9999');
+      const imp: Record<string, number> = { High: 3, Medium: 2, Low: 1 };
+      return (imp[b.bottleneck.impactLevel || 'Medium'] || 2) - (imp[a.bottleneck.impactLevel || 'Medium'] || 2);
+    });
+  }, [units, activeTab, selectedUnitFilter, searchQuery, sortBy]);
 
-  // Compliance & Target Date Tracker for Tab 3
-  const complianceItems = useMemo(() => {
-    const list: {
-      unitName: string;
-      unitCity: string;
-      unitId: string;
-      title: string;
-      category: string;
-      status: string;
-      percentComplete: number;
-      targetDate: string;
-      impactLevel: string;
-      isOverdue: boolean;
-      owner: string;
-    }[] = [];
+  // If inspecting a specific unit drilldown, render UnitHeadView
+  if (inspectedUnitId) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <button
+            onClick={() => setInspectedUnitId(null)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-700 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-orange-600" />
+            <span>← Back to Operations Overview</span>
+          </button>
 
-    const todayStr = new Date().toISOString().split('T')[0];
+          <span className="text-xs font-semibold text-slate-500">
+            Inspection Mode • Central Operations Directorate
+          </span>
+        </div>
 
-    for (const u of units) {
-      for (const b of u.bottlenecks) {
-        const isOverdue = Boolean(b.targetDate && b.targetDate < todayStr && b.status !== 'Completed');
-        list.push({
-          unitName: u.name,
-          unitCity: u.city,
-          unitId: u.id,
-          title: b.title,
-          category: b.category,
-          status: b.status,
-          percentComplete: b.percentComplete,
-          targetDate: b.targetDate || 'Pending Date',
-          impactLevel: b.impactLevel || 'Medium',
-          isOverdue,
-          owner: b.owner
-        });
-      }
-    }
-
-    return list.sort((a, b) => (b.isOverdue ? 1 : 0) - (a.isOverdue ? 1 : 0));
-  }, [units]);
-
-  const overdueCount = complianceItems.filter((i) => i.isOverdue).length;
+        <UnitHeadView
+          units={units}
+          selectedUnitId={inspectedUnitId}
+          currentUser={currentUser}
+          activeTab="bottlenecks"
+          onUpdateBottleneck={onUpdateBottleneck}
+          viewOnly={false}
+          onBackToDashboard={() => setInspectedUnitId(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       
-      {/* TAB 1: NETWORK EXECUTIVE DASHBOARD OR VIEW-ONLY UNIT HEAD WORKSPACE */}
+      {/* 1. DASHBOARD TAB */}
       {activeTab === 'dashboard' && (
-        inspectedUnitId ? (
-          <UnitHeadView
-            units={units}
-            selectedUnitId={inspectedUnitId}
-            onSelectUnit={setInspectedUnitId}
-            currentUser={{
-              id: 'user-opsteam',
-              name: 'Central Operations Directorate',
-              email: 'ops@sankara.org',
-              role: 'Operations Team',
-              avatarInitials: 'OP'
-            }}
-            activeTab="bottlenecks"
-            viewOnly={true}
-            allowUnitSwitch={true}
-            onBackToDashboard={() => setInspectedUnitId(null)}
-          />
-        ) : (
-          <LeadershipView
-            units={units}
-            onSelectUnitHead={(unitId) => setInspectedUnitId(unitId)}
-            onInitializeUnitAssessment={onInitializeUnitAssessment}
-          />
-        )
+        <DashboardOverview
+          units={units}
+          currentUser={currentUser}
+          onSelectUnit={(id) => setInspectedUnitId(id)}
+        />
       )}
 
-      {/* TAB: EVIDENCE & BEFORE/AFTER PHOTO APPROVALS */}
+      {/* 2. HOSPITAL UNITS (14) BENCHMARKING TAB */}
+      {activeTab === 'units' && (
+        <DashboardOverview
+          units={units}
+          currentUser={currentUser}
+          onSelectUnit={(id) => setInspectedUnitId(id)}
+        />
+      )}
+
+      {/* 3. ACTIVE BOTTLENECKS OR COMPLETED ARCHIVE */}
+      {(activeTab === 'bottlenecks' || activeTab === 'completed') && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          
+          {/* Header Card */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800">
+                  {activeTab === 'completed' ? 'Resolved Archive' : 'Active Operational Registry'}
+                </span>
+                <span className="text-xs text-slate-400">•</span>
+                <span className="text-xs font-bold text-slate-500">14 Hospital Units</span>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900">
+                {activeTab === 'completed' ? 'Completed Bottlenecks Archive' : 'Network Active Bottlenecks'}
+              </h2>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search title, category, owner..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <select
+                value={selectedUnitFilter}
+                onChange={(e) => setSelectedUnitFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="ALL">All Hospital Units (14)</option>
+                {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="newest">Sort: Newest First</option>
+                <option value="targetDate">Sort: Target Date</option>
+                <option value="impact">Sort: Impact Level</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Bottlenecks List */}
+          {allBottlenecks.length === 0 ? (
+            <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center">
+              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+              <h3 className="text-base font-black text-slate-900">
+                {activeTab === 'completed' ? 'No Completed Bottlenecks in Archive' : 'No Active Bottlenecks Matching Filter'}
+              </h3>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {allBottlenecks.map(({ unit, bottleneck }) => {
+                const badge = getStatusBadgeStyle(bottleneck.status);
+                const impactBadge = getImpactBadgeStyle(bottleneck.impactLevel);
+                const commentsCount = (bottleneck.comments || []).length;
+
+                return (
+                  <div
+                    key={bottleneck.id}
+                    className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-300 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white">
+                          {unit.name}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200">
+                          {bottleneck.category}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${impactBadge}`}>
+                          {bottleneck.impactLevel || 'Medium'} Impact
+                        </span>
+                        {bottleneck.targetDate && (
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                            🎯 Deadline: {bottleneck.targetDate}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="text-sm font-black text-slate-900">{bottleneck.title}</h4>
+                      {bottleneck.notes && <p className="text-xs text-slate-600">{bottleneck.notes}</p>}
+
+                      <div className="flex items-center gap-3 pt-1">
+                        <button
+                          onClick={() => setActiveCommentBottleneck({ unitId: unit.id, bottleneck })}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-xs font-bold text-slate-700 hover:text-orange-700 transition-colors cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-orange-500" />
+                          <span>Management Directives</span>
+                          {commentsCount > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-orange-600 text-white text-[10px] font-black">
+                              {commentsCount}
+                            </span>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => setInspectedUnitId(unit.id)}
+                          className="inline-flex items-center gap-1 text-xs font-bold text-orange-600 hover:text-orange-700 cursor-pointer"
+                        >
+                          <span>Inspect Unit Workspace</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="min-w-[170px] space-y-1.5">
+                      <span className={`inline-block px-3 py-1 rounded-xl text-xs font-black border ${badge.badge}`}>
+                        {badge.label} ({bottleneck.percentComplete}%)
+                      </span>
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div style={{ width: `${bottleneck.percentComplete}%` }} className={`h-full ${badge.bar}`} />
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-medium">Owner: {bottleneck.owner}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* 4. EVIDENCE APPROVALS TAB */}
       {activeTab === 'evidence' && (
         <EvidenceApprovalGrid
           units={units}
           onUpdateBottleneck={onUpdateBottleneck}
+          currentUserRole={currentUser.role}
         />
       )}
 
-      {/* TAB 2: CATEGORY HEATMAP & TRENDS */}
+      {/* 5. CATEGORIES & DEPARTMENTS MANAGEMENT TAB */}
       {activeTab === 'categories' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-orange-600" />
-                  Network-Wide Clinical Category Heatmap
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Cross-unit bottleneck aggregation across all 14 Sankara Eye Hospital centers
-                </p>
-              </div>
-              <span className="px-3.5 py-1 rounded-full text-xs font-black bg-orange-50 text-orange-800 border border-orange-200">
-                15 Clinical & PX Categories
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categoryHeatmap.map((item) => (
-                <div
-                  key={item.category}
-                  className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200 hover:border-orange-300 hover:bg-white transition-all space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-extrabold text-sm text-slate-900 leading-snug">
-                      {item.category}
-                    </h4>
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-white text-orange-600 border border-slate-200 shrink-0">
-                      {item.total} Total
-                    </span>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-500 font-medium">Network Resolution Rate</span>
-                      <span className="font-black text-orange-600">{item.resolutionRate}%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                      <div
-                        className="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-500 h-full rounded-full transition-all"
-                        style={{ width: `${item.resolutionRate}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] pt-1 text-slate-600 border-t border-slate-200/60">
-                    <span>Active in <strong className="text-slate-900">{item.affectedUnits}</strong> units</span>
-                    <span className="font-extrabold text-emerald-700">{item.completed} Resolved</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <CategoryDeptManager
+          currentUser={currentUser}
+          onToast={(msg) => console.log(msg)}
+        />
       )}
 
-      {/* TAB 3: QUALITY COMPLIANCE & TARGET DATES */}
-      {activeTab === 'compliance' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  Target Date Compliance & Escalation Tracker
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Monitoring timeline resolution SLAs across all hospital units
-                </p>
-              </div>
-
-              {overdueCount > 0 && (
-                <span className="px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-800 border border-rose-200 flex items-center gap-1.5 shrink-0">
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                  {overdueCount} Overdue Items
-                </span>
-              )}
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase tracking-wider text-slate-600">
-                    <th className="py-3 px-4 pl-6">Hospital Unit</th>
-                    <th className="py-3 px-4">Bottleneck Title</th>
-                    <th className="py-3 px-4">Status & %</th>
-                    <th className="py-3 px-4">Target Date</th>
-                    <th className="py-3 px-4">Responsible Owner</th>
-                    <th className="py-3 px-4 pr-6 text-right">SLA Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
-                  {complianceItems.slice(0, 20).map((item, idx) => (
-                    <tr key={idx} className="hover:bg-orange-50/20 transition-colors">
-                      <td className="py-3.5 px-4 pl-6 font-bold text-slate-900 whitespace-nowrap">
-                        {item.unitName}
-                        <span className="text-[11px] font-normal text-slate-500 block">{item.unitCity}</span>
-                      </td>
-
-                      <td className="py-3.5 px-4 max-w-xs">
-                        <span className="font-bold text-slate-900 block">{item.title}</span>
-                        <span className="text-[11px] text-slate-500">{item.category}</span>
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-slate-900">{item.percentComplete}%</span>
-                          <span className="text-[11px] text-slate-500">({item.status})</span>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">
-                        {item.targetDate}
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">
-                        {item.owner}
-                      </td>
-
-                      <td className="py-3.5 px-4 pr-6 text-right whitespace-nowrap">
-                        {item.status === 'Completed' ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            ✓ Resolved
-                          </span>
-                        ) : item.isOverdue ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-800 border border-rose-200">
-                            ⚠ Overdue SLA
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                            On Track
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: LIVE ACTIVITY FEED */}
+      {/* 6. REAL-TIME AUDIT LOG FEED */}
       {activeTab === 'activity' && (
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                <History className="w-5 h-5 text-orange-600" />
-                Live Network Activity Stream
-              </h3>
-              <p className="text-xs text-slate-500">
-                Chronological stream of bottleneck creations, % updates, and resolutions by Unit Heads
-              </p>
-            </div>
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-slate-100 text-slate-700">
-              {logs.length} Recent Actions
-            </span>
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <History className="w-5 h-5 text-orange-600" />
+            <h3 className="text-lg font-black text-slate-900">Hospital Operational Audit Log</h3>
           </div>
 
           {logsLoading ? (
-            <div className="py-12 text-center text-slate-400 text-xs">
-              Loading latest activity stream...
-            </div>
-          ) : logs.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs">
-              No activity logs recorded yet.
-            </div>
+            <p className="text-xs text-slate-400 py-6 text-center">Loading audit records...</p>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-slate-100 text-xs">
               {logs.map((l) => (
-                <div key={l.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-orange-100 text-orange-800">
-                        {l.action}
-                      </span>
-                      <span className="font-extrabold text-xs text-slate-900">{l.unitName || 'System'}</span>
-                      <span className="text-[11px] text-slate-400">by {l.userRole}</span>
-                    </div>
-                    {l.bottleneckTitle && (
-                      <p className="text-xs font-semibold text-slate-700">{l.bottleneckTitle}</p>
-                    )}
+                <div key={l.id} className="py-3 flex items-start justify-between gap-4">
+                  <div>
+                    <span className="font-bold text-slate-800">{l.action}</span>
+                    <span className="text-slate-400 ml-2">• {l.userRole}</span>
+                    <p className="text-slate-500 mt-0.5">{JSON.stringify(l.details)}</p>
                   </div>
-                  <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">
+                  <span className="text-slate-400 shrink-0 text-[10px]">
                     {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -355,6 +334,20 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* Comments Modal */}
+      {activeCommentBottleneck && (
+        <BottleneckCommentModal
+          isOpen={Boolean(activeCommentBottleneck)}
+          onClose={() => setActiveCommentBottleneck(null)}
+          bottleneck={activeCommentBottleneck.bottleneck}
+          currentUser={currentUser}
+          onCommentAdded={(updated) => {
+            onUpdateBottleneck?.(activeCommentBottleneck.unitId, updated.id, updated);
+            setActiveCommentBottleneck({ unitId: activeCommentBottleneck.unitId, bottleneck: updated });
+          }}
+        />
       )}
 
     </div>
