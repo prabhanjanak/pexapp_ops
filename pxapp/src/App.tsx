@@ -452,14 +452,12 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
             <div className="flex items-center gap-2">
               <img src="/sankara-emblem.png" alt="Sankara" className="w-5 h-5 object-contain" />
-              <span className="font-black text-slate-800">Sankara Eye Foundation India</span>
+              <span className="font-black text-slate-800">Sankara Eye Foundation, India</span>
               <span>•</span>
               <span>Sri Kanchi Kamakoti Medical Trust</span>
             </div>
             <div className="font-semibold text-slate-600 flex items-center gap-2">
-              <span>PPE - Project Patient Experience & Kaizen Systems</span>
-              <span>•</span>
-              <span>All rights reserved</span>
+              <span>Business Excellence Application • Project Patient Experience</span>
             </div>
           </div>
         </footer>

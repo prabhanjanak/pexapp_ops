@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Header Controls: Network Counters, User Profile Chip & Logout */}
+        {/* Right Header Controls: Network Counters & Refresh Data */}
         <div className="flex items-center gap-3 justify-between sm:justify-end">
           
           {/* Quick Network Stat Pill (for Ops and Super Admin) */}
@@ -109,47 +109,17 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* User Profile Chip */}
-          <button
-            type="button"
-            onClick={onOpenProfile}
-            title="Click to view locked profile or change password"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 transition-all cursor-pointer text-left group"
-          >
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-orange-500 to-amber-400 text-white flex items-center justify-center font-black text-xs shadow-xs group-hover:scale-105 transition-transform">
-              {currentUser.avatarInitials || 'SK'}
-            </div>
-            <div className="text-left hidden sm:block">
-              <span className="text-xs font-black text-slate-900 block leading-tight group-hover:text-orange-600 transition-colors">
-                {currentUser.name}
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium block leading-tight truncate max-w-[130px]">
-                {currentUser.empId ? `EMP: ${currentUser.empId}` : currentUser.email}
-              </span>
-            </div>
-          </button>
-
           {/* Refresh Live Data */}
           <button
             type="button"
             onClick={onRefreshData}
             title="Refresh live operational data"
-            className={`p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-colors border border-slate-200 cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-colors border border-slate-200 cursor-pointer text-xs font-bold ${
               isLoading ? 'opacity-50 pointer-events-none' : ''
             }`}
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-orange-500' : ''}`} />
-          </button>
-
-          {/* Logout Button */}
-          <button
-            type="button"
-            onClick={onLogout}
-            title="Sign out of portal"
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 transition-colors border border-slate-200 hover:border-rose-200 cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sign Out</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-orange-500' : 'text-slate-600'}`} />
+            <span className="hidden sm:inline">Sync Data</span>
           </button>
 
         </div>
