@@ -12,18 +12,27 @@ const DB_HOST = process.env.PGHOST || 'localhost';
 const DB_PORT = parseInt(process.env.PGPORT || '5432', 10);
 const DB_PASSWORD = process.env.PGPASSWORD || '';
 
+const useSsl = process.env.PGSSL === 'true' || Boolean(process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost'));
+
 export const pool = new Pool(
   process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL }
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      }
     : {
         user: DB_USER,
         host: DB_HOST,
         database: DB_NAME,
         password: DB_PASSWORD,
         port: DB_PORT,
-        max: 20,
+        ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+        max: 10,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 10000,
       }
 );
 

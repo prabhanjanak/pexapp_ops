@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "buildCommand": "cd pxapp && npm install && npm run build",
+  "outputDirectory": "pxapp/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

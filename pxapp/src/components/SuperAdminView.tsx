@@ -84,6 +84,122 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isAddBottleneckModalOpen, setIsAddBottleneckModalOpen] = useState(false);
 
+  // User Form State
+  const [formName, setFormName] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formEmpId, setFormEmpId] = useState('');
+  const [formRole, setFormRole] = useState<UserRole>('Unit Head');
+  const [formUnitId, setFormUnitId] = useState(units[0]?.id || '');
+
+  const showNotify = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const data = await api.getUsers();
+      setUsersList(data);
+    } catch (err: any) {
+      console.error('Failed to load users:', err);
+      showNotify('error', err.message || 'Failed to load staff directory');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      loadUsers();
+    }
+  }, [activeTab]);
+
+  const resetForm = () => {
+    setFormName('');
+    setFormEmail('');
+    setFormEmpId('');
+    setFormRole('Unit Head');
+    setFormUnitId(units[0]?.id || '');
+    setEditingUser(null);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim() || !formEmail.trim()) {
+      showNotify('error', 'Full Name and Hospital Email are required');
+      return;
+    }
+    try {
+      const newUser = await api.createUser({
+        name: formName.trim(),
+        email: formEmail.trim().toLowerCase(),
+        empId: formEmpId.trim(),
+        role: formRole,
+        unitId: formRole === 'Unit Head' ? formUnitId : undefined,
+        designation: formRole === 'Unit Head' ? 'Unit Head' : undefined
+      });
+      setUsersList(prev => [...prev, newUser]);
+      setShowAddUserModal(false);
+      resetForm();
+      showNotify('success', `Staff account successfully created for ${newUser.name}! Default password is Sankara@123.`);
+    } catch (err: any) {
+      showNotify('error', err.message || 'Failed to create staff account');
+    }
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    try {
+      const updated = await api.updateUser(editingUser.id, {
+        name: formName.trim(),
+        email: formEmail.trim().toLowerCase(),
+        empId: formEmpId.trim(),
+        role: formRole,
+        unitId: formRole === 'Unit Head' ? formUnitId : undefined
+      });
+      setUsersList(prev => prev.map(u => u.id === updated.id ? updated : u));
+      setEditingUser(null);
+      setShowAddUserModal(false);
+      resetForm();
+      showNotify('success', `Account details updated for ${updated.name}!`);
+    } catch (err: any) {
+      showNotify('error', err.message || 'Failed to update staff account');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTargetUser) return;
+    try {
+      await api.deleteUser(deleteTargetUser.id);
+      setUsersList(prev => prev.filter(u => u.id !== deleteTargetUser.id));
+      showNotify('success', `Account for ${deleteTargetUser.name} deleted successfully.`);
+      setDeleteTargetUser(null);
+    } catch (err: any) {
+      showNotify('error', err.message || 'Failed to delete staff account');
+    }
+  };
+
+  const handleResetPassword = async (targetUser: User) => {
+    try {
+      const res = await api.resetUserPassword(targetUser.id);
+      showNotify('success', res.message || `Password reset to Sankara@123 for ${targetUser.name}`);
+    } catch (err: any) {
+      showNotify('error', err.message || 'Failed to reset password');
+    }
+  };
+
+  const startEditUser = (u: User) => {
+    setEditingUser(u);
+    setFormName(u.name);
+    setFormEmail(u.email);
+    setFormEmpId(u.empId || '');
+    setFormRole(u.role as UserRole);
+    setFormUnitId(u.unitId || units[0]?.id || '');
+    setShowAddUserModal(true);
+  };
+
   // Active / Completed Bottleneck state
   const [viewScope, setViewScope] = useState<'active' | 'completed' | 'all'>(
     activeTab === 'completed' ? 'completed' : 'active'

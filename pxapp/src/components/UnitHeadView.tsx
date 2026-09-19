@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { HospitalUnit, Bottleneck, BottleneckStatus, BottleneckCategory, UnitHeadTab, User, STATUS_STAGES, STATUS_PERCENT_MAP } from '../types';
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import { CATEGORIES } from '../data/seedData';
