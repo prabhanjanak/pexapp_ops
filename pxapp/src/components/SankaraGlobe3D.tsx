@@ -15,21 +15,21 @@ export interface HospitalPin {
 }
 
 export const SANKARA_UNITS_GEO: HospitalPin[] = [
-  { id: 'cbe', name: 'Sankara Eye Hospital (HQ)', city: 'Coimbatore', state: 'Tamil Nadu', lat: 11.0168, lon: 76.9558, isHQ: true, beds: '225 Beds • Central Hub' },
-  { id: 'rsp', name: 'Sankara Eye Hospital (R.S. Puram)', city: 'R.S. Puram, Coimbatore', state: 'Tamil Nadu', lat: 11.0086, lon: 76.9490, beds: 'Daycare Super-specialty' },
-  { id: 'kri', name: 'Sankara Eye Hospital', city: 'Krishnankoil', state: 'Tamil Nadu', lat: 9.5855, lon: 77.6625, beds: '100 Beds' },
-  { id: 'blr', name: 'Sankara Eye Hospital', city: 'Bengaluru', state: 'Karnataka', lat: 12.9716, lon: 77.5946, beds: '225 Beds' },
-  { id: 'shm', name: 'Sankara Eye Hospital', city: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681, beds: '100 Beds' },
-  { id: 'gun', name: 'Sankara Eye Hospital', city: 'Guntur', state: 'Andhra Pradesh', lat: 16.3067, lon: 80.4365, beds: '150 Beds' },
-  { id: 'and', name: 'Sankara Eye Hospital', city: 'Anand', state: 'Gujarat', lat: 22.5645, lon: 72.9289, beds: '150 Beds' },
-  { id: 'lud', name: 'Sankara Eye Hospital', city: 'Ludhiana', state: 'Punjab', lat: 30.9010, lon: 75.8573, beds: '100 Beds' },
-  { id: 'knp', name: 'Sankara Eye Hospital', city: 'Kanpur', state: 'Uttar Pradesh', lat: 26.4499, lon: 80.3319, beds: '120 Beds' },
-  { id: 'var', name: 'Sankara Eye Hospital', city: 'Varanasi', state: 'Uttar Pradesh', lat: 25.3176, lon: 82.9739, beds: '100 Beds' },
-  { id: 'jai', name: 'Sankara Eye Hospital', city: 'Jaipur', state: 'Rajasthan', lat: 26.9124, lon: 75.7873, beds: '125 Beds' },
-  { id: 'ind', name: 'Sankara Eye Hospital', city: 'Indore', state: 'Madhya Pradesh', lat: 22.7196, lon: 75.8577, beds: '120 Beds' },
-  { id: 'hyd', name: 'Sankara Eye Hospital', city: 'Hyderabad', state: 'Telangana', lat: 17.3850, lon: 78.4867, beds: '150 Beds' },
-  { id: 'pan', name: 'Sankara Eye Hospital', city: 'Panvel (Mumbai)', state: 'Maharashtra', lat: 18.9894, lon: 73.1175, beds: '150 Beds' },
-  { id: 'pat', name: 'Sankara Eye Hospital (Upcoming)', city: 'Patna', state: 'Bihar', lat: 25.5941, lon: 85.1376, isUpcoming: true, beds: 'Upcoming 150-Bed Center' },
+  { id: 'cbe', name: 'Sankara Eye Hospital Coimbatore (HQ)', city: 'Coimbatore', state: 'Tamil Nadu', lat: 11.0168, lon: 76.9558, isHQ: true, beds: '225 Beds • Central Hub' },
+  { id: 'rsp', name: 'Sankara Eye Hospital Coimbatore (RS Puram)', city: 'R.S. Puram, Coimbatore', state: 'Tamil Nadu', lat: 11.0086, lon: 76.9490, beds: 'Daycare Super-specialty' },
+  { id: 'kri', name: 'Sankara Eye Hospital Krishnankoil', city: 'Krishnankoil', state: 'Tamil Nadu', lat: 9.5855, lon: 77.6625, beds: '100 Beds' },
+  { id: 'blr', name: 'Sankara Eye Hospital Bengaluru', city: 'Bengaluru', state: 'Karnataka', lat: 12.9716, lon: 77.5946, beds: '225 Beds' },
+  { id: 'shm', name: 'Sankara Eye Hospital Shivamogga', city: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681, beds: '100 Beds' },
+  { id: 'gun', name: 'Sankara Eye Hospital Guntur', city: 'Guntur', state: 'Andhra Pradesh', lat: 16.3067, lon: 80.4365, beds: '150 Beds' },
+  { id: 'and', name: 'Sankara Eye Hospital Anand', city: 'Anand', state: 'Gujarat', lat: 22.5645, lon: 72.9289, beds: '150 Beds' },
+  { id: 'lud', name: 'Sankara Eye Hospital Ludhiana', city: 'Ludhiana', state: 'Punjab', lat: 30.9010, lon: 75.8573, beds: '100 Beds' },
+  { id: 'knp', name: 'Sankara Eye Hospital Kanpur', city: 'Kanpur', state: 'Uttar Pradesh', lat: 26.4499, lon: 80.3319, beds: '120 Beds' },
+  { id: 'var', name: 'Sankara Eye Hospital Varanasi', city: 'Varanasi', state: 'Uttar Pradesh', lat: 25.3176, lon: 82.9739, beds: '100 Beds' },
+  { id: 'jai', name: 'Sankara Eye Hospital Jaipur', city: 'Jaipur', state: 'Rajasthan', lat: 26.9124, lon: 75.7873, beds: '125 Beds' },
+  { id: 'ind', name: 'Sankara Eye Hospital Indore', city: 'Indore', state: 'Madhya Pradesh', lat: 22.7196, lon: 75.8577, beds: '120 Beds' },
+  { id: 'hyd', name: 'Sankara Eye Hospital Hyderabad', city: 'Hyderabad', state: 'Telangana', lat: 17.3850, lon: 78.4867, beds: '150 Beds' },
+  { id: 'pan', name: 'Sankara Eye Hospital Panvel', city: 'Panvel (Mumbai)', state: 'Maharashtra', lat: 18.9894, lon: 73.1175, beds: '150 Beds' },
+  { id: 'pat', name: 'Sankara Eye Hospital Patna (Upcoming)', city: 'Patna', state: 'Bihar', lat: 25.5941, lon: 85.1376, isUpcoming: true, beds: 'Upcoming 150-Bed Center' },
 ];
 
 interface SankaraGlobe3DProps {

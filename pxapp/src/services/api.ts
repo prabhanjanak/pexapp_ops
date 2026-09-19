@@ -42,7 +42,7 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
   }
 }
 
-const UNITS_OVERRIDE_KEY = 'sankara_units_overrides_v1';
+const UNITS_OVERRIDE_KEY = 'sankara_units_overrides_v2';
 const USERS_OVERRIDE_KEY = 'sankara_users_overrides_v2';
 
 function getLocalUnitOverrides(): Record<string, Partial<HospitalUnit>> {

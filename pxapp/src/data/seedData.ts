@@ -22,7 +22,7 @@ export const CATEGORIES = [
 export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-coimbatore',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Coimbatore',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
     cmo: 'Dr. Shruthi Tara',
@@ -35,7 +35,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-coimbatore-city',
-    name: 'Sankara Eye Hospital – Coimbatore City',
+    name: 'Sankara Eye Hospital Coimbatore (RS Puram)',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
     cmo: 'Dr. Devi Priya',
@@ -48,7 +48,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-guntur',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Guntur',
     city: 'Guntur',
     state: 'Andhra Pradesh',
     cmo: 'Dr. Sudhakar Potti',
@@ -61,7 +61,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-bangalore',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Bengaluru',
     city: 'Bengaluru',
     state: 'Karnataka',
     cmo: 'Dr. Yeddula Umesh',
@@ -74,7 +74,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-shimoga',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Shivamogga',
     city: 'Shivamogga',
     state: 'Karnataka',
     cmo: 'Dr. S. Mahesha',
@@ -87,7 +87,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-anand',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Anand',
     city: 'Anand',
     state: 'Gujarat',
     cmo: 'Dr. Nisha Vadhyamal Ahuja',
@@ -100,7 +100,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-kanpur',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Kanpur',
     city: 'Kanpur',
     state: 'Uttar Pradesh',
     cmo: 'Dr. Puneet Johri',
@@ -113,7 +113,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-jaipur',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Jaipur',
     city: 'Jaipur',
     state: 'Rajasthan',
     cmo: 'Dr. Neeraj Shah',
@@ -126,7 +126,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-ludhiana',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Ludhiana',
     city: 'Ludhiana',
     state: 'Punjab',
     cmo: 'Dr. Manoj Gupta',
@@ -139,7 +139,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-indore',
-    name: 'Sankara Eye Centre',
+    name: 'Sankara Eye Hospital Indore',
     city: 'Indore',
     state: 'Madhya Pradesh',
     cmo: 'Dr. Ankit Deokar',
@@ -152,7 +152,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-panvel',
-    name: 'R. Jhunjhunwala Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Panvel',
     city: 'Panvel',
     state: 'Maharashtra',
     cmo: 'Dr. Girish Budhrani',
@@ -165,7 +165,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-hyderabad',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Hyderabad',
     city: 'Hyderabad',
     state: 'Telangana',
     cmo: 'Dr. Simakurthy Sriram',
@@ -178,7 +178,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-varanasi',
-    name: 'R. J. Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Varanasi',
     city: 'Varanasi',
     state: 'Uttar Pradesh',
     cmo: 'Dr. Saptagirish Rambhatla',
@@ -191,7 +191,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-krishnankoil',
-    name: 'Sankara Eye Hospital',
+    name: 'Sankara Eye Hospital Krishnankoil',
     city: 'Krishnankoil',
     state: 'Tamil Nadu',
     cmo: 'Dr. Sudha N',
