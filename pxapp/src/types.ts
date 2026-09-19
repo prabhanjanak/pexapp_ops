@@ -86,6 +86,9 @@ export interface HospitalUnit {
   contactHead?: string;
   cmo?: string;
   unitHead?: string;
+  unitHeadEmail?: string;
+  unitHeadEmpId?: string;
+  unitHeadDesignation?: string;
 }
 
 export interface CategoryItem {

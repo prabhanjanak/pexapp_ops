@@ -51,17 +51,24 @@ function formatBottleneck(row: any) {
 }
 
 function formatUnit(row: any, bottlenecks: any[] = []) {
+  const memUser = SANKARA_INITIAL_USERS.find(
+    (u) => (u.unit_id === row.id || (u as any).unitId === row.id) && u.role === 'Unit Head'
+  );
+
   return {
     id: row.id,
     name: row.name,
     city: row.city,
     state: row.state,
     cmo: row.cmo || undefined,
-    unitHead: row.unit_head || row.contact_head || undefined,
+    unitHead: row.unit_head || row.contact_head || row.unitHead || memUser?.name || undefined,
+    unitHeadEmail: row.unit_head_email || row.unitHeadEmail || memUser?.email || undefined,
+    unitHeadEmpId: row.unit_head_emp_id || row.unitHeadEmpId || memUser?.emp_id || (memUser as any)?.empId || undefined,
+    unitHeadDesignation: row.unit_head_designation || row.unitHeadDesignation || memUser?.designation || undefined,
     isAssessed: Boolean(row.is_assessed) || bottlenecks.length > 0,
-    establishedYear: row.established_year,
-    bedCapacity: row.bed_capacity,
-    contactHead: row.unit_head || row.contact_head,
+    establishedYear: row.established_year || row.establishedYear,
+    bedCapacity: row.bed_capacity || row.bedCapacity,
+    contactHead: row.unit_head || row.contact_head || row.unitHead || memUser?.name || undefined,
     bottlenecks: bottlenecks.map(formatBottleneck)
   };
 }
@@ -480,38 +487,87 @@ router.get('/units/:id', async (req: Request, res: Response) => {
   }
 });
 
-// 7b. Update Unit Metadata (Super Admin)
+// 7b. Update Unit Metadata & Details (Super Admin)
 router.put('/units/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, city, state, cmo, unitHead, contactHead, establishedYear, bedCapacity } = req.body;
+  const { name, city, state, cmo, unitHead, contactHead, establishedYear, bedCapacity, unitHeadEmail, unitHeadEmpId, unitHeadDesignation } = req.body;
+
+  const resolvedHead = (unitHead !== undefined ? unitHead : (contactHead !== undefined ? contactHead : '')).trim();
+
+  // Update in-memory unit
+  const memUnit = SANKARA_INITIAL_UNITS.find((u) => u.id === id);
+  if (memUnit) {
+    if (name) memUnit.name = name.trim();
+    if (city) memUnit.city = city.trim();
+    if (state) memUnit.state = state.trim();
+    if (cmo !== undefined) memUnit.cmo = cmo.trim();
+    if (resolvedHead) {
+      memUnit.unit_head = resolvedHead;
+      memUnit.contact_head = resolvedHead;
+      (memUnit as any).unitHead = resolvedHead;
+      (memUnit as any).contactHead = resolvedHead;
+    }
+    if (establishedYear !== undefined) {
+      memUnit.established_year = Number(establishedYear) || undefined;
+      (memUnit as any).establishedYear = Number(establishedYear) || undefined;
+    }
+    if (bedCapacity !== undefined) {
+      memUnit.bed_capacity = Number(bedCapacity) || undefined;
+      (memUnit as any).bedCapacity = Number(bedCapacity) || undefined;
+    }
+    if (unitHeadEmail) {
+      (memUnit as any).unitHeadEmail = unitHeadEmail.trim().toLowerCase();
+    }
+    if (unitHeadEmpId) {
+      (memUnit as any).unitHeadEmpId = unitHeadEmpId.trim();
+    }
+  }
+
+  // Also update or create in-memory user if email or head name provided
+  if (unitHeadEmail || resolvedHead) {
+    let memUser = SANKARA_INITIAL_USERS.find((u) => u.unit_id === id || (unitHeadEmail && u.email.toLowerCase() === unitHeadEmail.trim().toLowerCase()));
+    if (memUser) {
+      if (resolvedHead) memUser.name = resolvedHead;
+      if (unitHeadEmail) memUser.email = unitHeadEmail.trim().toLowerCase();
+      if (unitHeadEmpId) memUser.emp_id = unitHeadEmpId.trim();
+    }
+  }
 
   try {
     const existing = await pool.query('SELECT * FROM units WHERE id = $1', [id]);
-    if (existing.rows.length === 0) {
-      return res.status(404).json({ error: `Unit ${id} not found` });
+    if (existing.rows.length > 0) {
+      const current = existing.rows[0];
+      const newName = name ? name.trim() : current.name;
+      const newCity = city ? city.trim() : current.city;
+      const newState = state ? state.trim() : current.state;
+      const newCmo = cmo !== undefined ? cmo.trim() : current.cmo;
+      const newUnitHead = resolvedHead || current.unit_head || current.contact_head;
+      const newContactHead = newUnitHead;
+      const newYear = establishedYear !== undefined ? Number(establishedYear) : current.established_year;
+      const newBedCapacity = bedCapacity !== undefined ? Number(bedCapacity) : current.bed_capacity;
+
+      const updateRes = await pool.query(`
+        UPDATE units
+        SET name = $1, city = $2, state = $3, cmo = $4, unit_head = $5, contact_head = $6, established_year = $7, bed_capacity = $8, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $9
+        RETURNING *
+      `, [newName, newCity, newState, newCmo, newUnitHead, newContactHead, newYear, newBedCapacity, id]);
+
+      if (unitHeadEmail) {
+        await pool.query(`
+          UPDATE users
+          SET email = $1, name = COALESCE(NULLIF($2, ''), name)
+          WHERE unit_id = $3 AND role = 'Unit Head'
+        `, [unitHeadEmail.trim().toLowerCase(), resolvedHead, id]).catch(() => {});
+      }
+
+      return res.json(formatUnit(updateRes.rows[0]));
     }
-
-    const current = existing.rows[0];
-    const newName = name || current.name;
-    const newCity = city || current.city;
-    const newState = state || current.state;
-    const newCmo = cmo !== undefined ? cmo : current.cmo;
-    const newUnitHead = unitHead !== undefined ? unitHead : (contactHead !== undefined ? contactHead : (current.unit_head || current.contact_head));
-    const newContactHead = newUnitHead;
-    const newYear = establishedYear !== undefined ? establishedYear : current.established_year;
-    const newBedCapacity = bedCapacity !== undefined ? bedCapacity : current.bed_capacity;
-
-    const updateRes = await pool.query(`
-      UPDATE units
-      SET name = $1, city = $2, state = $3, cmo = $4, unit_head = $5, contact_head = $6, established_year = $7, bed_capacity = $8, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
-      RETURNING *
-    `, [newName, newCity, newState, newCmo, newUnitHead, newContactHead, newYear, newBedCapacity, id]);
-
-    res.json(formatUnit(updateRes.rows[0]));
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.warn('[PostgreSQL Offline Notice on Unit Update]', error.message);
   }
+
+  res.json(formatUnit(memUnit || { id, name: name || 'Unit', city, state, cmo, unit_head: resolvedHead, contact_head: resolvedHead, established_year: establishedYear, bed_capacity: bedCapacity }));
 });
 
 // 7c. Super Admin: Assign or Update Unit Head & CMO for a Unit
@@ -529,78 +585,115 @@ router.post('/units/:id/unit-head', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Unit Head Name and Official Email are required' });
   }
 
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    const unitRes = await client.query('SELECT * FROM units WHERE id = $1', [id]);
-    if (unitRes.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: `Unit ${id} not found` });
-    }
-    const unit = unitRes.rows[0];
-
-    // 1. Update unit unit_head, contact_head, and optional cmo
-    if (cmo !== undefined) {
-      await client.query(
-        `UPDATE units SET unit_head = $1, contact_head = $1, cmo = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
-        [headName, cmo, id]
-      );
-    } else {
-      await client.query(
-        `UPDATE units SET unit_head = $1, contact_head = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-        [headName, id]
-      );
-    }
-
-    // 2. Check if a Unit Head user for this unit already exists OR email already exists
-    const existingUser = await client.query(
-      `SELECT * FROM users WHERE (unit_id = $1 AND role = 'Unit Head') OR LOWER(email) = LOWER($2) LIMIT 1`,
-      [id, headEmail]
-    );
-
-    const initials = headName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'UH';
-
-    let userRecord: any;
-    if (existingUser.rows.length > 0) {
-      const existingId = existingUser.rows[0].id;
-      const updateRes = await client.query(`
-        UPDATE users
-        SET name = $1, email = $2, emp_id = $3, password = COALESCE($4, password), role = 'Unit Head', unit_id = $5, designation = $6, avatar_initials = $7
-        WHERE id = $8
-        RETURNING *
-      `, [headName, headEmail, headEmpId || existingUser.rows[0].emp_id, password ? headPassword : null, id, headDesignation, initials, existingId]);
-      userRecord = updateRes.rows[0];
-    } else {
-      const newUserId = `user-${id}-head-${Date.now()}`;
-      const insertRes = await client.query(`
-        INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
-        VALUES ($1, $2, $3, $4, $5, 'Unit Head', $6, $7, $8)
-        RETURNING *
-      `, [newUserId, headName, headEmail, headEmpId || `UH-${String(id).toUpperCase()}`, headPassword, id, headDesignation, initials]);
-      userRecord = insertRes.rows[0];
-    }
-
-    // 3. Log to audit logs
-    await client.query(`
-      INSERT INTO audit_logs (unit_id, action, details, user_role)
-      VALUES ($1, 'UNIT_HEAD_ASSIGNED', $2, 'Super Admin')
-    `, [id, JSON.stringify({ unitId: id, unitName: unit.name, headName, headEmail, headEmpId })]);
-
-    await client.query('COMMIT');
-
-    res.json({
-      success: true,
-      message: `Unit Head ${headName} successfully assigned to ${unit.name}`,
-      unit: formatUnit({ ...unit, unit_head: headName, contact_head: headName, cmo: cmo !== undefined ? cmo : unit.cmo }),
-      user: formatUser(userRecord)
-    });
-  } catch (error: any) {
-    await client.query('ROLLBACK');
-    res.status(500).json({ error: error.message });
-  } finally {
-    client.release();
+  // 1. Update in-memory fallback unit
+  const memUnit = SANKARA_INITIAL_UNITS.find((u) => u.id === id);
+  if (memUnit) {
+    memUnit.unit_head = headName;
+    memUnit.contact_head = headName;
+    (memUnit as any).unitHead = headName;
+    (memUnit as any).contactHead = headName;
+    (memUnit as any).unitHeadEmail = headEmail;
+    (memUnit as any).unitHeadEmpId = headEmpId;
+    (memUnit as any).unitHeadDesignation = headDesignation;
+    if (cmo !== undefined) memUnit.cmo = cmo.trim();
   }
+
+  // 2. Update or add in-memory fallback user
+  let memUser = SANKARA_INITIAL_USERS.find((u) => u.unit_id === id || u.email.toLowerCase() === headEmail);
+  if (memUser) {
+    memUser.name = headName;
+    memUser.email = headEmail;
+    memUser.emp_id = headEmpId || memUser.emp_id;
+    (memUser as any).empId = headEmpId || (memUser as any).empId;
+    memUser.password = headPassword;
+    memUser.designation = headDesignation;
+    memUser.unit_id = id;
+    (memUser as any).unitId = id;
+  } else {
+    memUser = {
+      id: `user-${id}-head-${Date.now()}`,
+      name: headName,
+      email: headEmail,
+      emp_id: headEmpId || `UH-${String(id).toUpperCase().slice(0, 8)}`,
+      password: headPassword,
+      role: 'Unit Head',
+      unit_id: id,
+      designation: headDesignation,
+      avatar_initials: headName.slice(0, 2).toUpperCase()
+    };
+    (memUser as any).unitId = id;
+    (memUser as any).empId = headEmpId;
+    SANKARA_INITIAL_USERS.push(memUser);
+  }
+
+  // 3. Persist to PostgreSQL if connected
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const unitRes = await client.query('SELECT * FROM units WHERE id = $1', [id]);
+      if (unitRes.rows.length > 0) {
+        if (cmo !== undefined) {
+          await client.query(
+            `UPDATE units SET unit_head = $1, contact_head = $1, cmo = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+            [headName, cmo.trim(), id]
+          );
+        } else {
+          await client.query(
+            `UPDATE units SET unit_head = $1, contact_head = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+            [headName, id]
+          );
+        }
+
+        const existingUser = await client.query(
+          `SELECT * FROM users WHERE (unit_id = $1 AND role = 'Unit Head') OR LOWER(email) = LOWER($2) LIMIT 1`,
+          [id, headEmail]
+        );
+
+        const initials = headName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'UH';
+
+        if (existingUser.rows.length > 0) {
+          await client.query(`
+            UPDATE users
+            SET name = $1, email = $2, emp_id = $3, password = COALESCE($4, password), role = 'Unit Head', unit_id = $5, designation = $6, avatar_initials = $7
+            WHERE id = $8
+          `, [headName, headEmail, headEmpId || existingUser.rows[0].emp_id, password ? headPassword : null, id, headDesignation, initials, existingUser.rows[0].id]);
+        } else {
+          const newUserId = `user-${id}-head-${Date.now()}`;
+          await client.query(`
+            INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
+            VALUES ($1, $2, $3, $4, $5, 'Unit Head', $6, $7, $8)
+          `, [newUserId, headName, headEmail, headEmpId || `UH-${String(id).toUpperCase().slice(0, 8)}`, headPassword, id, headDesignation, initials]);
+        }
+
+        await client.query(`
+          INSERT INTO audit_logs (unit_id, action, details, user_role)
+          VALUES ($1, 'UNIT_HEAD_ASSIGNED', $2, 'Super Admin')
+        `, [id, JSON.stringify({ unitId: id, headName, headEmail, headEmpId, cmo })]);
+
+        await client.query('COMMIT');
+      }
+    } catch (dbErr) {
+      await client.query('ROLLBACK').catch(() => {});
+    } finally {
+      client.release();
+    }
+  } catch (connErr: any) {
+    console.warn('[PostgreSQL Offline Notice on Unit Head Update]', connErr.message);
+  }
+
+  const updatedFormattedUnit = formatUnit(memUnit || { id, name: headName, unit_head: headName, contact_head: headName, cmo });
+  updatedFormattedUnit.unitHeadEmail = headEmail;
+  updatedFormattedUnit.unitHeadEmpId = headEmpId;
+  updatedFormattedUnit.unitHeadDesignation = headDesignation;
+
+  res.json({
+    success: true,
+    message: `Unit Head ${headName} and CMO details successfully assigned to ${memUnit?.name || 'Unit'}`,
+    unit: updatedFormattedUnit,
+    user: formatUser(memUser)
+  });
 });
 
 // 8. Initialize Unit Assessment

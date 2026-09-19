@@ -43,29 +43,51 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
   const [selectedUnitForAddBottleneck, setSelectedUnitForAddBottleneck] = useState<HospitalUnit | null>(null);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [usersList, setUsersList] = useState<User[]>([]);
 
-  // Form State for Assigning / Editing Unit Leadership
+  // Form State for Assigning / Editing Unit Leadership & Details
+  const [unitName, setUnitName] = useState('');
   const [cmoName, setCmoName] = useState('');
   const [headName, setHeadName] = useState('');
   const [headEmail, setHeadEmail] = useState('');
   const [headEmpId, setHeadEmpId] = useState('');
   const [headDesignation, setHeadDesignation] = useState('');
   const [headPassword, setHeadPassword] = useState('');
+  const [bedCapacity, setBedCapacity] = useState<number>(100);
+  const [establishedYear, setEstablishedYear] = useState<number>(2010);
+
+  // Load staff users to link unit head emails accurately
+  React.useEffect(() => {
+    api.getUsers().then(setUsersList).catch(() => {});
+  }, []);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
   };
 
+  const getUnitUser = (unit: HospitalUnit) => {
+    return usersList.find(
+      (u) =>
+        u.unitId === unit.id ||
+        (u.unitName && u.unitName.toLowerCase().includes(unit.city.toLowerCase())) ||
+        (unit.unitHeadEmail && u.email.toLowerCase() === unit.unitHeadEmail.toLowerCase())
+    );
+  };
+
   const handleOpenAssignModal = (unit: HospitalUnit) => {
-    setSelectedUnitForHead(unit);
-    setCmoName(unit.cmo || '');
-    setHeadName(unit.unitHead || unit.contactHead || '');
-    // Generate default suggested email if none exists
+    const matchingUser = getUnitUser(unit);
     const citySlug = unit.city.toLowerCase().replace(/[^a-z]/g, '');
-    setHeadEmail(`unithead.${citySlug}@sankara.com`);
-    setHeadEmpId(`UH-${unit.id.replace('unit-', '').toUpperCase().slice(0, 4)}-01`);
-    setHeadDesignation(`${unit.name} • Unit Head`);
+
+    setSelectedUnitForHead(unit);
+    setUnitName(unit.name || '');
+    setCmoName(unit.cmo || '');
+    setHeadName(unit.unitHead || unit.contactHead || matchingUser?.name || '');
+    setHeadEmail(unit.unitHeadEmail || matchingUser?.email || `unithead.${citySlug}@sankara.com`);
+    setHeadEmpId(unit.unitHeadEmpId || matchingUser?.empId || `UH-${unit.id.replace('unit-', '').toUpperCase().slice(0, 4)}-01`);
+    setHeadDesignation(unit.unitHeadDesignation || matchingUser?.designation || `${unit.name} • Unit Head`);
+    setBedCapacity(unit.bedCapacity || 100);
+    setEstablishedYear(unit.establishedYear || 2010);
     setHeadPassword('unit123');
   };
 
@@ -79,20 +101,43 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
 
     setLoading(true);
     try {
+      const cleanEmail = headEmail.trim().toLowerCase();
+      const cleanHead = headName.trim();
+      const cleanCmo = cmoName.trim();
+      const cleanEmpId = headEmpId.trim();
+      const cleanDesig = headDesignation.trim();
+
+      // 1. Update Unit Head credentials & CMO
       const res = await api.assignUnitHead(selectedUnitForHead.id, {
-        name: headName.trim(),
-        email: headEmail.trim().toLowerCase(),
-        empId: headEmpId.trim(),
-        designation: headDesignation.trim(),
+        name: cleanHead,
+        email: cleanEmail,
+        empId: cleanEmpId,
+        designation: cleanDesig,
         password: headPassword.trim() || 'unit123',
-        cmo: cmoName.trim()
+        cmo: cleanCmo
       });
 
-      showToast('success', res.message || `Leadership details updated successfully for ${selectedUnitForHead.name}!`);
+      // 2. Also persist unit capacity & metadata
+      await api.updateUnit(selectedUnitForHead.id, {
+        name: unitName.trim() || selectedUnitForHead.name,
+        cmo: cleanCmo,
+        unitHead: cleanHead,
+        contactHead: cleanHead,
+        unitHeadEmail: cleanEmail,
+        unitHeadEmpId: cleanEmpId,
+        unitHeadDesignation: cleanDesig,
+        bedCapacity: Number(bedCapacity) || selectedUnitForHead.bedCapacity,
+        establishedYear: Number(establishedYear) || selectedUnitForHead.establishedYear
+      });
+
+      showToast('success', res.message || `Unit details and credentials saved successfully for ${selectedUnitForHead.name}!`);
       setSelectedUnitForHead(null);
+      
+      // Reload users list & parent units state
+      api.getUsers().then(setUsersList).catch(() => {});
       onRefreshUnits();
     } catch (err: any) {
-      showToast('error', err.message || 'Failed to update leadership details.');
+      showToast('error', err.message || 'Failed to update unit details.');
     } finally {
       setLoading(false);
     }
@@ -101,12 +146,15 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
   // Filter units across name, city, state, CMO, and Unit Head
   const filteredUnits = units.filter((u) => {
     const q = searchQuery.toLowerCase();
+    const matchingUser = getUnitUser(u);
+    const userEmail = u.unitHeadEmail || matchingUser?.email || '';
     return (
       u.name.toLowerCase().includes(q) ||
       u.city.toLowerCase().includes(q) ||
       u.state.toLowerCase().includes(q) ||
       (u.cmo || '').toLowerCase().includes(q) ||
-      (u.unitHead || u.contactHead || '').toLowerCase().includes(q)
+      (u.unitHead || u.contactHead || '').toLowerCase().includes(q) ||
+      userEmail.toLowerCase().includes(q)
     );
   });
 
@@ -274,15 +322,30 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                         Unit Head
                       </span>
                     </div>
-                    <div className="font-black text-xs text-slate-900 pl-0.5">
-                      {currentHead || 'Unassigned'}
-                    </div>
-                    <div className="space-y-0.5 text-[10px] text-slate-600 pt-1 border-t border-orange-100/80">
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <Mail className="w-3 h-3 text-orange-500 shrink-0" />
-                        <span className="truncate">unithead.{unit.city.toLowerCase().replace(/[^a-z]/g, '')}@sankara.com</span>
-                      </div>
-                    </div>
+
+                    {(() => {
+                      const matchingUser = getUnitUser(unit);
+                      const displayEmail = unit.unitHeadEmail || matchingUser?.email || `unithead.${unit.city.toLowerCase().replace(/[^a-z]/g, '')}@sankara.com`;
+                      const displayEmpId = unit.unitHeadEmpId || matchingUser?.empId;
+                      return (
+                        <>
+                          <div className="font-black text-xs text-slate-900 pl-0.5 flex items-center justify-between gap-2">
+                            <span className="truncate">{currentHead || matchingUser?.name || 'Unassigned'}</span>
+                            {displayEmpId && (
+                              <span className="text-[9px] font-mono font-bold bg-orange-100/90 text-orange-900 px-2 py-0.5 rounded-md shrink-0 border border-orange-200">
+                                {displayEmpId}
+                              </span>
+                            )}
+                          </div>
+                          <div className="space-y-0.5 text-[10px] text-slate-600 pt-1 border-t border-orange-100/80">
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <Mail className="w-3 h-3 text-orange-500 shrink-0" />
+                              <span className="truncate font-semibold text-slate-800">{displayEmail}</span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                 </div>
@@ -295,7 +358,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                       className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Edit Leadership</span>
+                      <span>Edit Unit & Head</span>
                     </button>
 
                     <button
@@ -324,7 +387,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
         })}
       </div>
 
-      {/* Assign / Edit Leadership Modal */}
+      {/* Assign / Edit Leadership & Unit Details Modal */}
       {selectedUnitForHead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
@@ -336,7 +399,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                   Super Admin Management
                 </span>
                 <h3 className="text-lg font-black tracking-tight">
-                  Unit Leadership & Credentials
+                  Unit Profile, Leadership & Credentials
                 </h3>
                 <span className="text-xs text-orange-100 font-medium">
                   {selectedUnitForHead.name} ({selectedUnitForHead.city}, {selectedUnitForHead.state})
@@ -353,6 +416,24 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
             {/* Modal Form */}
             <form onSubmit={handleSaveUnitHead} className="p-6 space-y-4 overflow-y-auto flex-1">
               
+              {/* Unit Hospital Name */}
+              <div>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                  Hospital Unit Name *
+                </label>
+                <div className="relative">
+                  <Building2 className="w-4 h-4 text-orange-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Sankara Eye Hospital"
+                    value={unitName}
+                    onChange={(e) => setUnitName(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
               {/* Chief Medical Officer (CMO) */}
               <div>
                 <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
@@ -441,6 +522,37 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
                       className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Bed Capacity & Established Year */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Bed Capacity
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="1000"
+                    value={bedCapacity}
+                    onChange={(e) => setBedCapacity(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Established Year
+                  </label>
+                  <input
+                    type="number"
+                    min="1970"
+                    max="2030"
+                    value={establishedYear}
+                    onChange={(e) => setEstablishedYear(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
                 </div>
               </div>
 

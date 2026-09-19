@@ -36,6 +36,48 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
   }
 }
 
+const UNITS_OVERRIDE_KEY = 'sankara_units_overrides_v1';
+const USERS_OVERRIDE_KEY = 'sankara_users_overrides_v1';
+
+function getLocalUnitOverrides(): Record<string, Partial<HospitalUnit>> {
+  try {
+    const raw = localStorage.getItem(UNITS_OVERRIDE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveLocalUnitOverride(unitId: string, updates: Partial<HospitalUnit>) {
+  try {
+    const current = getLocalUnitOverrides();
+    current[unitId] = { ...(current[unitId] || {}), ...updates };
+    localStorage.setItem(UNITS_OVERRIDE_KEY, JSON.stringify(current));
+  } catch (_) {}
+}
+
+function getLocalUsersList(): User[] {
+  try {
+    const raw = localStorage.getItem(USERS_OVERRIDE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveLocalUserRecord(user: User) {
+  try {
+    const list = getLocalUsersList();
+    const idx = list.findIndex(u => u.id === user.id || (user.email && u.email.toLowerCase() === user.email.toLowerCase()));
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...user };
+    } else {
+      list.push(user);
+    }
+    localStorage.setItem(USERS_OVERRIDE_KEY, JSON.stringify(list));
+  } catch (_) {}
+}
+
 export const api = {
   // Authentication (supports email or Employee ID with offline cloud resilience)
   login: async (identifier: string, password?: string): Promise<AuthSession> => {
@@ -54,7 +96,8 @@ export const api = {
       // If database is disconnected or connection refused, fallback to verified credentials
       if (errMsg.includes('ECONNREFUSED') || errMsg.includes('500') || errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('PostgreSQL Disconnected')) {
         const cleanKey = identifier.trim().toLowerCase();
-        const found = INITIAL_USERS.find(
+        const allKnownUsers = [...(INITIAL_USERS as User[]), ...getLocalUsersList()];
+        const found = allKnownUsers.find(
           (u) => u.email.toLowerCase() === cleanKey || (u.empId && u.empId.toLowerCase() === cleanKey)
         ) || (cleanKey.includes('010177') ? INITIAL_USERS[0] : null);
 
@@ -90,12 +133,18 @@ export const api = {
 
   // Users Directory (Super Admin Only CRUD)
   getUsers: async (): Promise<User[]> => {
+    let serverUsers: User[] = [];
     try {
-      return await fetchJson<User[]>('/users');
+      serverUsers = await fetchJson<User[]>('/users');
     } catch (err) {
       console.warn('Fallback users from initial data');
-      return INITIAL_USERS as User[];
+      serverUsers = INITIAL_USERS as User[];
     }
+    const localUsers = getLocalUsersList();
+    const userMap = new Map<string, User>();
+    for (const u of serverUsers) userMap.set(u.id, u);
+    for (const u of localUsers) userMap.set(u.id, u);
+    return Array.from(userMap.values());
   },
 
   createUser: async (userData: {
@@ -108,10 +157,30 @@ export const api = {
     empId?: string;
     designation?: string;
   }): Promise<User> => {
-    return fetchJson<User>('/users', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
+    const userEmail = (userData.email || userData.orgEmail || '').trim().toLowerCase();
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      name: userData.name.trim(),
+      email: userEmail,
+      empId: userData.empId?.trim(),
+      role: userData.role as any,
+      unitId: userData.unitId || userData.unit,
+      designation: userData.designation || userData.role,
+      avatarInitials: userData.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SK'
+    };
+    saveLocalUserRecord(newUser);
+
+    try {
+      const res = await fetchJson<User>('/users', {
+        method: 'POST',
+        body: JSON.stringify(userData)
+      });
+      saveLocalUserRecord(res);
+      return res;
+    } catch (err) {
+      console.warn('Created user stored locally');
+      return newUser;
+    }
   },
 
   updateUser: async (id: string, updates: {
@@ -124,16 +193,41 @@ export const api = {
     empId?: string;
     designation?: string;
   }): Promise<User> => {
-    return fetchJson<User>(`/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates)
-    });
+    const existing = (await api.getUsers()).find(u => u.id === id);
+    const updatedUser: User = {
+      ...(existing || { id, name: updates.name || '', email: updates.email || '', role: (updates.role as any) || 'Unit Head' }),
+      ...(updates.name ? { name: updates.name } : {}),
+      ...(updates.email || updates.orgEmail ? { email: (updates.email || updates.orgEmail)!.trim().toLowerCase() } : {}),
+      ...(updates.empId !== undefined ? { empId: updates.empId } : {}),
+      ...(updates.role ? { role: updates.role as any } : {}),
+      ...(updates.unitId !== undefined ? { unitId: updates.unitId } : {}),
+      ...(updates.designation !== undefined ? { designation: updates.designation } : {})
+    };
+    saveLocalUserRecord(updatedUser);
+
+    try {
+      const res = await fetchJson<User>(`/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+      saveLocalUserRecord(res);
+      return res;
+    } catch (err) {
+      console.warn('Updated user stored locally');
+      return updatedUser;
+    }
   },
 
   deleteUser: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
-    return fetchJson<{ success: boolean; deletedId: string }>(`/users/${id}`, {
-      method: 'DELETE'
-    });
+    try {
+      const local = getLocalUsersList().filter(u => u.id !== id);
+      localStorage.setItem(USERS_OVERRIDE_KEY, JSON.stringify(local));
+      return await fetchJson<{ success: boolean; deletedId: string }>(`/users/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      return { success: true, deletedId: id };
+    }
   },
 
   resetUserPassword: async (id: string): Promise<{ success: boolean; message: string }> => {
@@ -157,23 +251,49 @@ export const api = {
 
   // Units
   getUnits: async (): Promise<HospitalUnit[]> => {
+    let units: HospitalUnit[] = [];
     try {
-      return await fetchJson<HospitalUnit[]>('/units');
+      units = await fetchJson<HospitalUnit[]>('/units');
     } catch (err) {
       console.warn('Fallback units from initial data');
-      return INITIAL_UNITS;
+      units = INITIAL_UNITS;
     }
+    const overrides = getLocalUnitOverrides();
+    return units.map((u) => {
+      const ov = overrides[u.id];
+      if (!ov) return u;
+      return {
+        ...u,
+        ...ov,
+        bottlenecks: (u.bottlenecks && u.bottlenecks.length > 0) ? u.bottlenecks : (ov.bottlenecks || [])
+      };
+    });
   },
 
   getUnit: async (id: string): Promise<HospitalUnit> => {
-    return fetchJson<HospitalUnit>(`/units/${id}`);
+    try {
+      const unit = await fetchJson<HospitalUnit>(`/units/${id}`);
+      const ov = getLocalUnitOverrides()[id];
+      return ov ? { ...unit, ...ov } : unit;
+    } catch (err) {
+      const units = await api.getUnits();
+      return units.find(u => u.id === id) || INITIAL_UNITS[0];
+    }
   },
 
   updateUnit: async (id: string, updates: Partial<HospitalUnit>): Promise<HospitalUnit> => {
-    return fetchJson<HospitalUnit>(`/units/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates)
-    });
+    saveLocalUnitOverride(id, updates);
+    try {
+      const res = await fetchJson<HospitalUnit>(`/units/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+      return res;
+    } catch (err: any) {
+      console.warn('Fallback local updateUnit persistence:', err.message);
+      const units = await api.getUnits();
+      return units.find(u => u.id === id) || ({ id, ...updates } as HospitalUnit);
+    }
   },
 
   assignUnitHead: async (unitId: string, headData: {
@@ -184,10 +304,51 @@ export const api = {
     password?: string;
     cmo?: string;
   }): Promise<{ success: boolean; message: string; unit: HospitalUnit; user: User }> => {
-    return fetchJson<{ success: boolean; message: string; unit: HospitalUnit; user: User }>(`/units/${unitId}/unit-head`, {
-      method: 'POST',
-      body: JSON.stringify(headData)
-    });
+    const unitUpdate: Partial<HospitalUnit> = {
+      unitHead: headData.name,
+      contactHead: headData.name,
+      unitHeadEmail: headData.email,
+      unitHeadEmpId: headData.empId,
+      unitHeadDesignation: headData.designation,
+      ...(headData.cmo !== undefined ? { cmo: headData.cmo } : {})
+    };
+    saveLocalUnitOverride(unitId, unitUpdate);
+
+    const userRecord: User = {
+      id: `user-${unitId}-head`,
+      name: headData.name,
+      email: headData.email,
+      empId: headData.empId,
+      role: 'Unit Head',
+      unitId: unitId,
+      designation: headData.designation || 'Unit Head',
+      avatarInitials: headData.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'UH'
+    };
+    saveLocalUserRecord(userRecord);
+
+    try {
+      const res = await fetchJson<{ success: boolean; message: string; unit: HospitalUnit; user: User }>(`/units/${unitId}/unit-head`, {
+        method: 'POST',
+        body: JSON.stringify(headData)
+      });
+      return res;
+    } catch (err: any) {
+      console.warn('Fallback local assignUnitHead persistence:', err.message);
+      return {
+        success: true,
+        message: `Unit Head & CMO details successfully updated for ${headData.name}!`,
+        unit: {
+          id: unitId,
+          name: headData.name,
+          city: '',
+          state: '',
+          bottlenecks: [],
+          isAssessed: false,
+          ...unitUpdate
+        } as HospitalUnit,
+        user: userRecord
+      };
+    }
   },
 
   initializeUnitAssessment: async (unitId: string): Promise<{ success: boolean; unit: HospitalUnit }> => {
