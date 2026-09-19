@@ -10,8 +10,12 @@ function getAuthHeader(): Record<string, string> {
 
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4500);
+
   try {
     const res = await fetch(url, {
+      signal: options?.signal || controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeader(),
@@ -19,6 +23,7 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
       },
       ...options
     });
+    clearTimeout(timer);
 
     if (!res.ok) {
       let errDetail = `HTTP error ${res.status}`;
@@ -31,6 +36,7 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
 
     return await res.json();
   } catch (err: any) {
+    clearTimeout(timer);
     console.error(`[API Error] ${endpoint}:`, err);
     throw err;
   }

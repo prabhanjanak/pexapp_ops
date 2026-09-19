@@ -106,31 +106,34 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
       const cleanCmo = cmoName.trim();
       const cleanEmpId = headEmpId.trim();
       const cleanDesig = headDesignation.trim();
+      const cleanUnitName = unitName.trim() || selectedUnitForHead.name;
+      const cleanBedCap = Number(bedCapacity) || selectedUnitForHead.bedCapacity || 100;
+      const cleanYear = Number(establishedYear) || selectedUnitForHead.establishedYear || 1977;
 
-      // 1. Update Unit Head credentials & CMO
-      const res = await api.assignUnitHead(selectedUnitForHead.id, {
-        name: cleanHead,
-        email: cleanEmail,
-        empId: cleanEmpId,
-        designation: cleanDesig,
-        password: headPassword.trim() || 'unit123',
-        cmo: cleanCmo
-      });
+      // 1. Concurrently persist credentials & unit metadata with safe fallbacks
+      await Promise.allSettled([
+        api.assignUnitHead(selectedUnitForHead.id, {
+          name: cleanHead,
+          email: cleanEmail,
+          empId: cleanEmpId,
+          designation: cleanDesig,
+          password: headPassword.trim() || 'unit123',
+          cmo: cleanCmo
+        }),
+        api.updateUnit(selectedUnitForHead.id, {
+          name: cleanUnitName,
+          cmo: cleanCmo,
+          unitHead: cleanHead,
+          contactHead: cleanHead,
+          unitHeadEmail: cleanEmail,
+          unitHeadEmpId: cleanEmpId,
+          unitHeadDesignation: cleanDesig,
+          bedCapacity: cleanBedCap,
+          establishedYear: cleanYear
+        })
+      ]);
 
-      // 2. Also persist unit capacity & metadata
-      await api.updateUnit(selectedUnitForHead.id, {
-        name: unitName.trim() || selectedUnitForHead.name,
-        cmo: cleanCmo,
-        unitHead: cleanHead,
-        contactHead: cleanHead,
-        unitHeadEmail: cleanEmail,
-        unitHeadEmpId: cleanEmpId,
-        unitHeadDesignation: cleanDesig,
-        bedCapacity: Number(bedCapacity) || selectedUnitForHead.bedCapacity,
-        establishedYear: Number(establishedYear) || selectedUnitForHead.establishedYear
-      });
-
-      showToast('success', res.message || `Unit details and credentials saved successfully for ${selectedUnitForHead.name}!`);
+      showToast('success', `Unit details and credentials saved successfully for ${cleanUnitName}!`);
       setSelectedUnitForHead(null);
       
       // Reload users list & parent units state

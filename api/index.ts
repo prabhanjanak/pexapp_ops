@@ -16,16 +16,16 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Lazy Database Initialization for Vercel Serverless Function lifecycle
+// Non-blocking Database Initialization for Vercel Serverless Function lifecycle
 let dbInitPromise: Promise<any> | null = null;
-app.use(async (req, res, next) => {
+app.use((req, res, next) => {
   if (!dbInitPromise) {
-    dbInitPromise = initializeDatabase().catch(err => {
+    dbInitPromise = initializeDatabase(2, 500).catch(err => {
       console.error('[Vercel PostgreSQL Init Warning]', err.message);
-      dbInitPromise = null;
+      // Allow retry after 15s on failure
+      setTimeout(() => { dbInitPromise = null; }, 15000);
     });
   }
-  await dbInitPromise;
   next();
 });
 

@@ -21,7 +21,8 @@ export const pool = new Pool(
         ssl: useSsl ? { rejectUnauthorized: false } : undefined,
         max: 10,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
+        connectionTimeoutMillis: 3000,
+        query_timeout: 4000,
       }
     : {
         user: DB_USER,
@@ -32,7 +33,8 @@ export const pool = new Pool(
         ssl: useSsl ? { rejectUnauthorized: false } : undefined,
         max: 10,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
+        connectionTimeoutMillis: 3000,
+        query_timeout: 4000,
       }
 );
 
