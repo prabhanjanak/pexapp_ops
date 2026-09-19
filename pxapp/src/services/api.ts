@@ -384,6 +384,7 @@ export const api = {
     remarks?: string;
     beforePhotos?: string[];
     afterPhotos?: string[];
+    tasks?: { id: string; text: string; isCompleted: boolean }[];
     userRole?: string;
   }): Promise<Bottleneck> => {
     return fetchJson<Bottleneck>('/bottlenecks', {
@@ -426,38 +427,136 @@ export const api = {
 
   // Categories API
   getCategories: async (): Promise<CategoryItem[]> => {
-    return fetchJson<CategoryItem[]>('/categories');
+    try {
+      return await fetchJson<CategoryItem[]>('/categories');
+    } catch (_) {
+      const raw = localStorage.getItem('sankara_local_cats_v1');
+      if (raw) {
+        try { return JSON.parse(raw); } catch (e) {}
+      }
+      return [
+        { id: 'cat-opd-wait', name: 'OPD Wait Time', department: 'Outpatient (OPD)' },
+        { id: 'cat-room-cap', name: 'Private Room Capacity', department: 'Inpatient & Daycare' },
+        { id: 'cat-tracking', name: 'Real-time Patient Tracking', department: 'IT & Digital Infrastructure' },
+        { id: 'cat-buzzer', name: 'Dilation & Buzzer Alert System', department: 'Outpatient (OPD)' },
+        { id: 'cat-lab', name: 'Lab Turnaround', department: 'Diagnostic & Laboratory' },
+        { id: 'cat-surgical-audit', name: 'Surgical Redo Audits', department: 'Operating Theatre (OT)' },
+        { id: 'cat-reg-delays', name: 'Registration Delays', department: 'Outpatient (OPD)' },
+        { id: 'cat-counselling', name: 'Counselling Wait Time', department: 'Patient Counselling' },
+        { id: 'cat-discharge', name: 'Discharge Process', department: 'Inpatient & Daycare' },
+        { id: 'cat-pharmacy', name: 'Pharmacy Counter Delays', department: 'Pharmacy & Dispensary' },
+        { id: 'cat-billing', name: 'Billing & Insurance Clearance', department: 'Billing & TPA Insurance' },
+        { id: 'cat-triage', name: 'Optometry & Triage Queue', department: 'Outpatient (OPD)' }
+      ];
+    }
   },
 
   createCategory: async (categoryData: { name: string; department?: string; description?: string }): Promise<CategoryItem> => {
-    return fetchJson<CategoryItem>('/categories', {
-      method: 'POST',
-      body: JSON.stringify(categoryData)
-    });
+    const newCat: CategoryItem = {
+      id: `cat-${Date.now()}`,
+      name: categoryData.name.trim(),
+      department: categoryData.department || 'General Operations',
+      description: categoryData.description?.trim()
+    };
+    try {
+      const raw = localStorage.getItem('sankara_local_cats_v1');
+      const list = raw ? JSON.parse(raw) : [];
+      list.push(newCat);
+      localStorage.setItem('sankara_local_cats_v1', JSON.stringify(list));
+    } catch (_) {}
+
+    try {
+      return await fetchJson<CategoryItem>('/categories', {
+        method: 'POST',
+        body: JSON.stringify(categoryData)
+      });
+    } catch (_) {
+      return newCat;
+    }
   },
 
   deleteCategory: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
-    return fetchJson<{ success: boolean; deletedId: string }>(`/categories/${id}`, {
-      method: 'DELETE'
-    });
+    try {
+      const raw = localStorage.getItem('sankara_local_cats_v1');
+      if (raw) {
+        const list = JSON.parse(raw).filter((c: any) => c.id !== id);
+        localStorage.setItem('sankara_local_cats_v1', JSON.stringify(list));
+      }
+    } catch (_) {}
+
+    try {
+      return await fetchJson<{ success: boolean; deletedId: string }>(`/categories/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (_) {
+      return { success: true, deletedId: id };
+    }
   },
 
   // Departments API
   getDepartments: async (): Promise<DepartmentItem[]> => {
-    return fetchJson<DepartmentItem[]>('/departments');
+    try {
+      return await fetchJson<DepartmentItem[]>('/departments');
+    } catch (_) {
+      const raw = localStorage.getItem('sankara_local_depts_v1');
+      if (raw) {
+        try { return JSON.parse(raw); } catch (e) {}
+      }
+      return [
+        { id: 'dept-opd', name: 'Outpatient (OPD)', code: 'OPD', headContact: 'Dr. Head OPD' },
+        { id: 'dept-inpatient', name: 'Inpatient & Daycare', code: 'IPD', headContact: 'Nursing Supervisor' },
+        { id: 'dept-ot', name: 'Operating Theatre (OT)', code: 'OT', headContact: 'Chief Surgeon' },
+        { id: 'dept-lab', name: 'Diagnostic & Laboratory', code: 'LAB', headContact: 'Lab Director' },
+        { id: 'dept-pharmacy', name: 'Pharmacy & Dispensary', code: 'PHARM', headContact: 'Chief Pharmacist' },
+        { id: 'dept-billing', name: 'Billing & TPA Insurance', code: 'BILL', headContact: 'Finance Lead' },
+        { id: 'dept-counselling', name: 'Patient Counselling', code: 'COUNS', headContact: 'PX Head' },
+        { id: 'dept-facility', name: 'Facility & Housekeeping', code: 'FAC', headContact: 'Facility Manager' },
+        { id: 'dept-quality', name: 'Quality Assurance & Audit', code: 'QA', headContact: 'Quality Lead' },
+        { id: 'dept-it', name: 'IT & Digital Infrastructure', code: 'IT', headContact: 'IT Ops Lead' }
+      ];
+    }
   },
 
   createDepartment: async (deptData: { name: string; code?: string; headContact?: string }): Promise<DepartmentItem> => {
-    return fetchJson<DepartmentItem>('/departments', {
-      method: 'POST',
-      body: JSON.stringify(deptData)
-    });
+    const newDept: DepartmentItem = {
+      id: `dept-${Date.now()}`,
+      name: deptData.name.trim(),
+      code: deptData.code?.trim().toUpperCase(),
+      headContact: deptData.headContact?.trim()
+    };
+    try {
+      const raw = localStorage.getItem('sankara_local_depts_v1');
+      const list = raw ? JSON.parse(raw) : [];
+      list.push(newDept);
+      localStorage.setItem('sankara_local_depts_v1', JSON.stringify(list));
+    } catch (_) {}
+
+    try {
+      return await fetchJson<DepartmentItem>('/departments', {
+        method: 'POST',
+        body: JSON.stringify(deptData)
+      });
+    } catch (_) {
+      return newDept;
+    }
   },
 
   deleteDepartment: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
-    return fetchJson<{ success: boolean; deletedId: string }>(`/departments/${id}`, {
-      method: 'DELETE'
-    });
+    try {
+      const raw = localStorage.getItem('sankara_local_depts_v1');
+      if (raw) {
+        const list = JSON.parse(raw).filter((d: any) => d.id !== id);
+        localStorage.setItem('sankara_local_depts_v1', JSON.stringify(list));
+      }
+    } catch (_) {}
+
+    try {
+      return await fetchJson<{ success: boolean; deletedId: string }>(`/departments/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (_) {
+      return { success: true, deletedId: id };
+    }
   },
 
   // Database Utilities

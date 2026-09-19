@@ -204,6 +204,7 @@ export default function App() {
         remarks: newBottleneck.remarks,
         beforePhotos: newBottleneck.beforePhotos,
         afterPhotos: newBottleneck.afterPhotos,
+        tasks: newBottleneck.tasks,
         userRole: currentUser?.role || 'Unit Head'
       });
 
