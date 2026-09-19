@@ -11,8 +11,12 @@ WORKDIR /app
 COPY package.json ./
 COPY pxapp/package.json ./pxapp/
 
-# Install dependencies for both root and pxapp
-RUN npm install && cd pxapp && npm install
+# Configure npm for network resilience & install dependencies
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm install --no-audit --no-fund \
+    && cd pxapp && npm install --no-audit --no-fund
 
 # Copy application source code
 COPY . .
