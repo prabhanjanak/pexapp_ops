@@ -230,9 +230,9 @@ export const INITIAL_USERS = [
     name: 'President (Operations)',
     email: 'president@sankara.com',
     empId: '010002',
-    role: 'Operations Team',
+    role: 'President',
     unitId: undefined,
-    designation: 'President of Hospital Operations',
+    designation: 'President of Hospital Operations • Executive Directorate',
     avatarInitials: 'PO'
   },
   {

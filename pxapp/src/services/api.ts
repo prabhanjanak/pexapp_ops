@@ -158,14 +158,17 @@ export const api = {
     designation?: string;
   }): Promise<User> => {
     const userEmail = (userData.email || userData.orgEmail || '').trim().toLowerCase();
+    const finalUnitId = userData.unitId || userData.unit;
+    const assignedUnit = finalUnitId ? INITIAL_UNITS.find(u => u.id === finalUnitId) : null;
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: userData.name.trim(),
       email: userEmail,
-      empId: userData.empId?.trim(),
+      empId: userData.empId?.trim() || undefined,
       role: userData.role as any,
-      unitId: userData.unitId || userData.unit,
-      designation: userData.designation || userData.role,
+      unitId: finalUnitId,
+      unitName: assignedUnit?.name,
+      designation: userData.designation || (userData.role === 'Unit Head' ? `${assignedUnit?.name || 'Unit'} Head` : userData.role),
       avatarInitials: userData.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SK'
     };
     saveLocalUserRecord(newUser);
@@ -175,8 +178,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(userData)
       });
-      saveLocalUserRecord(res);
-      return res;
+      if (res && res.id) {
+        saveLocalUserRecord(res);
+        return res;
+      }
+      return newUser;
     } catch (err) {
       console.warn('Created user stored locally');
       return newUser;

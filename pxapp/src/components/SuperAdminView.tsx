@@ -130,19 +130,27 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
       showNotify('error', 'Full Name and Hospital Email are required');
       return;
     }
+    const cleanEmail = formEmail.trim().toLowerCase();
+    const cleanName = formName.trim();
+    const cleanEmpId = formEmpId.trim();
+    const assignedUnit = formRole === 'Unit Head' ? units.find(u => u.id === formUnitId) : undefined;
+
     try {
       const newUser = await api.createUser({
-        name: formName.trim(),
-        email: formEmail.trim().toLowerCase(),
-        empId: formEmpId.trim(),
+        name: cleanName,
+        email: cleanEmail,
+        empId: cleanEmpId,
         role: formRole,
         unitId: formRole === 'Unit Head' ? formUnitId : undefined,
-        designation: formRole === 'Unit Head' ? 'Unit Head' : undefined
+        designation: formRole === 'Unit Head' ? `${assignedUnit?.name || 'Unit'} Head` : (formRole === 'President' ? 'President of Hospital Operations' : formRole)
       });
-      setUsersList(prev => [...prev, newUser]);
+      setUsersList(prev => {
+        const filtered = prev.filter(u => u.id !== newUser.id && u.email.toLowerCase() !== cleanEmail);
+        return [...filtered, newUser];
+      });
       setShowAddUserModal(false);
       resetForm();
-      showNotify('success', `Staff account successfully created for ${newUser.name}! Default password is Sankara@123.`);
+      showNotify('success', `Staff account successfully created for ${newUser.name}! Default login password is Sankara@123.`);
     } catch (err: any) {
       showNotify('error', err.message || 'Failed to create staff account');
     }
@@ -151,13 +159,19 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    const cleanEmail = formEmail.trim().toLowerCase();
+    const cleanName = formName.trim();
+    const cleanEmpId = formEmpId.trim();
+    const assignedUnit = formRole === 'Unit Head' ? units.find(u => u.id === formUnitId) : undefined;
+
     try {
       const updated = await api.updateUser(editingUser.id, {
-        name: formName.trim(),
-        email: formEmail.trim().toLowerCase(),
-        empId: formEmpId.trim(),
+        name: cleanName,
+        email: cleanEmail,
+        empId: cleanEmpId,
         role: formRole,
-        unitId: formRole === 'Unit Head' ? formUnitId : undefined
+        unitId: formRole === 'Unit Head' ? formUnitId : undefined,
+        designation: formRole === 'Unit Head' ? `${assignedUnit?.name || 'Unit'} Head` : (formRole === 'President' ? 'President of Hospital Operations' : formRole)
       });
       setUsersList(prev => prev.map(u => u.id === updated.id ? updated : u));
       setEditingUser(null);
@@ -866,10 +880,11 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-orange-500 outline-none"
                   >
-                    <option value="Unit Head">Unit Head</option>
+                    <option value="President">President (Executive All Access)</option>
+                    <option value="Super Admin">Super Admin (Directorate All Access)</option>
                     <option value="Operations Team">Operations Team</option>
+                    <option value="Unit Head">Unit Head</option>
                     <option value="Super Admin (View Only)">Super Admin (View Only)</option>
-                    <option value="Super Admin">Super Admin</option>
                   </select>
                 </div>
               </div>

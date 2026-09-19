@@ -333,20 +333,22 @@ export default function App() {
   }
 
   // Step 4: Render Full Bottleneck (PPE) Workspace with Left Sidebar Pane
+  const isSuperAdminOrPresident = currentUser.role === 'Super Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president');
+
   const currentTab = currentUser.role === 'Unit Head'
     ? activeUnitTab
-    : (currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)')
-    ? activeOpsTab
-    : activeAdminTab;
+    : isSuperAdminOrPresident
+    ? activeAdminTab
+    : activeOpsTab;
 
   const handleTabChange = (tab: any) => {
     if (currentUser.role === 'Unit Head') {
       if (tab === 'profile') setIsProfileModalOpen(true);
       else setActiveUnitTab(tab);
-    } else if (currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)') {
-      setActiveOpsTab(tab);
-    } else {
+    } else if (isSuperAdminOrPresident) {
       setActiveAdminTab(tab);
+    } else {
+      setActiveOpsTab(tab);
     }
   };
 
@@ -411,7 +413,7 @@ export default function App() {
           )}
 
           {/* Tier 2: Operations Team / Super Admin View Only */}
-          {(currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)') && (
+          {!isSuperAdminOrPresident && currentUser.role !== 'Unit Head' && (
             <OperationsTeamView
               units={units}
               activeTab={activeOpsTab}
@@ -425,8 +427,8 @@ export default function App() {
             />
           )}
 
-          {/* Tier 3: Super Admin Workspace */}
-          {currentUser.role === 'Super Admin' && (
+          {/* Tier 3: Super Admin & President Workspace (All Access) */}
+          {isSuperAdminOrPresident && (
             <SuperAdminView
               units={units}
               activeTab={activeAdminTab}

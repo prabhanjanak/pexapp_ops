@@ -107,7 +107,7 @@ export interface DepartmentItem {
   createdAt?: string;
 }
 
-export type UserRole = 'Unit Head' | 'Operations Team' | 'Super Admin' | 'Super Admin (View Only)';
+export type UserRole = 'President' | 'Super Admin' | 'Operations Team' | 'Unit Head' | 'Super Admin (View Only)';
 
 export interface User {
   id: string;

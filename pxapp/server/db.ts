@@ -238,9 +238,9 @@ export const SANKARA_INITIAL_USERS = [
     email: 'president@sankara.com',
     emp_id: '010002',
     password: 'admin123',
-    role: 'Operations Team',
+    role: 'President',
     unit_id: null,
-    designation: 'President of Hospital Operations',
+    designation: 'President of Hospital Operations • Executive Directorate',
     avatar_initials: 'PO'
   },
   {
