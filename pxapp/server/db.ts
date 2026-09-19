@@ -254,6 +254,17 @@ export const SANKARA_INITIAL_USERS = [
     designation: 'Patient Experience & Quality Lead',
     avatar_initials: 'OP'
   },
+  {
+    id: 'user-unithead-generic',
+    name: 'Dr. Rajesh Kapse',
+    email: 'unithead@sankara.com',
+    emp_id: '010188',
+    password: 'unit123',
+    role: 'Unit Head',
+    unit_id: 'unit-panvel',
+    designation: 'Panvel Unit Head & CMO',
+    avatar_initials: 'RK'
+  },
   // 14 Official Unit Heads
   {
     id: 'user-coimbatore-head',
