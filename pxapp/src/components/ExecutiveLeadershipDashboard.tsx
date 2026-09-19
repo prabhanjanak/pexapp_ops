@@ -6,7 +6,6 @@ import {
   Search,
   Filter,
   Download,
-  Printer,
   ChevronLeft,
   ChevronRight,
   Award,
@@ -69,7 +68,6 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
 
   // Filters
   const [selectedUnitId, setSelectedUnitId] = useState<string>('ALL');
-  const [dateRange, setDateRange] = useState<string>('yesterday');
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>('ALL');
   const [ticketSearchQuery, setTicketSearchQuery] = useState<string>('');
   const [rankingTab, setRankingTab] = useState<'ranking' | 'criteria'>('ranking');
@@ -351,31 +349,11 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
           </div>
         </div>
 
-        {/* Top Right Controls: Date Range & Actions */}
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <label className="block text-[9px] font-bold text-slate-400 uppercase">Analysis Period</label>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
-            >
-              <option value="yesterday">Yesterday</option>
-              <option value="today">Today (Live)</option>
-              <option value="last_7_days">Last 7 Days</option>
-              <option value="last_30_days">Last 30 Days (MTD)</option>
-              <option value="ytd">Year to Date (YTD)</option>
-            </select>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            title="Print / Export Dashboard"
-            className="p-2 mt-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-orange-600 hover:bg-orange-50 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Printer className="w-4 h-4" />
-          </button>
+        {/* Top Right Controls */}
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 text-xs font-black">
+            Live Network Sync • 14 Units
+          </span>
         </div>
       </div>
 
