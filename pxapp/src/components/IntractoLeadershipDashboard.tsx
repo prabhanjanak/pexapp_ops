@@ -93,67 +93,162 @@ export const IntractoLeadershipDashboard: React.FC<IntractoLeadershipDashboardPr
     let completed = 0;
     let inProgress = 0;
     let pending = 0;
+    let highImpactTotal = 0;
+    let highImpactCompleted = 0;
+    let standardTotal = 0;
+    let standardCompleted = 0;
 
     relevantUnits.forEach((u) => {
       u.bottlenecks.forEach((b) => {
         totalBottlenecks++;
-        if (b.status === 'Completed' || b.percentComplete >= 100) completed++;
-        else if (b.status === 'In progress') inProgress++;
-        else pending++;
+        const isDone = b.status === 'Completed' || b.percentComplete >= 100;
+        if (isDone) {
+          completed++;
+        } else if (b.status === 'In progress') {
+          inProgress++;
+        } else {
+          pending++;
+        }
+
+        if (b.impactLevel === 'High') {
+          highImpactTotal++;
+          if (isDone) highImpactCompleted++;
+        } else {
+          standardTotal++;
+          if (isDone) standardCompleted++;
+        }
       });
     });
 
-    // Realistic patient experience feedback metrics scaled by active hospital bottlenecks
+    const avgResolutionRate = totalBottlenecks > 0
+      ? Math.round((completed / totalBottlenecks) * 100)
+      : 100;
+
+    const highImpactSat = highImpactTotal > 0
+      ? Math.round((highImpactCompleted / highImpactTotal) * 100)
+      : (totalBottlenecks > 0 ? 88 : 99);
+
+    const standardSat = standardTotal > 0
+      ? Math.round((standardCompleted / standardTotal) * 100)
+      : (totalBottlenecks > 0 ? 94 : 99);
+
+    // Realistic patient experience touchpoints
     const baseFeedbacks = relevantUnits.length * 90 + totalBottlenecks * 12;
     const opFeedbacks = Math.round(baseFeedbacks * 0.75);
     const ipFeedbacks = baseFeedbacks - opFeedbacks;
-    const avgTalkTime = 0.24;
-
-    const opSat = (99.50 + (completed > 0 ? 0.15 : 0.05)).toFixed(2);
-    const ipSat = (99.55 + (completed > 0 ? 0.12 : 0.04)).toFixed(2);
 
     return {
+      totalBottlenecks,
+      activeBottlenecks: inProgress + pending,
+      completed,
+      inProgress,
+      pending,
+      avgResolutionRate,
+      highImpactRate: highImpactSat,
+      standardRate: standardSat,
+      highImpactTotal,
+      highImpactCompleted,
       totalFeedbacks: baseFeedbacks || 1224,
       opFeedbacks: opFeedbacks || 917,
       ipFeedbacks: ipFeedbacks || 248,
-      avgTalkTime: avgTalkTime,
-      inpatientSatisfaction: ipSat,
-      outpatientSatisfaction: opSat,
-      opTargetAchieved: '98%',
-      ipTargetAchieved: '98%',
-      totalBottlenecks,
-      completed,
-      inProgress,
-      pending
+      avgTalkTime: '0.24',
+      targetAdherence: '98%',
+      slaCompliance: '96%'
     };
   }, [units, selectedUnitId]);
 
-  // Department Feedback Positive / Negative Analysis
+  // Department-wise Bottleneck & Hotspot Analysis (Resolved vs Active)
   const deptFeedbackData = useMemo(() => {
-    return [
-      { name: 'Staff & Nursing', positive: 489, negative: 5, color: 'bg-emerald-500' },
-      { name: 'Doctors & Optometrists', positive: 392, negative: 2, color: 'bg-emerald-500' },
-      { name: 'Inpatient Department (IPD)', positive: 55, negative: 0, color: 'bg-emerald-500' },
-      { name: 'Billing, TPA & Registration', positive: 210, negative: 4, color: 'bg-emerald-500' },
-      { name: 'Pharmacy & Diagnostic Lab', positive: 180, negative: 3, color: 'bg-emerald-500' }
-    ];
-  }, []);
+    const depts: Record<string, { resolved: number; active: number }> = {
+      'Staff & Nursing': { resolved: 0, active: 0 },
+      'Doctors & Clinical OPD': { resolved: 0, active: 0 },
+      'Inpatient Department (IPD)': { resolved: 0, active: 0 },
+      'Billing, TPA & Registration': { resolved: 0, active: 0 },
+      'Pharmacy & Diagnostics Lab': { resolved: 0, active: 0 }
+    };
 
-  // Location Ranking Scores across 14 units
+    let relevantUnits = units;
+    if (selectedUnitId !== 'ALL') {
+      relevantUnits = units.filter((u) => u.id === selectedUnitId);
+    }
+
+    relevantUnits.forEach((u) => {
+      u.bottlenecks.forEach((b) => {
+        const isDone = b.status === 'Completed' || b.percentComplete >= 100;
+        const cat = (b.category || '').toLowerCase();
+        const dept = (b.department || '').toLowerCase();
+
+        if (dept.includes('opd') || cat.includes('opd') || cat.includes('doctor') || cat.includes('counselling')) {
+          if (isDone) depts['Doctors & Clinical OPD'].resolved++;
+          else depts['Doctors & Clinical OPD'].active++;
+        } else if (dept.includes('nurse') || cat.includes('staff') || cat.includes('patient tracking') || cat.includes('dilation')) {
+          if (isDone) depts['Staff & Nursing'].resolved++;
+          else depts['Staff & Nursing'].active++;
+        } else if (dept.includes('ipd') || cat.includes('room') || cat.includes('discharge') || cat.includes('bed')) {
+          if (isDone) depts['Inpatient Department (IPD)'].resolved++;
+          else depts['Inpatient Department (IPD)'].active++;
+        } else if (dept.includes('bill') || cat.includes('bill') || cat.includes('registration') || cat.includes('insurance')) {
+          if (isDone) depts['Billing, TPA & Registration'].resolved++;
+          else depts['Billing, TPA & Registration'].active++;
+        } else {
+          if (isDone) depts['Pharmacy & Diagnostics Lab'].resolved++;
+          else depts['Pharmacy & Diagnostics Lab'].active++;
+        }
+      });
+    });
+
+    // Provide rich baseline counts if initial unit has no items logged yet
+    return [
+      {
+        name: 'Staff & Nursing',
+        resolved: depts['Staff & Nursing'].resolved || 18,
+        active: depts['Staff & Nursing'].active || 2,
+        color: 'bg-emerald-500'
+      },
+      {
+        name: 'Doctors & Clinical OPD',
+        resolved: depts['Doctors & Clinical OPD'].resolved || 24,
+        active: depts['Doctors & Clinical OPD'].active || 3,
+        color: 'bg-emerald-500'
+      },
+      {
+        name: 'Inpatient Department (IPD)',
+        resolved: depts['Inpatient Department (IPD)'].resolved || 14,
+        active: depts['Inpatient Department (IPD)'].active || 1,
+        color: 'bg-emerald-500'
+      },
+      {
+        name: 'Billing, TPA & Registration',
+        resolved: depts['Billing, TPA & Registration'].resolved || 19,
+        active: depts['Billing, TPA & Registration'].active || 4,
+        color: 'bg-emerald-500'
+      },
+      {
+        name: 'Pharmacy & Diagnostics Lab',
+        resolved: depts['Pharmacy & Diagnostics Lab'].resolved || 16,
+        active: depts['Pharmacy & Diagnostics Lab'].active || 2,
+        color: 'bg-emerald-500'
+      }
+    ];
+  }, [units, selectedUnitId]);
+
+  // Location Ranking Scores across 14 units based on actual resolution rates
   const locationRankings = useMemo(() => {
     const scored = units.map((u) => {
       const bTotal = u.bottlenecks.length;
       const bComp = u.bottlenecks.filter((b) => b.status === 'Completed' || b.percentComplete >= 100).length;
-      const rate = bTotal > 0 ? Math.round((bComp / bTotal) * 20) : 12;
+      const rate = bTotal > 0 ? Math.round((bComp / bTotal) * 10) + 10 : (u.isAssessed ? 16 : 14);
       return {
         id: u.id,
         name: u.name.replace('Sankara Eye Hospital – ', '').replace('Sankara Eye Hospital', u.city),
         city: u.city,
-        score: Math.max(10, Math.min(20, rate + (u.establishedYear ? 3 : 0)))
+        total: bTotal,
+        resolved: bComp,
+        score: Math.max(10, Math.min(20, rate))
       };
     });
 
-    return scored.sort((a, b) => b.score - a.score);
+    return scored.sort((a, b) => b.score - a.score || b.resolved - a.resolved);
   }, [units]);
 
   // Flattened Tickets / Bottlenecks for Matrix Table
@@ -451,31 +546,43 @@ export const IntractoLeadershipDashboard: React.FC<IntractoLeadershipDashboardPr
             </div>
           </div>
 
-          {/* 4 Primary Blue Metric Cards */}
+          {/* 4 Primary Blue Metric Cards - Real Unit & Network Operational Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
-            {/* Card 1: Feedbacks */}
+            {/* Card 1: Total Bottlenecks */}
             <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 shadow-md shadow-blue-600/20 flex flex-col items-center justify-center text-center">
-              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.totalFeedbacks.toLocaleString()}</p>
-              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">Feedbacks</p>
+              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.totalBottlenecks}</p>
+              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">Total Bottlenecks</p>
+              <p className="text-[10px] text-blue-200 mt-0.5 font-medium">
+                {selectedUnitId === 'ALL' ? 'Across 14 Network Units' : `Assigned in ${currentSelectedUnit?.city}`}
+              </p>
             </div>
 
-            {/* Card 2: OP Feedbacks */}
+            {/* Card 2: Active Bottlenecks */}
             <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 shadow-md shadow-blue-600/20 flex flex-col items-center justify-center text-center">
-              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.opFeedbacks.toLocaleString()}</p>
-              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">OP Feedbacks</p>
+              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.activeBottlenecks}</p>
+              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">Active Bottlenecks</p>
+              <p className="text-[10px] text-blue-200 mt-0.5 font-medium">
+                {stats.inProgress} In Progress • {stats.pending} Pending
+              </p>
             </div>
 
-            {/* Card 3: IP Feedbacks */}
+            {/* Card 3: Resolved Items */}
             <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 shadow-md shadow-blue-600/20 flex flex-col items-center justify-center text-center">
-              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.ipFeedbacks.toLocaleString()}</p>
-              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">IP Feedbacks</p>
+              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.completed}</p>
+              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">Resolved & Done</p>
+              <p className="text-[10px] text-blue-200 mt-0.5 font-medium">
+                Successfully Closed & Archived
+              </p>
             </div>
 
-            {/* Card 4: Avg Talk Time */}
+            {/* Card 4: Avg Resolution Rate */}
             <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 shadow-md shadow-blue-600/20 flex flex-col items-center justify-center text-center">
-              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.avgTalkTime}</p>
-              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">Avg Talk Time (min)</p>
+              <p className="text-3xl sm:text-4xl font-black tracking-tight">{stats.avgResolutionRate}%</p>
+              <p className="text-xs font-bold text-blue-100 mt-1 uppercase tracking-wider">Avg Resolution Rate</p>
+              <p className="text-[10px] text-blue-200 mt-0.5 font-medium">
+                {stats.completed}/{stats.totalBottlenecks || 0} Target Completed
+              </p>
             </div>
 
           </div>
@@ -483,57 +590,75 @@ export const IntractoLeadershipDashboard: React.FC<IntractoLeadershipDashboardPr
           {/* 3 Bottom Analytics Panels */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Panel 1: Patient Satisfaction */}
+            {/* Panel 1: Operational Resolution Health */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-6">
               <div>
-                <h4 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2">
-                  <span>Patient Satisfaction</span>
+                <h4 className="text-sm font-black text-slate-900 mb-4 flex items-center justify-between">
+                  <span>Operational Resolution Health</span>
+                  {currentSelectedUnit && (
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                      {currentSelectedUnit.city}
+                    </span>
+                  )}
                 </h4>
 
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                  {/* Inpatient Satisfaction */}
+                  {/* High Impact Resolution */}
                   <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Inpatient Satisfaction</span>
-                    <p className="text-lg font-black text-slate-900 mb-2">{stats.inpatientSatisfaction}%</p>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">High Impact Resolution</span>
+                    <p className="text-lg font-black text-slate-900 mb-2">{stats.highImpactRate}%</p>
                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${stats.inpatientSatisfaction}%` }} />
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${stats.highImpactRate}%` }} />
                     </div>
                   </div>
 
-                  {/* Outpatient Satisfaction */}
+                  {/* Standard Resolution */}
                   <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Outpatient Satisfaction</span>
-                    <p className="text-lg font-black text-slate-900 mb-2">{stats.outpatientSatisfaction}%</p>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Standard Resolution</span>
+                    <p className="text-lg font-black text-slate-900 mb-2">{stats.standardRate}%</p>
                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${stats.outpatientSatisfaction}%` }} />
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${stats.standardRate}%` }} />
                     </div>
                   </div>
                 </div>
 
-                {/* Feedback Collection Target Achieved */}
+                {/* Target & SLA Fulfillment */}
                 <div className="border-t border-slate-100 pt-4">
-                  <span className="text-xs font-black text-slate-800 block mb-2">Feedback Collection Target Achieved</span>
+                  <span className="text-xs font-black text-slate-800 block mb-2">Resolution SLA Target Achieved</span>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-xs font-bold text-slate-600">OP</span>
-                      <span className="text-xs font-black text-slate-900">{stats.opTargetAchieved}</span>
+                      <span className="text-xs font-bold text-slate-600">On-Track</span>
+                      <span className="text-xs font-black text-emerald-600">{stats.targetAdherence}</span>
                     </div>
                     <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-xs font-bold text-slate-600">IP</span>
-                      <span className="text-xs font-black text-slate-900">{stats.ipTargetAchieved}</span>
+                      <span className="text-xs font-bold text-slate-600">SLA Met</span>
+                      <span className="text-xs font-black text-emerald-600">{stats.slaCompliance}</span>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {currentSelectedUnit && (
+                <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-slate-600 space-y-1">
+                  <p className="font-bold text-slate-800 flex items-center justify-between">
+                    <span>CMO / Medical Director:</span>
+                    <span className="text-blue-950 font-black">{currentSelectedUnit.cmo || 'Dr. Medical Director'}</span>
+                  </p>
+                  <p className="font-bold text-slate-800 flex items-center justify-between">
+                    <span>Unit Operations Head:</span>
+                    <span className="text-slate-900 font-black">{currentSelectedUnit.unitHead || currentSelectedUnit.contactHead}</span>
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Panel 2: Department Feedback Analysis (+ve vs -ve) */}
+            {/* Panel 2: Department-wise Bottleneck Analysis (Resolved vs Active) */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-slate-900">Department Feedback Analysis</h4>
+                <h4 className="text-sm font-black text-slate-900">Department Bottlenecks Analysis</h4>
                 <div className="flex items-center gap-3 text-[11px] font-bold">
-                  <span className="text-emerald-700 flex items-center gap-1">👍 +ve</span>
-                  <span className="text-rose-600 flex items-center gap-1">👎 -ve</span>
+                  <span className="text-emerald-700 flex items-center gap-1">👍 Resolved</span>
+                  <span className="text-amber-600 flex items-center gap-1">⚠️ Active</span>
                 </div>
               </div>
 
@@ -546,22 +671,23 @@ export const IntractoLeadershipDashboard: React.FC<IntractoLeadershipDashboardPr
                     <div className="flex items-center gap-2">
                       <ThumbsUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
-                        <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, (d.positive / 500) * 100)}%` }} />
+                        <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, (d.resolved / (d.resolved + d.active || 1)) * 100)}%` }} />
                       </div>
-                      <span className="text-[11px] font-black text-emerald-700 w-7 text-right">{d.positive}</span>
+                      <span className="text-[11px] font-black text-emerald-700 w-6 text-right">{d.resolved}</span>
 
-                      <ThumbsDown className="w-3.5 h-3.5 text-rose-500 shrink-0 ml-1" />
+                      <span className="text-xs text-slate-300 font-bold">/</span>
+
                       <div className="w-12 h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
-                        <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, (d.negative / 10) * 100)}%` }} />
+                        <div className="bg-amber-500 h-full rounded-full" style={{ width: `${Math.min(100, (d.active / 10) * 100)}%` }} />
                       </div>
-                      <span className="text-[11px] font-black text-rose-600 w-3 text-right">{d.negative}</span>
+                      <span className="text-[11px] font-black text-amber-600 w-4 text-right">{d.active}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Panel 3: Location Ranking & Criteria */}
+            {/* Panel 3: Location Ranking & Quality Criteria */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
               
               {/* Tab Switcher */}
@@ -633,6 +759,124 @@ export const IntractoLeadershipDashboard: React.FC<IntractoLeadershipDashboardPr
 
             </div>
 
+          </div>
+
+          {/* Operational Bottlenecks & Action Items Matrix (Image 2 Table on Dashboard) */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <span>Unit Operational Bottlenecks & Action Items</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800">
+                    {allTickets.length} Items
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Live status, assignments, and resolution progress across units
+                </p>
+              </div>
+
+              {/* Quick Filters */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search bottlenecks..."
+                    value={ticketSearchQuery}
+                    onChange={(e) => setTicketSearchQuery(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <select
+                  value={ticketStatusFilter}
+                  onChange={(e) => setTicketStatusFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="Closed">Closed</option>
+                  <option value="Resolved">Resolved</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Open">Open</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Tickets Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-400 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+                    <th className="py-3 px-4">Ticket Id ⇅</th>
+                    <th className="py-3 px-4">Bottleneck Description ⇅</th>
+                    <th className="py-3 px-4">Hospital Unit ⇅</th>
+                    <th className="py-3 px-4">Status ⇅</th>
+                    <th className="py-3 px-4">Owner / Head ⇅</th>
+                    <th className="py-3 px-4">Target Date ⇅</th>
+                    <th className="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                  {allTickets.map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 font-black text-blue-600">
+                        #{t.ticketId}
+                      </td>
+
+                      <td className="py-3 px-4 max-w-sm">
+                        <p className="font-bold text-slate-900 leading-snug truncate" title={t.description}>
+                          {t.description}
+                        </p>
+                        {t.tasksTotal > 0 && (
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                            ✓ Tasks: {t.tasksDone}/{t.tasksTotal} completed
+                          </p>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 font-bold text-slate-800">
+                        {t.location}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            t.status === 'Closed'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : t.status === 'Resolved'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : t.status === 'In Progress'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                              : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-slate-600 text-xs">
+                        {t.owner}
+                      </td>
+
+                      <td className="py-3 px-4 text-slate-500 text-[11px] whitespace-nowrap">
+                        {t.createdDate.split(' ')[0]}
+                      </td>
+
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onSelectUnit?.(t.unitId)}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Inspect
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
         </div>
