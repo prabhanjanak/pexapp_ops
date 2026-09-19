@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { HospitalUnit, User, Bottleneck } from '../types';
 import { calculateOrgStats, calculateUnitStats } from '../utils/calc';
 import { AddBottleneckModal } from './AddBottleneckModal';
+import { IntractoLeadershipDashboard } from './IntractoLeadershipDashboard';
 import {
   Building2,
   TrendingUp,
@@ -16,7 +17,9 @@ import {
   LayoutGrid,
   List,
   MapPin,
-  UserCheck
+  UserCheck,
+  Sparkles,
+  BarChart3
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
@@ -32,6 +35,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onSelectUnit,
   onAddBottleneck
 }) => {
+  const [dashboardMode, setDashboardMode] = useState<'leadership' | 'matrix'>('leadership');
   const [searchFilter, setSearchFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [unitStatusFilter, setUnitStatusFilter] = useState<'ALL' | 'ACTIVE' | 'RESOLVED'>('ALL');
@@ -109,34 +113,83 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     .slice(0, 6);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* Welcome & Overview Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 text-xs font-black uppercase tracking-wider mb-3">
-            <Activity className="w-3.5 h-3.5" />
-            Executive Operational Intelligence
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
-            Hospital Network Performance Dashboard
-          </h2>
-          <p className="text-slate-300 text-xs sm:text-sm max-w-2xl">
-            Real-time cross-unit benchmarking, monthly resolution trends, and operational bottlenecks across all 14 Sankara hospital units nationwide.
-          </p>
+      {/* Top View Mode Switcher */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-1.5 shadow-xs flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setDashboardMode('leadership')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+              dashboardMode === 'leadership'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Leadership Overview & Feedback Matrix</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDashboardMode('matrix')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+              dashboardMode === 'matrix'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Network Operational Matrix & Hotspots</span>
+          </button>
         </div>
 
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-center min-w-[110px]">
-            <p className="text-2xl font-black text-orange-400">{orgStats.totalUnits}</p>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hospital Units</p>
-          </div>
-          <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-center min-w-[110px]">
-            <p className="text-2xl font-black text-emerald-400">{orgStats.orgAvgPercent}%</p>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Resolution</p>
-          </div>
+        <div className="hidden sm:flex items-center gap-2 px-3 text-xs font-bold text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Live 14 Units Sync</span>
         </div>
       </div>
+
+      {/* 1. LEADERSHIP VIEW (INTRACTO REFERENCE) */}
+      {dashboardMode === 'leadership' && (
+        <IntractoLeadershipDashboard
+          units={units}
+          currentUser={currentUser}
+          onSelectUnit={onSelectUnit}
+          onAddBottleneck={onAddBottleneck}
+        />
+      )}
+
+      {/* 2. OPERATIONAL MATRIX VIEW */}
+      {dashboardMode === 'matrix' && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          {/* Welcome & Overview Header */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 text-xs font-black uppercase tracking-wider mb-3">
+                <Activity className="w-3.5 h-3.5" />
+                Executive Operational Intelligence
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
+                Hospital Network Performance Dashboard
+              </h2>
+              <p className="text-slate-300 text-xs sm:text-sm max-w-2xl">
+                Real-time cross-unit benchmarking, monthly resolution trends, and operational bottlenecks across all 14 Sankara hospital units nationwide.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 self-start md:self-auto">
+              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-center min-w-[110px]">
+                <p className="text-2xl font-black text-orange-400">{orgStats.totalUnits}</p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hospital Units</p>
+              </div>
+              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-center min-w-[110px]">
+                <p className="text-2xl font-black text-emerald-400">{orgStats.orgAvgPercent}%</p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avg Resolution</p>
+              </div>
+            </div>
+          </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -613,6 +666,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           ))}
         </div>
       </div>
+    </div>
+  )}
 
       {/* Add Bottleneck Modal */}
       {isAddModalOpen && (
