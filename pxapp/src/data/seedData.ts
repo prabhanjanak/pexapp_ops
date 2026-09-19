@@ -203,3 +203,69 @@ export const INITIAL_UNITS: HospitalUnit[] = [
     bedCapacity: 110
   }
 ];
+
+export const INITIAL_USERS = [
+  {
+    id: 'user-prabhanjan-superadmin',
+    name: 'Prabhanjan',
+    email: 'prabhanjan@sankaraeye.com',
+    empId: '010177',
+    role: 'Super Admin',
+    unitId: undefined,
+    designation: 'Super Admin • Central Directorate',
+    avatarInitials: 'PR'
+  },
+  {
+    id: 'user-superadmin',
+    name: 'Super Admin',
+    email: 'superadmin@sankara.com',
+    empId: '010001',
+    role: 'Super Admin',
+    unitId: undefined,
+    designation: 'Chief Medical Director & Founder',
+    avatarInitials: 'SA'
+  },
+  {
+    id: 'user-president',
+    name: 'President (Operations)',
+    email: 'president@sankara.com',
+    empId: '010002',
+    role: 'Operations Team',
+    unitId: undefined,
+    designation: 'President of Hospital Operations',
+    avatarInitials: 'PO'
+  },
+  {
+    id: 'user-operations',
+    name: 'Operations Directorate',
+    email: 'operations@sankara.com',
+    empId: '010003',
+    role: 'Operations Team',
+    unitId: undefined,
+    designation: 'Patient Experience & Quality Lead',
+    avatarInitials: 'OP'
+  },
+  {
+    id: 'user-unithead-generic',
+    name: 'Dr. Rajesh Kapse',
+    email: 'unithead@sankara.com',
+    empId: '010188',
+    role: 'Unit Head',
+    unitId: 'unit-panvel',
+    unitName: 'R. Jhunjhunwala Sankara Eye Hospital, Panvel',
+    designation: 'Panvel Unit Head & CMO',
+    avatarInitials: 'RK'
+  },
+  {
+    id: 'user-bangalore-head',
+    name: 'Lt. Col. S. Guruprasad (Retd.)',
+    email: 'unithead.bangalore@sankara.com',
+    empId: 'UH-BLR-01',
+    role: 'Unit Head',
+    unitId: 'unit-bangalore',
+    unitName: 'Sankara Eye Hospital, Bengaluru',
+    designation: 'Bengaluru Unit Head',
+    avatarInitials: 'SG'
+  }
+];
+
