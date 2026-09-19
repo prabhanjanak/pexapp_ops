@@ -213,214 +213,70 @@ export const SANKARA_INITIAL_UNITS = [
 // Predefined Sankara users
 export const SANKARA_INITIAL_USERS = [
   {
-    id: 'user-prabhanjan-superadmin',
+    id: 'user-bharath-president',
+    name: 'Bharath Balasubramanian',
+    email: 'bharath@sankaraeye.com',
+    emp_id: 'PRES-001',
+    password: 'password123',
+    role: 'President',
+    unit_id: null,
+    designation: 'President of Hospital Operations • Executive Directorate',
+    avatar_initials: 'BB'
+  },
+  {
+    id: 'user-saurabh-ops',
+    name: 'Saurabh',
+    email: 'saurabh@sankaraeye.com',
+    emp_id: 'OPS-001',
+    password: 'password123',
+    role: 'Operations Team',
+    unit_id: null,
+    designation: 'Central Operations Lead • Patient Experience',
+    avatar_initials: 'SB'
+  },
+  {
+    id: 'user-arsh-ops',
+    name: 'Arsh Mishra',
+    email: 'arsh.mishra@sankaraeye.com',
+    emp_id: 'OPS-002',
+    password: 'password123',
+    role: 'Operations Team',
+    unit_id: null,
+    designation: 'Operations & Quality Specialist',
+    avatar_initials: 'AM'
+  },
+  {
+    id: 'user-sudarshan-ops',
+    name: 'Sudarshan',
+    email: 'sudarshan@sankaraeye.com',
+    emp_id: 'OPS-003',
+    password: 'password123',
+    role: 'Operations Team',
+    unit_id: null,
+    designation: 'Operations & Flow Lead',
+    avatar_initials: 'SD'
+  },
+  {
+    id: 'user-prabhanjan-itadmin',
     name: 'Prabhanjan',
     email: 'prabhanjan@sankaraeye.com',
     emp_id: '010177',
     password: 'Sankara@123',
-    role: 'Super Admin',
+    role: 'IT Admin',
     unit_id: null,
-    designation: 'Super Admin • Central Directorate',
+    designation: 'IT & Systems Admin • Central Directorate',
     avatar_initials: 'PR'
   },
   {
-    id: 'user-superadmin',
-    name: 'Super Admin',
-    email: 'superadmin@sankara.com',
-    emp_id: '010001',
-    password: 'admin123',
-    role: 'Super Admin',
+    id: 'user-saravanan-itadmin',
+    name: 'Saravanan',
+    email: 'saravanan@sankaraeye.com',
+    emp_id: '010178',
+    password: 'Sankara@123',
+    role: 'IT Admin',
     unit_id: null,
-    designation: 'Chief Medical Director & Founder',
-    avatar_initials: 'SA'
-  },
-  {
-    id: 'user-president',
-    name: 'President (Operations)',
-    email: 'president@sankara.com',
-    emp_id: '010002',
-    password: 'admin123',
-    role: 'President',
-    unit_id: null,
-    designation: 'President of Hospital Operations • Executive Directorate',
-    avatar_initials: 'PO'
-  },
-  {
-    id: 'user-operations',
-    name: 'Operations Directorate',
-    email: 'operations@sankara.com',
-    emp_id: '010003',
-    password: 'admin123',
-    role: 'Operations Team',
-    unit_id: null,
-    designation: 'Patient Experience & Quality Lead',
-    avatar_initials: 'OP'
-  },
-  {
-    id: 'user-unithead-generic',
-    name: 'Dr. Rajesh Kapse',
-    email: 'unithead@sankara.com',
-    emp_id: '010188',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-panvel',
-    designation: 'Panvel Unit Head & CMO',
-    avatar_initials: 'RK'
-  },
-  // 14 Official Unit Heads
-  {
-    id: 'user-coimbatore-head',
-    name: 'Ms. Binitha Harish',
-    email: 'unithead.coimbatore@sankara.com',
-    emp_id: 'UH-CBE-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-coimbatore',
-    designation: 'Coimbatore Unit Head',
-    avatar_initials: 'BH'
-  },
-  {
-    id: 'user-coimbatore-city-head',
-    name: 'Ms. Kanmani S',
-    email: 'unithead.coimbatorecity@sankara.com',
-    emp_id: 'UH-CBC-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-coimbatore-city',
-    designation: 'Coimbatore City Unit Head',
-    avatar_initials: 'KS'
-  },
-  {
-    id: 'user-guntur-head',
-    name: 'Ms. Tripura / Ms. Madhavi Machavarapu',
-    email: 'unithead.guntur@sankara.com',
-    emp_id: 'UH-GNT-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-guntur',
-    designation: 'Guntur Unit Head',
-    avatar_initials: 'TM'
-  },
-  {
-    id: 'user-bangalore-head',
-    name: 'Lt. Col. S. Guruprasad (Retd.)',
-    email: 'unithead.bangalore@sankara.com',
-    emp_id: 'UH-BLR-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-bangalore',
-    designation: 'Bengaluru Unit Head',
-    avatar_initials: 'SG'
-  },
-  {
-    id: 'user-shimoga-head',
-    name: 'Ms. Gayatri Shantharam / Ms. Anitha',
-    email: 'unithead.shimoga@sankara.com',
-    emp_id: 'UH-SHM-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-shimoga',
-    designation: 'Shivamogga Unit Head',
-    avatar_initials: 'GA'
-  },
-  {
-    id: 'user-anand-head',
-    name: 'Col. Sudeepkumar D. Mehta (Retd.)',
-    email: 'unithead.anand@sankara.com',
-    emp_id: 'UH-AND-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-anand',
-    designation: 'Anand Unit Head',
-    avatar_initials: 'SM'
-  },
-  {
-    id: 'user-kanpur-head',
-    name: 'Dr. Rahul Singh',
-    email: 'unithead.kanpur@sankara.com',
-    emp_id: 'UH-KNP-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-kanpur',
-    designation: 'Kanpur Unit Head',
-    avatar_initials: 'RS'
-  },
-  {
-    id: 'user-jaipur-head',
-    name: 'Dr. Nishant Jain',
-    email: 'unithead.jaipur@sankara.com',
-    emp_id: 'UH-JPR-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-jaipur',
-    designation: 'Jaipur Unit Head',
-    avatar_initials: 'NJ'
-  },
-  {
-    id: 'user-ludhiana-head',
-    name: 'Dr. Manoj Gupta',
-    email: 'unithead.ludhiana@sankara.com',
-    emp_id: 'UH-LDH-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-ludhiana',
-    designation: 'Ludhiana Unit Head',
-    avatar_initials: 'MG'
-  },
-  {
-    id: 'user-indore-head',
-    name: 'Dr. Rituraj Sharma',
-    email: 'unithead.indore@sankara.com',
-    emp_id: 'UH-IND-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-indore',
-    designation: 'Indore Unit Head',
-    avatar_initials: 'RS'
-  },
-  {
-    id: 'user-panvel-head',
-    name: 'Dr. Rajesh Kapse',
-    email: 'unithead.panvel@sankara.com',
-    emp_id: 'UH-PNV-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-panvel',
-    designation: 'Panvel Unit Head',
-    avatar_initials: 'RK'
-  },
-  {
-    id: 'user-hyderabad-head',
-    name: 'Mr. Gannamraju Viswamohan',
-    email: 'unithead.hyderabad@sankara.com',
-    emp_id: 'UH-HYD-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-hyderabad',
-    designation: 'Hyderabad Unit Head',
-    avatar_initials: 'GV'
-  },
-  {
-    id: 'user-varanasi-head',
-    name: 'Lt. Col. (Dr.) Bharat Singh',
-    email: 'unithead.varanasi@sankara.com',
-    emp_id: 'UH-VNS-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-varanasi',
-    designation: 'Varanasi Unit Head',
-    avatar_initials: 'BS'
-  },
-  {
-    id: 'user-krishnankoil-head',
-    name: 'Mr. Aswathaman R',
-    email: 'unithead.krishnankoil@sankara.com',
-    emp_id: 'UH-KRK-01',
-    password: 'unit123',
-    role: 'Unit Head',
-    unit_id: 'unit-krishnankoil',
-    designation: 'Krishnankoil Unit Head',
-    avatar_initials: 'AR'
+    designation: 'IT & Systems Admin • Digital Infrastructure',
+    avatar_initials: 'SR'
   }
 ];
 
@@ -668,6 +524,10 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
         [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials]
       );
     }
+
+    // Clean up stale demo users that are not in the new initial list
+    const validUserIds = SANKARA_INITIAL_USERS.map(u => u.id);
+    await client.query(`DELETE FROM users WHERE id NOT IN (${validUserIds.map((_, i) => `$${i+1}`).join(',')}) AND role != 'Unit Head'`, validUserIds);
 
   } catch (err: any) {
     await client.query('ROLLBACK');

@@ -204,68 +204,66 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   }
 ];
 
-export const INITIAL_USERS = [
+export const INITIAL_USERS: any[] = [
   {
-    id: 'user-prabhanjan-superadmin',
-    name: 'Prabhanjan',
-    email: 'prabhanjan@sankaraeye.com',
-    empId: '010177',
-    role: 'Super Admin',
-    unitId: undefined,
-    designation: 'Super Admin • Central Directorate',
-    avatarInitials: 'PR'
-  },
-  {
-    id: 'user-superadmin',
-    name: 'Super Admin',
-    email: 'superadmin@sankara.com',
-    empId: '010001',
-    role: 'Super Admin',
-    unitId: undefined,
-    designation: 'Chief Medical Director & Founder',
-    avatarInitials: 'SA'
-  },
-  {
-    id: 'user-president',
-    name: 'President (Operations)',
-    email: 'president@sankara.com',
-    empId: '010002',
+    id: 'user-bharath-president',
+    name: 'Bharath Balasubramanian',
+    email: 'bharath@sankaraeye.com',
+    empId: 'PRES-001',
     role: 'President',
     unitId: undefined,
     designation: 'President of Hospital Operations • Executive Directorate',
-    avatarInitials: 'PO'
+    avatarInitials: 'BB'
   },
   {
-    id: 'user-operations',
-    name: 'Operations Directorate',
-    email: 'operations@sankara.com',
-    empId: '010003',
+    id: 'user-saurabh-ops',
+    name: 'Saurabh',
+    email: 'saurabh@sankaraeye.com',
+    empId: 'OPS-001',
     role: 'Operations Team',
     unitId: undefined,
-    designation: 'Patient Experience & Quality Lead',
-    avatarInitials: 'OP'
+    designation: 'Central Operations Lead • Patient Experience',
+    avatarInitials: 'SB'
   },
   {
-    id: 'user-unithead-generic',
-    name: 'Dr. Rajesh Kapse',
-    email: 'unithead@sankara.com',
-    empId: '010188',
-    role: 'Unit Head',
-    unitId: 'unit-panvel',
-    unitName: 'R. Jhunjhunwala Sankara Eye Hospital, Panvel',
-    designation: 'Panvel Unit Head & CMO',
-    avatarInitials: 'RK'
+    id: 'user-arsh-ops',
+    name: 'Arsh Mishra',
+    email: 'arsh.mishra@sankaraeye.com',
+    empId: 'OPS-002',
+    role: 'Operations Team',
+    unitId: undefined,
+    designation: 'Operations & Quality Specialist',
+    avatarInitials: 'AM'
   },
   {
-    id: 'user-bangalore-head',
-    name: 'Lt. Col. S. Guruprasad (Retd.)',
-    email: 'unithead.bangalore@sankara.com',
-    empId: 'UH-BLR-01',
-    role: 'Unit Head',
-    unitId: 'unit-bangalore',
-    unitName: 'Sankara Eye Hospital, Bengaluru',
-    designation: 'Bengaluru Unit Head',
-    avatarInitials: 'SG'
+    id: 'user-sudarshan-ops',
+    name: 'Sudarshan',
+    email: 'sudarshan@sankaraeye.com',
+    empId: 'OPS-003',
+    role: 'Operations Team',
+    unitId: undefined,
+    designation: 'Operations & Flow Lead',
+    avatarInitials: 'SD'
+  },
+  {
+    id: 'user-prabhanjan-itadmin',
+    name: 'Prabhanjan',
+    email: 'prabhanjan@sankaraeye.com',
+    empId: '010177',
+    role: 'IT Admin',
+    unitId: undefined,
+    designation: 'IT & Systems Admin • Central Directorate',
+    avatarInitials: 'PR'
+  },
+  {
+    id: 'user-saravanan-itadmin',
+    name: 'Saravanan',
+    email: 'saravanan@sankaraeye.com',
+    empId: '010178',
+    role: 'IT Admin',
+    unitId: undefined,
+    designation: 'IT & Systems Admin • Digital Infrastructure',
+    avatarInitials: 'SR'
   }
 ];
 

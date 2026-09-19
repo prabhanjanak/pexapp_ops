@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ];
     }
 
-    if (currentUser.role === 'Super Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president')) {
+    if (currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president')) {
       return [
         { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
         { id: 'units', label: '14 Units & Unit Heads', icon: Building2 },

@@ -881,6 +881,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-orange-500 outline-none"
                   >
                     <option value="President">President (Executive All Access)</option>
+                    <option value="IT Admin">IT Admin (Central IT & Infrastructure)</option>
                     <option value="Super Admin">Super Admin (Directorate All Access)</option>
                     <option value="Operations Team">Operations Team</option>
                     <option value="Unit Head">Unit Head</option>

@@ -334,7 +334,7 @@ export default function App() {
   }
 
   // Step 4: Render Full Bottleneck (PPE) Workspace with Left Sidebar Pane
-  const isSuperAdminOrPresident = currentUser.role === 'Super Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president');
+  const isSuperAdminOrPresident = currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president');
 
   const currentTab = currentUser.role === 'Unit Head'
     ? activeUnitTab
