@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { HospitalUnit, User, Bottleneck } from '../types';
 import { calculateOrgStats, calculateUnitStats } from '../utils/calc';
 import { AddBottleneckModal } from './AddBottleneckModal';
-import { IntractoLeadershipDashboard } from './IntractoLeadershipDashboard';
+import { ExecutiveLeadershipDashboard } from './ExecutiveLeadershipDashboard';
 import {
   Building2,
   TrendingUp,
@@ -151,9 +151,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       </div>
 
-      {/* 1. LEADERSHIP VIEW (INTRACTO REFERENCE) */}
+      {/* 1. EXECUTIVE LEADERSHIP DASHBOARD (SANKARA ORANGE INTELLIGENCE) */}
       {dashboardMode === 'leadership' && (
-        <IntractoLeadershipDashboard
+        <ExecutiveLeadershipDashboard
           units={units}
           currentUser={currentUser}
           onSelectUnit={onSelectUnit}
