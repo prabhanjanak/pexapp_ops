@@ -104,8 +104,11 @@ export const api = {
         const cleanKey = identifier.trim().toLowerCase();
         const allKnownUsers = [...(INITIAL_USERS as User[]), ...getLocalUsersList()];
         const found = allKnownUsers.find(
-          (u) => u.email.toLowerCase() === cleanKey || (u.empId && u.empId.toLowerCase() === cleanKey)
-        ) || (cleanKey.includes('010177') ? INITIAL_USERS[0] : null);
+          (u) =>
+            u.email.toLowerCase() === cleanKey ||
+            (u.empId && u.empId.toLowerCase() === cleanKey) ||
+            (cleanKey.includes('prabhanjan') && u.email.includes('prabhanjan'))
+        ) || (cleanKey.includes('010177') ? (INITIAL_USERS.find((u) => u.empId === '010177') || INITIAL_USERS[4]) : null);
 
         if (found) {
           const session: AuthSession = {

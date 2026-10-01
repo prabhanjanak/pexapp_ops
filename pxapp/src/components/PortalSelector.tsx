@@ -147,8 +147,8 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-orange-600 font-black text-xs sm:text-sm group-hover:translate-x-1 transition-transform">
-              <span>View 5S Development Status</span>
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-emerald-700 font-black text-xs sm:text-sm group-hover:translate-x-1 transition-transform">
+              <span>Enter 5S Digital Audit Application</span>
               <ArrowRight className="w-4 h-4" />
             </div>
           </div>

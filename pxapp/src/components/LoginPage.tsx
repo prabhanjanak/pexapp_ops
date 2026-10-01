@@ -8,7 +8,6 @@ import {
   ArrowRight,
   AlertCircle,
   ShieldCheck,
-  BadgeCheck,
   Building2
 } from 'lucide-react';
 
@@ -17,7 +16,6 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [loginMode, setLoginMode] = useState<'email' | 'empid'>('email');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +37,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier.trim()) {
-      setError(loginMode === 'email' ? 'Please enter your registered hospital email address' : 'Please enter your official Employee ID (Emp ID)');
+      setError('Please enter your registered hospital email address');
       return;
     }
     handleLogin(identifier, password);
@@ -141,34 +139,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {/* Mode Switcher Tabs */}
-              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70">
-                <button
-                  type="button"
-                  onClick={() => { setError(null); setLoginMode('email'); }}
-                  className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    loginMode === 'email'
-                      ? 'bg-white text-orange-600 shadow-xs border border-orange-200/50'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Hospital Email</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setError(null); setLoginMode('empid'); }}
-                  className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    loginMode === 'empid'
-                      ? 'bg-white text-orange-600 shadow-xs border border-orange-200/50'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <BadgeCheck className="w-3.5 h-3.5" />
-                  <span>Employee ID</span>
-                </button>
-              </div>
-
               {/* Error Banner */}
               <AnimatePresence>
                 {error && (
@@ -187,22 +157,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               {/* Sign In Form */}
               <form onSubmit={handleFormSubmit} className="space-y-3.5">
                 
-                {/* Dynamic Identifier Input */}
+                {/* Email ID Input */}
                 <div>
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
-                    {loginMode === 'email' ? 'Registered Hospital Email' : 'Official Employee ID (Emp ID)'}
+                    Email ID
                   </label>
                   <div className="relative">
-                    {loginMode === 'email' ? (
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    ) : (
-                      <BadgeCheck className="w-4 h-4 text-orange-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    )}
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
-                      type={loginMode === 'email' ? 'email' : 'text'}
+                      type="email"
                       required
                       id="login-identifier-input"
-                      placeholder={loginMode === 'email' ? 'e.g. superadmin@sankara.com' : 'e.g. 010177'}
+                      placeholder="e.g. prabhanjan@sankaraeye.com"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"
@@ -216,14 +182,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     <label className="text-[11px] font-black text-slate-700 uppercase tracking-wider">
                       Security Password
                     </label>
-                    <span className="text-[10px] text-slate-400 font-medium">Default: admin123 / unit123</span>
                   </div>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="password"
                       id="login-password-input"
-                      placeholder="••••••••"
+                      placeholder=""
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"

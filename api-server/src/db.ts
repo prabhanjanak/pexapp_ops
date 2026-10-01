@@ -496,14 +496,14 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       );
     }
 
-    // Seed users
+    // Seed users (upsert on unique email)
     for (const u of SANKARA_INITIAL_USERS) {
       await client.query(
         `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         ON CONFLICT (id) DO UPDATE SET
+         ON CONFLICT (email) DO UPDATE SET
+           id = EXCLUDED.id,
            name = EXCLUDED.name,
-           email = EXCLUDED.email,
            emp_id = EXCLUDED.emp_id,
            password = EXCLUDED.password,
            role = EXCLUDED.role,
