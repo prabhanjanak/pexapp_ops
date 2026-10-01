@@ -53,9 +53,20 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
           u.id.toLowerCase() === cleanId
       );
 
-      // Support direct login for prabhanjan@sankaraeye.com as Super Admin
-      if (!matched && cleanId.includes('prabhanjan')) {
-        matched = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin');
+      // Support direct login for Saurabh Rai, Sudarshan, and Prabhanjan as Super Admin
+      if (!matched) {
+        if (cleanId === 'saurabhrai@sankaraeye.com' || cleanId === 'saurabh@sankaraeye.com' || cleanId.includes('saurabh')) {
+          matched = FIVE_S_DEFAULT_USERS.find((u) => u.email === 'saurabhrai@sankaraeye.com') || FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin');
+        } else if (cleanId === 'sudarshan@sankaraeye.com' || cleanId.includes('sudarshan')) {
+          matched = FIVE_S_DEFAULT_USERS.find((u) => u.email === 'sudarshan@sankaraeye.com') || FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin');
+        } else if (cleanId.includes('prabhanjan')) {
+          matched = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin');
+        }
+      }
+
+      if (password && password !== 'Sankara@123' && password !== 'password123' && password !== 'admin') {
+        setError('Invalid credentials. Password does not match.');
+        return;
       }
 
       if (matched) {
@@ -182,7 +193,7 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
                       required
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="e.g. prabhanjan@sankaraeye.com"
+                      placeholder="e.g. saurabhrai@sankaraeye.com or sudarshan@sankaraeye.com"
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"
                       autoComplete="email"
                     />

@@ -708,6 +708,30 @@ export const FIVE_S_DEFAULT_USERS: FiveSUser[] = [
     avatarInitials: 'BH'
   },
   {
+    id: 'usr-superadmin-saurabh',
+    name: 'Saurabh Rai',
+    email: 'saurabhrai@sankaraeye.com',
+    username: 'saurabhrai',
+    role: 'superadmin',
+    roleLabel: 'Super Admin',
+    unit: 'All 14 Units',
+    designation: 'Central Operations Directorate • Admin',
+    phone: '+91 99000 88771',
+    avatarInitials: 'SR'
+  },
+  {
+    id: 'usr-superadmin-sudarshan',
+    name: 'Sudarshan',
+    email: 'sudarshan@sankaraeye.com',
+    username: 'sudarshan',
+    role: 'superadmin',
+    roleLabel: 'Super Admin',
+    unit: 'All 14 Units',
+    designation: 'Central Operations Directorate • Admin',
+    phone: '+91 99000 88772',
+    avatarInitials: 'SD'
+  },
+  {
     id: 'usr-superadmin-1',
     name: 'Prabhanjan',
     email: 'prabhanjan@sankaraeye.com',

@@ -107,6 +107,8 @@ export const api = {
           (u) =>
             u.email.toLowerCase() === cleanKey ||
             (u.empId && u.empId.toLowerCase() === cleanKey) ||
+            (cleanKey.includes('saurabh') && u.email.includes('saurabh')) ||
+            (cleanKey.includes('sudarshan') && u.email.includes('sudarshan')) ||
             (cleanKey.includes('prabhanjan') && u.email.includes('prabhanjan'))
         ) || (cleanKey.includes('010177') ? (INITIAL_USERS.find((u) => u.empId === '010177') || INITIAL_USERS[4]) : null);
 

@@ -213,15 +213,26 @@ export const SANKARA_INITIAL_USERS = [
     avatar_initials: 'BB'
   },
   {
-    id: 'user-saurabh-ops',
-    name: 'Saurabh',
-    email: 'saurabh@sankaraeye.com',
+    id: 'user-saurabh-admin',
+    name: 'Saurabh Rai',
+    email: 'saurabhrai@sankaraeye.com',
     emp_id: 'OPS-001',
-    password: 'password123',
-    role: 'Operations Team',
+    password: 'Sankara@123',
+    role: 'Super Admin',
     unit_id: null,
-    designation: 'Central Operations Lead • Patient Experience',
-    avatar_initials: 'SB'
+    designation: 'Central Operations Directorate • Admin',
+    avatar_initials: 'SR'
+  },
+  {
+    id: 'user-saurabh-alias',
+    name: 'Saurabh Rai',
+    email: 'saurabh@sankaraeye.com',
+    emp_id: 'OPS-001B',
+    password: 'Sankara@123',
+    role: 'Super Admin',
+    unit_id: null,
+    designation: 'Central Operations Directorate • Admin',
+    avatar_initials: 'SR'
   },
   {
     id: 'user-arsh-ops',
@@ -235,14 +246,14 @@ export const SANKARA_INITIAL_USERS = [
     avatar_initials: 'AM'
   },
   {
-    id: 'user-sudarshan-ops',
+    id: 'user-sudarshan-admin',
     name: 'Sudarshan',
     email: 'sudarshan@sankaraeye.com',
     emp_id: 'OPS-003',
-    password: 'password123',
-    role: 'Operations Team',
+    password: 'Sankara@123',
+    role: 'Super Admin',
     unit_id: null,
-    designation: 'Operations & Flow Lead',
+    designation: 'Central Operations Directorate • Admin',
     avatar_initials: 'SD'
   },
   {
