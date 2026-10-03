@@ -29,6 +29,8 @@ interface Record5SAuditModalProps {
   defaultDeptName?: string;
   lockUnit?: boolean;
   onAuditSubmitted: (audit: FiveSAudit, newNcs: FiveSNonConformity[]) => void;
+  initialAudit?: FiveSAudit | null;
+  onEditAudit?: (auditId: string, updatedAudit: Partial<FiveSAudit>) => void;
 }
 
 export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
@@ -40,7 +42,9 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
   defaultZoneName,
   defaultDeptName,
   lockUnit = false,
-  onAuditSubmitted
+  onAuditSubmitted,
+  initialAudit = null,
+  onEditAudit
 }) => {
   const getResolvedUnitCode = (code?: string) => {
     if (!code) return currentUser.unit || 'CBE';
@@ -53,14 +57,16 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
   };
 
   const [selectedUnitCode, setSelectedUnitCode] = useState<string>(() =>
-    getResolvedUnitCode(defaultUnitCode)
+    initialAudit ? getResolvedUnitCode(initialAudit.unit) : getResolvedUnitCode(defaultUnitCode)
   );
 
   React.useEffect(() => {
-    if (defaultUnitCode) {
+    if (initialAudit) {
+      setSelectedUnitCode(getResolvedUnitCode(initialAudit.unit));
+    } else if (defaultUnitCode) {
       setSelectedUnitCode(getResolvedUnitCode(defaultUnitCode));
     }
-  }, [defaultUnitCode]);
+  }, [defaultUnitCode, initialAudit]);
 
   const activeUnitConfig =
     units.find((u) => u.code === selectedUnitCode) || units[0];
@@ -79,17 +85,19 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
       : availableDepts[0] || 'General Area'
   );
 
-  const [auditDate, setAuditDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [evaluatorName, setEvaluatorName] = useState<string>(currentUser.name);
-  const [evaluatorRole, setEvaluatorRole] = useState<string>(currentUser.roleLabel);
+  const [auditDate, setAuditDate] = useState<string>(() => initialAudit?.auditDate || new Date().toISOString().slice(0, 10));
+  const [evaluatorName, setEvaluatorName] = useState<string>(() => initialAudit?.auditorName || currentUser.name);
+  const [evaluatorRole, setEvaluatorRole] = useState<string>(() => initialAudit?.auditorDesignation || currentUser.roleLabel);
 
   // Mode: 'checklist' (36 items) | 'pillars' (Quick 5S points)
-  const [entryMode, setEntryMode] = useState<'checklist' | 'pillars'>('checklist');
+  const [entryMode, setEntryMode] = useState<'checklist' | 'pillars'>(() => 
+    initialAudit && initialAudit.scores && Object.keys(initialAudit.scores).length > 0 ? 'checklist' : 'checklist'
+  );
 
   // Checklist state: checkpointId -> score (0, 1, 2, 3)
-  const [scores, setScores] = useState<Record<string, number>>({});
-  const [comments, setComments] = useState<Record<string, string>>({});
-  const [beforePhotos, setBeforePhotos] = useState<Record<string, string>>({});
+  const [scores, setScores] = useState<Record<string, number>>(() => initialAudit?.scores || {});
+  const [comments, setComments] = useState<Record<string, string>>(() => initialAudit?.comments || {});
+  const [beforePhotos, setBeforePhotos] = useState<Record<string, string>>(() => initialAudit?.beforePhotos || {});
 
   // Quick Pillar Points state (max: 18, 24, 18, 24, 24 = 108)
   const [pillarPoints, setPillarPoints] = useState<Record<string, number>>({
@@ -102,6 +110,22 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
 
   const [activeSectionFilter, setActiveSectionFilter] = useState<string>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (initialAudit) {
+      if (initialAudit.zone) setSelectedZoneName(initialAudit.zone);
+      if (initialAudit.department) setSelectedDeptName(initialAudit.department);
+      if (initialAudit.auditDate) setAuditDate(initialAudit.auditDate);
+      if (initialAudit.auditorName) setEvaluatorName(initialAudit.auditorName);
+      if (initialAudit.auditorDesignation) setEvaluatorRole(initialAudit.auditorDesignation);
+      if (initialAudit.scores && Object.keys(initialAudit.scores).length > 0) {
+        setScores(initialAudit.scores);
+        setComments(initialAudit.comments || {});
+        setBeforePhotos(initialAudit.beforePhotos || {});
+        setEntryMode('checklist');
+      }
+    }
+  }, [initialAudit]);
 
   if (!isOpen) return null;
 
@@ -149,6 +173,28 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
     }
 
     setIsSubmitting(true);
+
+    if (initialAudit && onEditAudit) {
+      onEditAudit(initialAudit.id, {
+        unit: selectedUnitCode,
+        zone: selectedZoneName,
+        department: selectedDeptName,
+        auditDate,
+        month: new Date(auditDate).toLocaleDateString('en-US', { month: 'short' }),
+        year: new Date(auditDate).getFullYear().toString(),
+        scores: entryMode === 'checklist' ? scores : {},
+        comments: entryMode === 'checklist' ? comments : {},
+        beforePhotos: entryMode === 'checklist' ? beforePhotos : {},
+        totalScore: effectiveTotal,
+        maxScore: effectiveMax,
+        compliancePercent: effectivePct,
+        auditorName: evaluatorName,
+        auditorDesignation: evaluatorRole
+      });
+      setIsSubmitting(false);
+      onClose();
+      return;
+    }
 
     const auditId = `AUD-${Date.now().toString().slice(-4)}`;
     const newNcs: FiveSNonConformity[] = [];
@@ -218,14 +264,16 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-black tracking-tight text-white">
-                  Record 5S Audit & Add Points
+                  {initialAudit ? 'Edit 5S Audit & Update Scores' : 'Record 5S Audit & Add Points'}
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/25 text-white border border-white/30">
                   {evaluatorRole}
                 </span>
               </div>
               <p className="text-xs text-orange-100 font-medium mt-0.5">
-                Input departmental 5S scores, record findings, and log non-conformities
+                {initialAudit
+                  ? `Updating Audit #${initialAudit.auditNumber} for ${selectedUnitCode} - ${selectedZoneName}`
+                  : 'Input departmental 5S scores, record findings, and log non-conformities'}
               </p>
             </div>
           </div>
@@ -589,7 +637,7 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white font-black text-xs shadow-md shadow-orange-500/25 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>Submit 5S Audit & Update Points</span>
+              <span>{initialAudit ? 'Save & Update 5S Audit Scores' : 'Submit 5S Audit & Add Points'}</span>
             </button>
           </div>
 

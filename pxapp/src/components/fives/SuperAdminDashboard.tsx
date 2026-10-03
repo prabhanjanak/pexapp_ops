@@ -35,6 +35,8 @@ interface SuperAdminDashboardProps {
   onUpdateUnits: (units: FiveSUnitConfig[]) => void;
   onGoReports: () => void;
   onAuditSubmitted?: (audit: FiveSAudit, newNcs: FiveSNonConformity[]) => void;
+  onUpdateAudit?: (auditId: string, updates: Partial<FiveSAudit>) => void;
+  onDeleteAudit?: (auditId: string) => void;
 }
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
@@ -44,9 +46,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   ncs,
   onUpdateUnits,
   onGoReports,
-  onAuditSubmitted
+  onAuditSubmitted,
+  onUpdateAudit,
+  onDeleteAudit
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'units' | 'zones' | 'users' | 'checklist' | 'audits'>('overview');
+  const [editingAudit, setEditingAudit] = useState<FiveSAudit | null>(null);
 
   // Master Data Local State
   const [unitList, setUnitList] = useState<FiveSUnitConfig[]>(units);
@@ -786,6 +791,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                   <th className="py-2.5 px-3">Audit Date</th>
                   <th className="py-2.5 px-3">Compliance</th>
                   <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -807,6 +813,29 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                         <Check className="w-3 h-3" />
                         {a.status}
                       </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setEditingAudit(a)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] transition-colors cursor-pointer border border-orange-200"
+                          title="Edit Audit & Re-score"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Delete audit ${a.auditNumber} for ${a.unit} (${a.department})?`)) {
+                              onDeleteAudit?.(a.id);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition-colors cursor-pointer border border-rose-200"
+                          title="Delete Audit"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1018,6 +1047,28 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         lockUnit={false}
         onAuditSubmitted={handleAuditSubmitInternal}
       />
+
+      {/* Modal: Edit Existing 5S Audit & Re-score */}
+      {editingAudit && (
+        <Record5SAuditModal
+          isOpen={true}
+          onClose={() => setEditingAudit(null)}
+          currentUser={currentUser}
+          units={unitList}
+          defaultUnitCode={editingAudit.unit}
+          defaultZoneName={editingAudit.zone}
+          defaultDeptName={editingAudit.department}
+          lockUnit={false}
+          initialAudit={editingAudit}
+          onAuditSubmitted={() => {}}
+          onEditAudit={(id, updates) => {
+            onUpdateAudit?.(id, updates);
+            setEditingAudit(null);
+            setSuccessToast(`Audit #${editingAudit.auditNumber} successfully updated and re-scored!`);
+            setTimeout(() => setSuccessToast(null), 3500);
+          }}
+        />
+      )}
 
     </div>
   );

@@ -5,6 +5,7 @@ import { UnitsManagementView } from './UnitsManagementView';
 import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 import { UnitHeadView } from './UnitHeadView';
 import { AddBottleneckModal } from './AddBottleneckModal';
+import { EditBottleneckModal } from './EditBottleneckModal';
 import { CategoryDeptManager } from './CategoryDeptManager';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
@@ -33,7 +34,9 @@ import {
   ArrowLeft,
   Search,
   ArrowUpDown,
-  Plus
+  Plus,
+  Edit3,
+  Trash2
 } from 'lucide-react';
 
 interface OperationsTeamViewProps {
@@ -73,6 +76,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   const [sortBy, setSortBy] = useState<'newest' | 'targetDate' | 'impact'>('newest');
   const [activeCommentBottleneck, setActiveCommentBottleneck] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
   const [isAddBottleneckModalOpen, setIsAddBottleneckModalOpen] = useState(false);
+  const [editingBottleneckData, setEditingBottleneckData] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
   const [isRecord5SModalOpen, setIsRecord5SModalOpen] = useState(false);
   const [fivesSuccessMsg, setFivesSuccessMsg] = useState<string | null>(null);
   const [viewScope, setViewScope] = useState<'active' | 'completed' | 'all'>(
@@ -459,6 +463,30 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                           <span>Inspect Unit Workspace</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditingBottleneckData({ unitId: unit.id, bottleneck })}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200 text-xs font-bold text-orange-700 transition-colors cursor-pointer"
+                          title="Edit Bottleneck Details & Checklist"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-orange-600" />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Delete bottleneck "${bottleneck.title}" from ${unit.name}?`)) {
+                              onDeleteBottleneck?.(unit.id, bottleneck.id);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-bold text-rose-700 transition-colors cursor-pointer"
+                          title="Delete Bottleneck"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
 
@@ -642,6 +670,26 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
             setFivesSuccessMsg(`5S Audit #${audit.id} (${audit.unit}) successfully recorded! Score: ${audit.overallScore}/108 (${audit.compliancePercentage}% Compliance).`);
             setTimeout(() => setFivesSuccessMsg(null), 6000);
           }}
+        />
+      )}
+
+      {/* Edit Bottleneck Modal */}
+      {editingBottleneckData && (
+        <EditBottleneckModal
+          isOpen={true}
+          onClose={() => setEditingBottleneckData(null)}
+          bottleneck={editingBottleneckData.bottleneck}
+          unitId={editingBottleneckData.unitId}
+          unitName={units.find(u => u.id === editingBottleneckData.unitId)?.name}
+          onUpdate={(unitId, bId, updates) => {
+            onUpdateBottleneck?.(unitId, bId, updates);
+            setEditingBottleneckData(null);
+          }}
+          onDelete={(unitId, bId) => {
+            onDeleteBottleneck?.(unitId, bId);
+            setEditingBottleneckData(null);
+          }}
+          currentUserRole={currentUser.role}
         />
       )}
 

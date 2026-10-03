@@ -3,6 +3,7 @@ import { HospitalUnit, Bottleneck, BottleneckStatus, BottleneckCategory, UnitHea
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import { CATEGORIES } from '../data/seedData';
 import { AddBottleneckModal } from './AddBottleneckModal';
+import { EditBottleneckModal } from './EditBottleneckModal';
 import { PhotoUploadCell } from './PhotoUploadCell';
 import { ImageLightboxModal } from './ImageLightboxModal';
 import { AssignDeadlineModal } from './AssignDeadlineModal';
@@ -46,7 +47,9 @@ import {
   Lock,
   Eye,
   ArrowLeft,
-  ArrowUpDown
+  ArrowUpDown,
+  Edit3,
+  Trash2
 } from 'lucide-react';
 
 interface UnitHeadViewProps {
@@ -86,6 +89,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     activeTab === 'completed' ? 'completed' : 'active'
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingBottleneck, setEditingBottleneck] = useState<Bottleneck | null>(null);
   const [isRecord5SModalOpen, setIsRecord5SModalOpen] = useState(false);
   const [fivesSuccessMsg, setFivesSuccessMsg] = useState<string | null>(null);
 
@@ -592,13 +596,39 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                         </button>
 
                         {!viewOnly && (
-                          <button
-                            type="button"
-                            onClick={() => setAssignModalState({ isOpen: true, bottleneck: item })}
-                            className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 cursor-pointer"
-                          >
-                            <span>🎯 {item.targetDate ? `Due ${item.targetDate}` : 'Assign Deadline'}</span>
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setAssignModalState({ isOpen: true, bottleneck: item })}
+                              className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 cursor-pointer"
+                            >
+                              <span>🎯 {item.targetDate ? `Due ${item.targetDate}` : 'Assign Deadline'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setEditingBottleneck(item)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200 text-xs font-bold text-orange-700 transition-colors cursor-pointer"
+                              title="Edit Bottleneck Details & Checklist"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-orange-600" />
+                              <span>Edit Details</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm(`Delete bottleneck "${item.title}"?`)) {
+                                  onDeleteBottleneck?.(currentUnit.id, item.id);
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-bold text-rose-700 transition-colors cursor-pointer"
+                              title="Delete Bottleneck"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -825,6 +855,26 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
             setFivesSuccessMsg(`Audit #${audit.id} successfully recorded! Score: ${audit.overallScore}/108 (${audit.compliancePercentage}% Compliance).`);
             setTimeout(() => setFivesSuccessMsg(null), 6000);
           }}
+        />
+      )}
+
+      {/* Edit Bottleneck Modal */}
+      {editingBottleneck && (
+        <EditBottleneckModal
+          isOpen={true}
+          onClose={() => setEditingBottleneck(null)}
+          bottleneck={editingBottleneck}
+          unitId={currentUnit.id}
+          unitName={currentUnit.name}
+          onUpdate={(unitId, bId, updates) => {
+            onUpdateBottleneck?.(unitId, bId, updates);
+            setEditingBottleneck(null);
+          }}
+          onDelete={(unitId, bId) => {
+            onDeleteBottleneck?.(unitId, bId);
+            setEditingBottleneck(null);
+          }}
+          currentUserRole={currentUser.role}
         />
       )}
 

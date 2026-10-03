@@ -18,7 +18,10 @@ import {
   Check,
   Plus,
   Sparkles,
-  ClipboardCheck
+  ClipboardCheck,
+  Edit2,
+  Trash2,
+  Search
 } from 'lucide-react';
 
 interface UnitHeadDashboardProps {
@@ -28,6 +31,10 @@ interface UnitHeadDashboardProps {
   ncs: FiveSNonConformity[];
   onGoReports: () => void;
   onAuditSubmitted?: (audit: FiveSAudit, newNcs: FiveSNonConformity[]) => void;
+  onUpdateAudit?: (auditId: string, updates: Partial<FiveSAudit>) => void;
+  onDeleteAudit?: (auditId: string) => void;
+  onUpdateNc?: (ncId: string, updates: Partial<FiveSNonConformity>) => void;
+  onDeleteNc?: (ncId: string) => void;
 }
 
 export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
@@ -36,7 +43,11 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
   audits,
   ncs,
   onGoReports,
-  onAuditSubmitted
+  onAuditSubmitted,
+  onUpdateAudit,
+  onDeleteAudit,
+  onUpdateNc,
+  onDeleteNc
 }) => {
   // Strict Scope: Own Unit Only
   const targetUnitCode = currentUser.unit || 'CBE';
@@ -49,6 +60,7 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
 
   // Modal State for adding 5S audits & points
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [editingAudit, setEditingAudit] = useState<FiveSAudit | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   // Filter unit's NCs and audits
@@ -566,6 +578,175 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
 
       </div>
 
+      {/* Unit Audits & Scoring History */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-base font-extrabold text-slate-900">
+              {targetUnitCode} 5S Audits & Scoring Registry
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              History of conducted 5S audits, scored checkpoints, and compliance ratings for this unit.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsAuditModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 text-white font-black text-xs shadow-md shadow-orange-500/20 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Score Zone / Record Audit</span>
+          </button>
+        </div>
+
+        {unitAudits.length === 0 ? (
+          <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <ClipboardCheck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-xs font-bold text-slate-600">No audits recorded yet for {targetUnitCode}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Click "Score Zone / Record Audit" to conduct the first monthly 5S assessment.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-2.5 px-3">Audit #</th>
+                  <th className="py-2.5 px-3">Zone</th>
+                  <th className="py-2.5 px-3">Department</th>
+                  <th className="py-2.5 px-3">Auditor</th>
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Compliance</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {unitAudits.map((a) => (
+                  <tr key={a.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-3 font-black text-slate-900">{a.auditNumber}</td>
+                    <td className="py-3 px-3 text-slate-700 font-semibold">{a.zone}</td>
+                    <td className="py-3 px-3 font-bold text-slate-800">{a.department}</td>
+                    <td className="py-3 px-3 text-slate-500">{a.auditorName}</td>
+                    <td className="py-3 px-3 text-slate-600">{a.auditDate}</td>
+                    <td className="py-3 px-3">
+                      <span className="font-extrabold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md text-xs">
+                        {a.compliancePercent}%
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[11px]">
+                        <Check className="w-3 h-3" />
+                        {a.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setEditingAudit(a)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] transition-colors cursor-pointer border border-orange-200"
+                          title="Edit Audit & Re-score"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Delete audit ${a.auditNumber} for ${a.department}?`)) {
+                              onDeleteAudit?.(a.id);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition-colors cursor-pointer border border-rose-200"
+                          title="Delete Audit"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Unit Non-Conformities (NC) Management */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+              <h3 className="text-base font-extrabold text-slate-900">
+                {targetUnitCode} Non-Conformity (NC) & Corrective Action Log
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Review audit findings, update CAPA actions, close resolved items, or remove observations.
+            </p>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            {openNcs.length} Pending Resolution
+          </span>
+        </div>
+
+        {unitNcs.length === 0 ? (
+          <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1.5" />
+            <p className="text-xs font-bold text-slate-700">Zero Open Non-Conformities</p>
+            <p className="text-[11px] text-slate-400">All 5S checkpoints for this hospital unit meet compliance standards.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {unitNcs.map((nc) => (
+              <div
+                key={nc.id}
+                className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200">
+                      {nc.zone} • {nc.department}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      nc.status === 'Closed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {nc.status}
+                    </span>
+                    <span className="text-[11px] text-slate-400">Raised: {nc.raisedDate}</span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-800">{nc.checkpointText}</h4>
+                  <p className="text-xs text-slate-600 font-normal">{nc.auditorComment}</p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <select
+                    value={nc.status}
+                    onChange={(e) => onUpdateNc?.(nc.id, { status: e.target.value as any })}
+                    className="text-xs font-bold px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 cursor-pointer focus:ring-2 focus:ring-orange-500 outline-none"
+                  >
+                    <option value="Open">🟡 Open</option>
+                    <option value="In Progress">🔵 In Progress</option>
+                    <option value="Submitted for Verification">🟣 Verification</option>
+                    <option value="Closed">🟢 Closed</option>
+                  </select>
+
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Delete NC observation "${nc.checkpointText}"?`)) {
+                        onDeleteNc?.(nc.id);
+                      }
+                    }}
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer border border-slate-200 hover:border-rose-200"
+                    title="Delete Non-Conformity"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Modal for Recording 5S Audits & Points */}
       <Record5SAuditModal
         isOpen={isAuditModalOpen}
@@ -577,6 +758,28 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
         lockUnit={true}
         onAuditSubmitted={handleAuditSubmitInternal}
       />
+
+      {/* Modal for Editing 5S Audit & Re-scoring */}
+      {editingAudit && (
+        <Record5SAuditModal
+          isOpen={true}
+          onClose={() => setEditingAudit(null)}
+          currentUser={currentUser}
+          units={units}
+          defaultUnitCode={editingAudit.unit}
+          defaultZoneName={editingAudit.zone}
+          defaultDeptName={editingAudit.department}
+          lockUnit={true}
+          initialAudit={editingAudit}
+          onAuditSubmitted={() => {}}
+          onEditAudit={(id, updates) => {
+            onUpdateAudit?.(id, updates);
+            setEditingAudit(null);
+            setSuccessToast(`Audit #${editingAudit.auditNumber} updated & re-scored!`);
+            setTimeout(() => setSuccessToast(null), 3500);
+          }}
+        />
+      )}
 
     </div>
   );

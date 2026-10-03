@@ -146,12 +146,29 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
     );
   };
 
+  // Delete NC Handler
+  const handleDeleteNc = (ncId: string) => {
+    setNcs((prev) => prev.filter((n) => n.id !== ncId));
+  };
+
   // New Audit Submitted Handler
   const handleAuditSubmitted = (newAudit: FiveSAudit, newNcs: FiveSNonConformity[]) => {
     setAudits((prev) => [newAudit, ...prev]);
     if (newNcs.length > 0) {
       setNcs((prev) => [...newNcs, ...prev]);
     }
+  };
+
+  // Update Audit Handler
+  const handleUpdateAudit = (auditId: string, updates: Partial<FiveSAudit>) => {
+    setAudits((prev) =>
+      prev.map((a) => (a.id === auditId ? { ...a, ...updates } : a))
+    );
+  };
+
+  // Delete Audit Handler
+  const handleDeleteAudit = (auditId: string) => {
+    setAudits((prev) => prev.filter((a) => a.id !== auditId));
   };
 
   // Step 1: Render 5S Login Page if not signed in
@@ -235,6 +252,10 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
                 ncs={ncs}
                 onGoReports={() => setActiveScreen('reports')}
                 onAuditSubmitted={handleAuditSubmitted}
+                onUpdateAudit={handleUpdateAudit}
+                onDeleteAudit={handleDeleteAudit}
+                onUpdateNc={handleUpdateNc}
+                onDeleteNc={handleDeleteNc}
               />
             )}
 
@@ -248,6 +269,8 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
                 onUpdateUnits={setUnits}
                 onGoReports={() => setActiveScreen('reports')}
                 onAuditSubmitted={handleAuditSubmitted}
+                onUpdateAudit={handleUpdateAudit}
+                onDeleteAudit={handleDeleteAudit}
               />
             )}
 
