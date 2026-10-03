@@ -262,9 +262,9 @@ export const SANKARA_INITIAL_USERS = [
     email: 'prabhanjan@sankaraeye.com',
     emp_id: '010177',
     password: 'Sankara@123',
-    role: 'IT Admin',
+    role: 'Super Admin',
     unit_id: null,
-    designation: 'IT & Systems Admin • Central Directorate',
+    designation: 'Super Administrator • Central Directorate',
     avatar_initials: 'PR'
   },
   {

@@ -268,12 +268,25 @@ export default function App() {
     }
   };
 
-  // 5. Reset Database (Super Admin)
+  // 5. Reset Database (Exclusive Authorization: Super Admin Prabhanjan)
   const handleResetData = async () => {
-    if (window.confirm('Reset all hospital units and bottlenecks to baseline state?')) {
+    const isPrabhanjan =
+      currentUser?.email?.toLowerCase().includes('prabhanjan') ||
+      currentUser?.name?.toLowerCase().includes('prabhanjan');
+
+    if (!isPrabhanjan) {
+      addToast('Permission Denied: Only Super Administrator Prabhanjan has the exclusive authority to reset the database.', 'error');
+      return;
+    }
+
+    if (
+      window.confirm(
+        '⚠️ CRITICAL WARNING: FULL DATABASE RESET!\n\nThis will restore all 14 hospital units and canonical users to initial baseline and delete all logged bottlenecks.\n\nOnly Super Administrator Prabhanjan has permission to execute this operation.\n\nDo you want to proceed?'
+      )
+    ) {
       setIsLoading(true);
       try {
-        await api.resetDatabase();
+        await api.resetDatabase(currentUser?.email);
         await loadData();
         addToast('Database reset to initial state successfully.', 'info');
       } catch (err: any) {

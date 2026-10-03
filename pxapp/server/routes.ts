@@ -965,8 +965,15 @@ router.delete('/bottlenecks/:id', async (req: Request, res: Response) => {
   }
 });
 
-// 12. Reset Database (Restores canonical 14 units & users with empty bottleneck table)
+// 12. Reset Database (Restores canonical 14 units & users with empty bottleneck table - Exclusive to Prabhanjan)
 router.post('/db/reset', async (req: Request, res: Response) => {
+  const userEmail = (req.body?.userEmail || req.headers['x-user-email'] || '').toString().toLowerCase();
+  if (!userEmail.includes('prabhanjan')) {
+    return res.status(403).json({
+      error: 'Permission Denied: Only Super Administrator Prabhanjan has the exclusive authority to reset the database.'
+    });
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

@@ -260,9 +260,9 @@ export const INITIAL_USERS: any[] = [
     name: 'Prabhanjan',
     email: 'prabhanjan@sankaraeye.com',
     empId: '010177',
-    role: 'IT Admin',
+    role: 'Super Admin',
     unitId: undefined,
-    designation: 'IT & Systems Admin • Central Directorate',
+    designation: 'Super Administrator • Central Directorate',
     avatarInitials: 'PR'
   },
   {

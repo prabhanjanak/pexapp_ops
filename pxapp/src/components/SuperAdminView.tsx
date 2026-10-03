@@ -810,7 +810,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           </div>
 
           {/* Danger Zone & Seeding */}
-          <div className="pt-6 border-t border-slate-100 flex flex-wrap gap-4">
+          <div className="pt-6 border-t border-slate-100 flex flex-wrap items-center gap-4">
             <button
               onClick={onSeedAllUnits}
               className="px-4 py-2.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold border border-orange-200 flex items-center gap-2 cursor-pointer transition-colors"
@@ -819,13 +819,23 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               <span>Populate All 14 Hospital Units with Baseline Data</span>
             </button>
 
-            <button
-              onClick={onResetData}
-              className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-2 cursor-pointer transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Full Database Reset to Initial State</span>
-            </button>
+            {currentUser?.email?.toLowerCase().includes('prabhanjan') || currentUser?.name?.toLowerCase().includes('prabhanjan') ? (
+              <button
+                onClick={onResetData}
+                className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-2 cursor-pointer transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Full Database Reset to Initial State (Super Admin Prabhanjan Only)</span>
+              </button>
+            ) : (
+              <div
+                title="Only Super Administrator Prabhanjan has the exclusive authority to reset the database."
+                className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold border border-slate-200 flex items-center gap-2 cursor-not-allowed select-none"
+              >
+                <Lock className="w-4 h-4 text-slate-400" />
+                <span>Database Reset Restricted (Super Admin Prabhanjan Only)</span>
+              </div>
+            )}
           </div>
         </div>
       )}

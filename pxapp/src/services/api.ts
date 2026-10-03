@@ -564,10 +564,11 @@ export const api = {
     }
   },
 
-  // Database Utilities
-  resetDatabase: async (): Promise<{ success: boolean; message: string }> => {
+  // Database Utilities (Prabhanjan Only)
+  resetDatabase: async (userEmail?: string): Promise<{ success: boolean; message: string }> => {
     return fetchJson<{ success: boolean; message: string }>('/db/reset', {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify({ userEmail: userEmail || 'prabhanjan@sankaraeye.com' })
     });
   },
 
