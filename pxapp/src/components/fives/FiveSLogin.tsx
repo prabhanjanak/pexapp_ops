@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiveSUser, FiveSRole } from './types';
+import { FiveSUser } from './types';
 import { FIVE_S_DEFAULT_USERS } from './seedData';
 import {
   Lock,
@@ -7,11 +7,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Building2,
-  Sparkles,
   Eye,
   EyeOff,
-  AlertCircle,
-  Layers,
   ArrowLeft
 } from 'lucide-react';
 
@@ -82,13 +79,6 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
         }
       }
     }, 300);
-  };
-
-  const handleQuickSelect = (user: FiveSUser) => {
-    setIdentifier(user.email);
-    setPassword('');
-    setError(null);
-    onLogin(user);
   };
 
   return (
@@ -193,7 +183,7 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
                       required
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="e.g. saurabhrai@sankaraeye.com or sudarshan@sankaraeye.com"
+                      placeholder=""
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"
                       autoComplete="email"
                     />
@@ -279,78 +269,6 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
 
           </div>
 
-        </div>
-
-        {/* Quick Demo Role Switcher Matrix */}
-        <div className="w-full max-w-4xl mt-10">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Instant Role Testing Matrix (Select to Auto-Login)
-            </h3>
-            <span className="text-[11px] text-emerald-700 font-bold">
-              6 Configured Organizational Roles
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {FIVE_S_DEFAULT_USERS.map((user) => {
-              const roleColors: Record<FiveSRole, { badge: string; border: string }> = {
-                auditor: { badge: 'bg-emerald-100 text-emerald-900 border-emerald-300', border: 'hover:border-emerald-400' },
-                incharge: { badge: 'bg-amber-100 text-amber-900 border-amber-300', border: 'hover:border-amber-400' },
-                zonal: { badge: 'bg-blue-100 text-blue-900 border-blue-300', border: 'hover:border-blue-400' },
-                unithead: { badge: 'bg-teal-100 text-teal-900 border-teal-300', border: 'hover:border-teal-400' },
-                superadmin: { badge: 'bg-purple-100 text-purple-900 border-purple-300', border: 'hover:border-purple-400' },
-                president: { badge: 'bg-orange-100 text-orange-900 border-orange-300', border: 'hover:border-orange-400' }
-              };
-
-              const style = roleColors[user.role];
-
-              return (
-                <button
-                  key={user.id}
-                  onClick={() => handleQuickSelect(user)}
-                  className={`text-left p-3.5 rounded-2xl border border-slate-200 bg-white hover:shadow-md ${style.border} transition-all cursor-pointer group flex flex-col justify-between`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${style.badge}`}>
-                        {user.roleLabel}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-bold group-hover:text-emerald-700 transition-colors">
-                        Click to Sign In →
-                      </span>
-                    </div>
-
-                    <div className="font-black text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
-                      {user.name}
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-medium truncate">
-                      {user.designation}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-600 space-y-0.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-400">Unit:</span>
-                      <span className="font-bold text-slate-800">{user.unit}</span>
-                    </div>
-                    {user.zone && (
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-slate-400">Zone:</span>
-                        <span className="text-slate-800">{user.zone}</span>
-                      </div>
-                    )}
-                    {user.department && (
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-slate-400">Dept:</span>
-                        <span className="text-slate-800 truncate max-w-[140px]">{user.department}</span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
       </main>
