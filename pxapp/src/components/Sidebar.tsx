@@ -82,7 +82,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
         { id: 'evidence', label: 'Photo Approvals', icon: Camera },
         { id: 'categories', label: 'Categories & Depts', icon: Tag },
-        { id: 'users', label: 'Staff Directory', icon: Users },
         { id: 'database', label: 'Database Health', icon: Database }
       ];
     }
@@ -107,7 +106,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
       { id: 'evidence', label: 'Photo Approvals', icon: Camera },
       { id: 'categories', label: 'Categories & Depts', icon: Tag },
-      { id: 'users', label: 'Staff Directory', icon: Users },
       { id: 'database', label: 'Database Health', icon: Database }
     ];
   };

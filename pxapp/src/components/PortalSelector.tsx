@@ -14,12 +14,13 @@ import {
   LogOut,
   UserCheck,
   TrendingUp,
-  Award
+  Award,
+  Users
 } from 'lucide-react';
 
 interface PortalSelectorProps {
   currentUser: User;
-  onSelectPortal: (portal: '5s' | 'bottleneck') => void;
+  onSelectPortal: (portal: '5s' | 'bottleneck' | 'staff') => void;
   onLogout: () => void;
   onOpenProfile: () => void;
 }
@@ -30,6 +31,7 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
   onLogout,
   onOpenProfile
 }) => {
+  const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin';
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between selection:bg-orange-500 selection:text-white relative font-sans">
       
@@ -57,6 +59,16 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
           </div>
 
           <div className="flex items-center space-x-2.5">
+            {isSuperAdmin && (
+              <button
+                onClick={() => onSelectPortal('staff')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+              >
+                <Users className="w-3.5 h-3.5 text-purple-600" />
+                <span className="hidden sm:inline">Staff Directory</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenProfile}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 text-xs font-semibold text-slate-800 transition-all cursor-pointer shadow-xs group"
@@ -208,6 +220,41 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
           </div>
 
         </div>
+
+        {/* Super Admin Exclusive: Hospital Staff Directory & User Access Control */}
+        {isSuperAdmin && (
+          <div
+            onClick={() => onSelectPortal('staff')}
+            className="mt-6 sm:mt-8 max-w-5xl mx-auto w-full group relative bg-white hover:bg-gradient-to-r hover:from-white hover:via-purple-50/30 hover:to-indigo-50/40 border-2 border-slate-200 hover:border-purple-400 rounded-3xl p-5 sm:p-6 transition-all duration-300 shadow-md hover:shadow-xl cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 bottom-0 w-2 bg-gradient-to-b from-purple-600 to-indigo-600" />
+
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 group-hover:scale-105 transition-transform shrink-0">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-purple-700 transition-colors">
+                    Hospital Staff Directory & Access Control
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                    Super Admin Only
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium">
+                  Central management of all 14 hospital unit heads, operations directorate, auditors, password resets, and role assignments outside the individual workspaces.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-purple-700 font-black text-xs sm:text-sm shrink-0 self-end sm:self-auto group-hover:translate-x-1 transition-transform">
+              <span>Open Staff Directory</span>
+              <ArrowRight className="w-4 h-4 text-purple-600" />
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* Footer */}

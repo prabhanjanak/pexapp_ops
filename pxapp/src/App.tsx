@@ -15,6 +15,7 @@ import { api } from './services/api';
 import { LoginPage } from './components/LoginPage';
 import { PortalSelector } from './components/PortalSelector';
 import { FiveSInProgressView } from './components/FiveSInProgressView';
+import { StaffDirectoryView } from './components/StaffDirectoryView';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { UnitHeadView } from './components/UnitHeadView';
@@ -329,6 +330,18 @@ export default function App() {
       <FiveSInProgressView
         currentUser={currentUser}
         onBack={() => setPortalView('portal')}
+      />
+    );
+  }
+
+  // Step 3b: Render Standalone Staff Directory (Super Admin Only, Outside Bottleneck App)
+  if (portalView === 'staff') {
+    return (
+      <StaffDirectoryView
+        currentUser={currentUser}
+        units={units}
+        onBackToPortal={() => setPortalView('portal')}
+        onRefreshData={() => loadData(true)}
       />
     );
   }

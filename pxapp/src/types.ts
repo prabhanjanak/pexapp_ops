@@ -182,7 +182,7 @@ export interface OrgStats {
 }
 
 // Module Portal selection
-export type PortalView = 'portal' | '5s' | 'bottleneck';
+export type PortalView = 'portal' | '5s' | 'bottleneck' | 'staff';
 
 // Tab navigation definitions for role workspaces in the left sidebar
 export type UnitHeadTab = 'dashboard' | 'bottlenecks' | 'completed' | 'analytics' | 'profile';
