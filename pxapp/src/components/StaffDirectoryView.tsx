@@ -34,7 +34,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
   onBackToPortal,
   onRefreshData
 }) => {
-  const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin';
+  const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.email?.toLowerCase().includes('prabhanjan') || currentUser.name?.toLowerCase().includes('prabhanjan');
 
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,8 +165,8 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
   const handleDeleteUser = async () => {
     if (!deleteTargetUser) return;
     try {
-      await api.deleteUser(deleteTargetUser.id);
-      setUsersList(prev => prev.filter(u => u.id !== deleteTargetUser.id));
+      await api.deleteUser(deleteTargetUser.id, deleteTargetUser.email);
+      setUsersList(prev => prev.filter(u => u.id !== deleteTargetUser.id && u.email !== deleteTargetUser.email));
       showToast(`Staff account for ${deleteTargetUser.name} deleted successfully.`);
       setDeleteTargetUser(null);
     } catch (err: any) {

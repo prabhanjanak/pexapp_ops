@@ -187,4 +187,4 @@ export type PortalView = 'portal' | '5s' | 'bottleneck' | 'staff';
 // Tab navigation definitions for role workspaces in the left sidebar
 export type UnitHeadTab = 'dashboard' | 'bottlenecks' | 'completed' | 'analytics' | 'profile';
 export type OpsTeamTab = 'dashboard' | 'units' | 'bottlenecks' | 'completed' | 'evidence' | 'categories' | 'compliance' | 'activity';
-export type SuperAdminTab = 'dashboard' | 'units' | 'bottlenecks' | 'completed' | 'evidence' | 'categories' | 'users' | 'database';
+export type SuperAdminTab = 'dashboard' | 'units' | 'bottlenecks' | 'completed' | 'evidence' | 'categories' | 'database';

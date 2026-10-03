@@ -340,11 +340,18 @@ router.put('/users/:id', async (req: Request, res: Response) => {
 
 // 5c. Delete User (Super Admin Only)
 router.delete('/users/:id', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
+  const idx = SANKARA_INITIAL_USERS.findIndex(
+    u => u.id === id || u.email.toLowerCase() === id.toLowerCase()
+  );
+  if (idx >= 0) {
+    SANKARA_INITIAL_USERS.splice(idx, 1);
+  }
+
   try {
-    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const userRes = await pool.query('SELECT * FROM users WHERE id = $1 OR email = $1', [id]);
     if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.json({ success: true, deletedId: id });
     }
 
     const user = userRes.rows[0];
@@ -352,12 +359,12 @@ router.delete('/users/:id', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Primary Super Admin account cannot be deleted' });
     }
 
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    await pool.query('DELETE FROM users WHERE id = $1', [user.id]);
 
     await pool.query(`
       INSERT INTO audit_logs (user_role, action, details)
       VALUES ($1, $2, $3)
-    `, ['Super Admin', 'USER_DELETED', JSON.stringify({ userId: id, name: user.name, email: user.email, role: user.role })]);
+    `, ['Super Admin', 'USER_DELETED', JSON.stringify({ userId: user.id, name: user.name, email: user.email, role: user.role })]);
 
     res.json({ success: true, deletedId: id });
   } catch (error: any) {

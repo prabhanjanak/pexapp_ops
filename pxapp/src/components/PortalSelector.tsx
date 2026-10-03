@@ -31,7 +31,7 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
   onLogout,
   onOpenProfile
 }) => {
-  const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin';
+  const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.email?.toLowerCase().includes('prabhanjan') || currentUser.name?.toLowerCase().includes('prabhanjan');
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between selection:bg-orange-500 selection:text-white relative font-sans">
       

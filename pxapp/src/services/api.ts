@@ -44,6 +44,7 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
 
 const UNITS_OVERRIDE_KEY = 'sankara_units_overrides_v2';
 const USERS_OVERRIDE_KEY = 'sankara_users_overrides_v2';
+const DELETED_USERS_KEY = 'sankara_deleted_users_v2';
 
 function getLocalUnitOverrides(): Record<string, Partial<HospitalUnit>> {
   try {
@@ -59,6 +60,24 @@ function saveLocalUnitOverride(unitId: string, updates: Partial<HospitalUnit>) {
     const current = getLocalUnitOverrides();
     current[unitId] = { ...(current[unitId] || {}), ...updates };
     localStorage.setItem(UNITS_OVERRIDE_KEY, JSON.stringify(current));
+  } catch (_) {}
+}
+
+function getDeletedUserIds(): string[] {
+  try {
+    const raw = localStorage.getItem(DELETED_USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function markUserAsDeleted(id: string, email?: string) {
+  try {
+    const list = getDeletedUserIds();
+    if (id && !list.includes(id)) list.push(id);
+    if (email && !list.includes(email.toLowerCase())) list.push(email.toLowerCase());
+    localStorage.setItem(DELETED_USERS_KEY, JSON.stringify(list));
   } catch (_) {}
 }
 
@@ -152,9 +171,18 @@ export const api = {
       serverUsers = INITIAL_USERS as User[];
     }
     const localUsers = getLocalUsersList();
+    const deletedList = getDeletedUserIds();
     const userMap = new Map<string, User>();
-    for (const u of serverUsers) userMap.set(u.id, u);
-    for (const u of localUsers) userMap.set(u.id, u);
+    for (const u of serverUsers) {
+      if (!deletedList.includes(u.id) && !deletedList.includes(u.email?.toLowerCase())) {
+        userMap.set(u.id, u);
+      }
+    }
+    for (const u of localUsers) {
+      if (!deletedList.includes(u.id) && !deletedList.includes(u.email?.toLowerCase())) {
+        userMap.set(u.id, u);
+      }
+    }
     return Array.from(userMap.values());
   },
 
@@ -235,10 +263,16 @@ export const api = {
     }
   },
 
-  deleteUser: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
+  deleteUser: async (id: string, email?: string): Promise<{ success: boolean; deletedId: string }> => {
     try {
-      const local = getLocalUsersList().filter(u => u.id !== id);
+      const local = getLocalUsersList().filter(
+        u => u.id !== id && (email ? u.email.toLowerCase() !== email.toLowerCase() : true)
+      );
       localStorage.setItem(USERS_OVERRIDE_KEY, JSON.stringify(local));
+      markUserAsDeleted(id, email);
+    } catch (_) {}
+
+    try {
       return await fetchJson<{ success: boolean; deletedId: string }>(`/users/${id}`, {
         method: 'DELETE'
       });
@@ -566,6 +600,15 @@ export const api = {
 
   // Database Utilities (Prabhanjan Only)
   resetDatabase: async (userEmail?: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      localStorage.removeItem(UNITS_OVERRIDE_KEY);
+      localStorage.removeItem(USERS_OVERRIDE_KEY);
+      localStorage.removeItem(DELETED_USERS_KEY);
+      localStorage.removeItem('sankara_local_categories_v1');
+      localStorage.removeItem('sankara_local_depts_v1');
+      localStorage.removeItem('sankara_offline_bottlenecks');
+    } catch (_) {}
+
     return fetchJson<{ success: boolean; message: string }>('/db/reset', {
       method: 'POST',
       body: JSON.stringify({ userEmail: userEmail || 'prabhanjan@sankaraeye.com' })
