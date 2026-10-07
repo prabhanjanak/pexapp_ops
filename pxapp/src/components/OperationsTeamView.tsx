@@ -9,9 +9,7 @@ import { EditBottleneckModal } from './EditBottleneckModal';
 import { CategoryDeptManager } from './CategoryDeptManager';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
-import { Record5SAuditModal } from './fives/Record5SAuditModal';
-import { FIVE_S_UNITS } from './fives/seedData';
-import { FiveSAudit, FiveSNonConformity } from './fives/types';
+
 import { api } from '../services/api';
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import {
@@ -77,8 +75,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   const [activeCommentBottleneck, setActiveCommentBottleneck] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
   const [isAddBottleneckModalOpen, setIsAddBottleneckModalOpen] = useState(false);
   const [editingBottleneckData, setEditingBottleneckData] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
-  const [isRecord5SModalOpen, setIsRecord5SModalOpen] = useState(false);
-  const [fivesSuccessMsg, setFivesSuccessMsg] = useState<string | null>(null);
+
   const [viewScope, setViewScope] = useState<'active' | 'completed' | 'all'>(
     activeTab === 'completed' ? 'completed' : 'active'
   );
@@ -168,7 +165,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
     const clamped = Math.max(0, Math.min(100, Math.round(percent)));
     let targetStatus: BottleneckStatus = 'In progress';
     if (clamped >= 100) targetStatus = 'Completed';
-    else if (clamped <= 0) targetStatus = 'Pending';
+    else if (clamped <= 0) targetStatus = 'Not Started';
 
     onUpdateBottleneck?.(unitId, bottleneck.id, {
       status: targetStatus,
@@ -344,16 +341,6 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  id="ops-record-5s-btn"
-                  onClick={() => setIsRecord5SModalOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/20 hover:scale-[1.02] transition-all cursor-pointer"
-                >
-                  <ClipboardCheck className="w-4 h-4" />
-                  <span>Record 5S Points</span>
-                </button>
-
                 {onAddBottleneck && (
                   <button
                     type="button"
@@ -368,20 +355,6 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
               </div>
             </div>
           </div>
-
-          {fivesSuccessMsg && (
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 p-4 rounded-2xl flex items-center justify-between text-xs font-bold text-orange-950 shadow-2xs">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
-                <span>{fivesSuccessMsg}</span>
-              </div>
-              <button onClick={() => setFivesSuccessMsg(null)} className="text-orange-700 hover:text-orange-950 cursor-pointer">
-                Dismiss
-              </button>
-            </div>
-          )}
-
-          {/* Bottlenecks List */}
           {allBottlenecks.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center">
               <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
@@ -504,7 +477,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                               : 'bg-amber-50 text-amber-800 border-amber-300'
                           }`}
                         >
-                          <option value="Pending">Pending (0%)</option>
+                          <option value="Not Started">Not Started (0%)</option>
                           <option value="In progress">In progress</option>
                           <option value="Completed">Completed (100%)</option>
                         </select>
@@ -637,41 +610,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
         />
       )}
 
-      {/* Record 5S Audit Modal with Cross-Unit Capability */}
-      {isRecord5SModalOpen && (
-        <Record5SAuditModal
-          isOpen={isRecord5SModalOpen}
-          onClose={() => setIsRecord5SModalOpen(false)}
-          currentUser={{
-            id: currentUser.id || 'opsteam',
-            name: currentUser.name || 'Central Operations Team',
-            email: currentUser.email || 'operations@sankaraeye.com',
-            username: currentUser.email ? currentUser.email.split('@')[0] : 'operations',
-            role: 'superadmin',
-            roleLabel: 'Operations Team Lead',
-            unit: 'CBE',
-            designation: 'Central Operations Directorate'
-          }}
-          units={FIVE_S_UNITS}
-          defaultUnitCode={selectedUnitFilter !== 'ALL' ? selectedUnitFilter : 'CBE'}
-          lockUnit={false}
-          onAuditSubmitted={(audit, newNcs) => {
-            try {
-              const existingAudits = JSON.parse(localStorage.getItem('sankara_5s_audits') || '[]');
-              localStorage.setItem('sankara_5s_audits', JSON.stringify([audit, ...existingAudits]));
-              if (newNcs.length > 0) {
-                const existingNcs = JSON.parse(localStorage.getItem('sankara_5s_ncs') || '[]');
-                localStorage.setItem('sankara_5s_ncs', JSON.stringify([...newNcs, ...existingNcs]));
-              }
-            } catch (e) {
-              console.error('Failed to sync 5s audit', e);
-            }
-            setIsRecord5SModalOpen(false);
-            setFivesSuccessMsg(`5S Audit #${audit.id} (${audit.unit}) successfully recorded! Score: ${audit.overallScore}/108 (${audit.compliancePercentage}% Compliance).`);
-            setTimeout(() => setFivesSuccessMsg(null), 6000);
-          }}
-        />
-      )}
+
 
       {/* Edit Bottleneck Modal */}
       {editingBottleneckData && (

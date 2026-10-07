@@ -20,8 +20,18 @@ import {
   Activity,
   ArrowRight,
   X,
-  Plus
+  Plus,
+  Image as ImageIcon
 } from 'lucide-react';
+
+const REAL_HOSPITAL_PHOTO_PRESETS = [
+  { label: 'Coimbatore (CBE)', value: '/units/coimbatore.jpg', code: 'CBE' },
+  { label: 'Coimbatore RS Puram (CBC)', value: '/units/coimbatore-rs-puram.jpg', code: 'CBC' },
+  { label: 'Shivamogga (SMG)', value: '/units/shimoga.jpg', code: 'SMG' },
+  { label: 'Bangalore (BLR)', value: '/units/bangalore.jpg', code: 'BLR' },
+  { label: 'Krishnankovil (KKVL)', value: '/units/krishnankoil.jpg', code: 'KKVL' },
+  { label: 'Guntur (GNT)', value: '/units/guntur.jpg', code: 'GNT' }
+];
 
 interface UnitsManagementViewProps {
   units: HospitalUnit[];
@@ -47,6 +57,8 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
 
   // Form State for Assigning / Editing Unit Leadership & Details
   const [unitName, setUnitName] = useState('');
+  const [unitCode, setUnitCode] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [cmoName, setCmoName] = useState('');
   const [headName, setHeadName] = useState('');
   const [headEmail, setHeadEmail] = useState('');
@@ -81,6 +93,8 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
 
     setSelectedUnitForHead(unit);
     setUnitName(unit.name || '');
+    setUnitCode(unit.code || '');
+    setImageUrl(unit.imageUrl || '');
     setCmoName(unit.cmo || '');
     setHeadName(unit.unitHead || unit.contactHead || matchingUser?.name || '');
     setHeadEmail(unit.unitHeadEmail || matchingUser?.email || `unithead.${citySlug}@sankara.com`);
@@ -107,6 +121,8 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
       const cleanEmpId = headEmpId.trim();
       const cleanDesig = headDesignation.trim();
       const cleanUnitName = unitName.trim() || selectedUnitForHead.name;
+      const cleanCode = unitCode.trim().toUpperCase() || selectedUnitForHead.code;
+      const cleanImageUrl = imageUrl.trim() || selectedUnitForHead.imageUrl;
       const cleanBedCap = Number(bedCapacity) || selectedUnitForHead.bedCapacity || 100;
       const cleanYear = Number(establishedYear) || selectedUnitForHead.establishedYear || 1977;
 
@@ -122,6 +138,8 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
         }),
         api.updateUnit(selectedUnitForHead.id, {
           name: cleanUnitName,
+          code: cleanCode,
+          imageUrl: cleanImageUrl,
           cmo: cleanCmo,
           unitHead: cleanHead,
           contactHead: cleanHead,
@@ -133,7 +151,7 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
         })
       ]);
 
-      showToast('success', `Unit details and credentials saved successfully for ${cleanUnitName}!`);
+      showToast('success', `Unit details, code [${cleanCode || 'OK'}] and credentials saved successfully for ${cleanUnitName}!`);
       setSelectedUnitForHead(null);
       
       // Reload users list & parent units state
@@ -146,13 +164,14 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
     }
   };
 
-  // Filter units across name, city, state, CMO, and Unit Head
+  // Filter units across name, code, city, state, CMO, and Unit Head
   const filteredUnits = units.filter((u) => {
     const q = searchQuery.toLowerCase();
     const matchingUser = getUnitUser(u);
     const userEmail = u.unitHeadEmail || matchingUser?.email || '';
     return (
       u.name.toLowerCase().includes(q) ||
+      (u.code || '').toLowerCase().includes(q) ||
       u.city.toLowerCase().includes(q) ||
       u.state.toLowerCase().includes(q) ||
       (u.cmo || '').toLowerCase().includes(q) ||
@@ -252,37 +271,60 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
               key={unit.id}
               className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col justify-between"
             >
-              {/* Card Header */}
-              <div className="p-5 border-b border-slate-100 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-xl bg-orange-100 text-orange-800 text-xs font-black flex items-center justify-center shrink-0">
-                      {idx + 1}
-                    </span>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900 leading-tight">
-                        {unit.name}
-                      </h3>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                        <span>{unit.city}, {unit.state}</span>
-                      </div>
-                    </div>
+              {/* Unit Visual Header with Real Photo & Code Badge */}
+              <div className="relative h-36 w-full bg-slate-900 overflow-hidden">
+                {unit.imageUrl ? (
+                  <img
+                    src={unit.imageUrl}
+                    alt={unit.name}
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white/50">
+                    <Building2 className="w-12 h-12" />
                   </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-black/30" />
+                
+                {/* Top Badges */}
+                <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                  <span className="w-6 h-6 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[11px] font-black flex items-center justify-center shadow-xs">
+                    {idx + 1}
+                  </span>
+                  {unit.code && (
+                    <span className="px-2 py-0.5 rounded-lg bg-orange-600 text-white text-[11px] font-black tracking-wider shadow-xs uppercase">
+                      {unit.code}
+                    </span>
+                  )}
+                </div>
 
+                <div className="absolute top-3 right-3">
                   <span
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase shrink-0 ${
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase shadow-xs ${
                       isAssigned
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-amber-500 text-white'
                     }`}
                   >
                     {isAssigned ? 'Active' : 'Unassigned'}
                   </span>
                 </div>
 
-                {/* Unit Details & Capacity */}
-                <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] text-slate-600 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                {/* Bottom Overlay Title */}
+                <div className="absolute bottom-2.5 left-3 right-3 text-white">
+                  <h3 className="text-sm font-black leading-tight drop-shadow-md truncate">
+                    {unit.name}
+                  </h3>
+                  <div className="flex items-center gap-1 text-[11px] text-white/80 font-medium mt-0.5">
+                    <MapPin className="w-3 h-3 text-orange-400 shrink-0" />
+                    <span className="truncate">{unit.city}, {unit.state}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Unit Details & Capacity Strip */}
+              <div className="p-3 border-b border-slate-100 bg-slate-50/70">
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
                   <div>
                     <span className="text-slate-400 font-semibold block text-[10px]">Bed Capacity</span>
                     <span className="font-bold text-slate-800">{unit.bedCapacity || 100} Beds</span>
@@ -419,21 +461,108 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
             {/* Modal Form */}
             <form onSubmit={handleSaveUnitHead} className="p-6 space-y-4 overflow-y-auto flex-1">
               
-              {/* Unit Hospital Name */}
-              <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
-                  Hospital Unit Name *
-                </label>
-                <div className="relative">
-                  <Building2 className="w-4 h-4 text-orange-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              {/* Unit Hospital Name & Official Code */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Hospital Unit Name *
+                  </label>
+                  <div className="relative">
+                    <Building2 className="w-4 h-4 text-orange-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Sankara Eye Hospital"
+                      value={unitName}
+                      onChange={(e) => setUnitName(e.target.value)}
+                      className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Unit Code *
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Sankara Eye Hospital"
-                    value={unitName}
-                    onChange={(e) => setUnitName(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="e.g. CBE, SMG"
+                    value={unitCode}
+                    onChange={(e) => setUnitCode(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-black text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono text-center tracking-wider"
                   />
+                  <span className="text-[9px] text-slate-400 mt-0.5 block text-center">
+                    e.g. SMG, BLR, CBE
+                  </span>
+                </div>
+              </div>
+
+              {/* Hospital Display Photo & Image Selector */}
+              <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
+                    Hospital Display Photo (Real Image)
+                  </label>
+                  {imageUrl && (
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Photo Attached
+                    </span>
+                  )}
+                </div>
+
+                {/* Preview Thumbnail */}
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-14 rounded-xl bg-slate-200 overflow-hidden border border-slate-300 shrink-0 relative">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt="Unit Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <ImageIcon className="w-6 h-6" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-1">
+                    <input
+                      type="text"
+                      placeholder="e.g. /units/shimoga.jpg or custom URL"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <span className="text-[10px] text-slate-500 block">
+                      Choose from verified Sankara hospital photos below:
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick Presets for Real Hospital Photos */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {REAL_HOSPITAL_PHOTO_PRESETS.map((preset) => {
+                    const isSelected = imageUrl === preset.value;
+                    return (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => {
+                          setImageUrl(preset.value);
+                          if (!unitCode) setUnitCode(preset.code);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                          isSelected
+                            ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-orange-300 hover:bg-orange-50/50'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

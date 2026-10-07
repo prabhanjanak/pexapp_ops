@@ -176,7 +176,7 @@ export const EvidenceApprovalGrid: React.FC<EvidenceApprovalGridProps> = ({
             <option value="ALL">All Statuses</option>
             <option value="In progress">In Progress</option>
             <option value="Completed">Completed</option>
-            <option value="Pending">Pending / Not Started</option>
+            <option value="Not Started">Not Started</option>
           </select>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { HospitalUnit, Bottleneck, UnitStats, OrgStats, BottleneckStatus, STATUS
 
 export function normalizeStatus(status: string, percentComplete?: number): BottleneckStatus {
   if (percentComplete !== undefined && percentComplete >= 100) return 'Completed';
-  if (!status) return 'Pending';
+  if (!status) return 'Not Started';
   const s = status.trim().toLowerCase();
   if (s.includes('complete') || s.includes('resolved') || s.includes('done')) {
     return 'Completed';
@@ -10,7 +10,7 @@ export function normalizeStatus(status: string, percentComplete?: number): Bottl
   if (s.includes('progress') || s.includes('assigned') || s.includes('verifying') || s.includes('working')) {
     return 'In progress';
   }
-  return 'Pending';
+  return 'Not Started';
 }
 
 export function calculateUnitStats(bottlenecks: Bottleneck[]): UnitStats {
@@ -29,14 +29,14 @@ export function calculateUnitStats(bottlenecks: Bottleneck[]): UnitStats {
     };
   }
 
-  let pending = 0;
+  let notStarted = 0;
   let inProgress = 0;
   let completed = 0;
   let totalPercentSum = 0;
 
   for (const b of bottlenecks) {
     const normStatus = normalizeStatus(b.status);
-    if (normStatus === 'Pending') pending++;
+    if (normStatus === 'Not Started') notStarted++;
     else if (normStatus === 'In progress') inProgress++;
     else if (normStatus === 'Completed') completed++;
 
@@ -51,14 +51,14 @@ export function calculateUnitStats(bottlenecks: Bottleneck[]): UnitStats {
 
   return {
     total: bottlenecks.length,
-    pending,
+    pending: notStarted,
     inProgress,
     completed,
-    acknowledge: pending,
-    acknowledged: pending,
+    acknowledge: notStarted,
+    acknowledged: notStarted,
     assignedWork: inProgress,
     verifying: 0,
-    notStarted: pending,
+    notStarted,
     avgPercent
   };
 }
@@ -121,13 +121,13 @@ export function getStatusBadgeStyle(status: string) {
         bar: 'bg-gradient-to-r from-orange-500 via-amber-500 to-amber-400',
         label: 'In Progress'
       };
-    case 'Pending':
+    case 'Not Started':
     default:
       return {
         badge: 'bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200/90',
         dot: 'bg-slate-500',
         bar: 'bg-gradient-to-r from-slate-400 to-slate-500',
-        label: 'Pending / Not Started'
+        label: 'Not Started'
       };
   }
 }

@@ -209,8 +209,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending / Not Started</p>
-            <p className="text-3xl font-black text-slate-700 mt-1">{orgStats.pending}</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Not Started</p>
+            <p className="text-3xl font-black text-slate-700 mt-1">{orgStats.notStarted || orgStats.pending}</p>
             <p className="text-[11px] font-medium text-slate-500 mt-1">Awaiting action</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">

@@ -50,7 +50,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   onUpdateAudit,
   onDeleteAudit
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'units' | 'zones' | 'users' | 'checklist' | 'audits'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'units' | 'zones' | 'checklist' | 'audits'>('overview');
   const [editingAudit, setEditingAudit] = useState<FiveSAudit | null>(null);
 
   // Master Data Local State
@@ -74,15 +74,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   const [newZoneInput, setNewZoneInput] = useState('');
   const [newDeptInput, setNewDeptInput] = useState('');
 
-  // Create User Modal State
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState<FiveSRole>('auditor');
-  const [newUserUnit, setNewUserUnit] = useState('CBE');
-  const [newUserZone, setNewUserZone] = useState('Zone 1');
-  const [newUserDept, setNewUserDept] = useState('');
-  const [newUserDesig, setNewUserDesig] = useState('');
+
 
   // Record 5S Audit & Add Points Modal State
   const [isRecordAuditOpen, setIsRecordAuditOpen] = useState(false);
@@ -197,43 +189,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
     onUpdateUnits(updatedUnits);
   };
 
-  // Add User Handler
-  const handleAddUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUserName.trim() || !newUserEmail.trim()) {
-      alert('Please fill name and email.');
-      return;
-    }
 
-    const roleLabels: Record<FiveSRole, string> = {
-      auditor: 'Auditor',
-      incharge: 'Dept In-Charge',
-      zonal: 'Zonal In-Charge',
-      unithead: 'Unit Head',
-      superadmin: 'Super Admin',
-      president: 'President'
-    };
-
-    const newUser: FiveSUser = {
-      id: `usr-${Date.now()}`,
-      name: newUserName.trim(),
-      email: newUserEmail.trim(),
-      role: newUserRole,
-      roleLabel: roleLabels[newUserRole],
-      unit: newUserRole === 'president' || newUserRole === 'superadmin' ? 'All 14 Units' : newUserUnit,
-      zone: newUserRole === 'zonal' ? newUserZone : undefined,
-      department: newUserRole === 'incharge' ? newUserDept || 'General Ward' : undefined,
-      designation: newUserDesig.trim() || 'Quality Specialist',
-      username: newUserEmail.split('@')[0],
-      avatarInitials: newUserName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
-    };
-
-    setUserList([...userList, newUser]);
-    setIsAddUserOpen(false);
-    setNewUserName('');
-    setNewUserEmail('');
-    alert(`User ${newUser.name} created with role ${newUser.roleLabel}.`);
-  };
 
   const handleAuditSubmitInternal = (newAudit: FiveSAudit, newNcs: FiveSNonConformity[]) => {
     if (onAuditSubmitted) {
@@ -291,13 +247,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             <span>Create Unit</span>
           </button>
 
-          <button
-            onClick={() => setIsAddUserOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-all cursor-pointer"
-          >
-            <Users className="w-4 h-4" />
-            <span>Add User</span>
-          </button>
+
         </div>
       </div>
 
@@ -332,11 +282,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">User Accounts</span>
-            <span className="p-1.5 rounded-lg bg-teal-50 text-teal-600"><Users className="w-4 h-4" /></span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Checklist Standards</span>
+            <span className="p-1.5 rounded-lg bg-teal-50 text-teal-600"><Settings className="w-4 h-4" /></span>
           </div>
-          <div className="text-3xl font-black text-teal-600 mt-2">{userList.length}</div>
-          <div className="text-[11px] font-semibold text-slate-500 mt-1">Active Staff Across 6 Roles</div>
+          <div className="text-3xl font-black text-teal-600 mt-2">{checklist.length}</div>
+          <div className="text-[11px] font-semibold text-slate-500 mt-1">Standardized Audit Checkpoints</div>
         </div>
       </div>
 
@@ -347,7 +297,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             { id: 'overview', label: 'Network Overview', icon: FileCheck2 },
             { id: 'units', label: 'Units Manager', icon: Building2 },
             { id: 'zones', label: 'Zones & Departments', icon: Layers },
-            { id: 'users', label: 'Users & Roles', icon: Users },
             { id: 'checklist', label: 'Checklist Standards', icon: Settings },
             { id: 'audits', label: 'Audit Registry', icon: BarChart2 }
           ].map((tab) => {
@@ -668,61 +617,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         </div>
       )}
 
-      {/* TAB 4: USERS & ROLE ASSIGNMENTS */}
-      {activeTab === 'users' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900">
-                User Accounts & Access Permissions ({userList.length} Users)
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Create and configure user roles, assign units, zones, and department scopes.
-              </p>
-            </div>
-            <button
-              onClick={() => setIsAddUserOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 text-white text-xs font-bold cursor-pointer hover:from-orange-700 hover:to-amber-600 shadow-xs"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create User Account</span>
-            </button>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-2.5 px-3">Name</th>
-                  <th className="py-2.5 px-3">Email ID</th>
-                  <th className="py-2.5 px-3">Assigned Role</th>
-                  <th className="py-2.5 px-3">Scope Unit</th>
-                  <th className="py-2.5 px-3">Scope Zone</th>
-                  <th className="py-2.5 px-3">Department</th>
-                  <th className="py-2.5 px-3">Designation</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {userList.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-3 font-extrabold text-slate-900">{u.name}</td>
-                    <td className="py-3 px-3 font-mono text-[11px] text-slate-500">{u.email}</td>
-                    <td className="py-3 px-3">
-                      <span className="font-bold text-[10.5px] uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200 px-2.5 py-0.5 rounded-full">
-                        {u.roleLabel}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-bold text-orange-700">{u.unit}</td>
-                    <td className="py-3 px-3 text-slate-600">{u.zone || '—'}</td>
-                    <td className="py-3 px-3 text-slate-600">{u.department || '—'}</td>
-                    <td className="py-3 px-3 text-slate-500">{u.designation}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* TAB 5: CHECKLIST STANDARDS */}
       {activeTab === 'checklist' && (
@@ -931,111 +826,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Modal: Create User Account */}
-      {isAddUserOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 space-y-4 shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
-                  <Users className="w-4 h-4" />
-                </div>
-                <h3 className="font-extrabold text-sm text-slate-900">
-                  Assign New User Role & Scope
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsAddUserOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            <form onSubmit={handleAddUser} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-orange-500/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Email ID</label>
-                <input
-                  type="email"
-                  required
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-orange-500/30"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Role</label>
-                  <select
-                    value={newUserRole}
-                    onChange={(e) => setNewUserRole(e.target.value as FiveSRole)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-orange-500/30"
-                  >
-                    <option value="auditor">Auditor</option>
-                    <option value="incharge">Dept In-Charge</option>
-                    <option value="zonal">Zonal In-Charge</option>
-                    <option value="unithead">Unit Head</option>
-                    <option value="superadmin">Super Admin</option>
-                    <option value="president">President</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Assigned Unit</label>
-                  <select
-                    value={newUserUnit}
-                    onChange={(e) => setNewUserUnit(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-orange-500/30"
-                  >
-                    {unitList.map((u) => (
-                      <option key={u.code} value={u.code}>{u.code}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Designation</label>
-                <input
-                  type="text"
-                  value={newUserDesig}
-                  onChange={(e) => setNewUserDesig(e.target.value)}
-                  placeholder="e.g. Quality Executive / Area Owner"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-orange-500/30"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsAddUserOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 text-white text-xs font-bold cursor-pointer hover:from-orange-700 hover:to-amber-600 shadow-xs"
-                >
-                  Create & Assign
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal: Record 5S Audit & Add Points across any unit */}
       <Record5SAuditModal

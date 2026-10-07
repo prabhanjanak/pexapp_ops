@@ -123,6 +123,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
       setShowAddModal(false);
       resetForm();
       showToast(`Staff account successfully created for ${newUser.name}! Default login password is Sankara@123.`);
+      onRefreshData?.();
     } catch (err: any) {
       showToast(err.message || 'Failed to create staff account', 'error');
     }
@@ -157,6 +158,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
       setShowAddModal(false);
       resetForm();
       showToast(`Account details updated for ${updated.name}!`);
+      onRefreshData?.();
     } catch (err: any) {
       showToast(err.message || 'Failed to update staff account', 'error');
     }
@@ -169,6 +171,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
       setUsersList(prev => prev.filter(u => u.id !== deleteTargetUser.id && u.email !== deleteTargetUser.email));
       showToast(`Staff account for ${deleteTargetUser.name} deleted successfully.`);
       setDeleteTargetUser(null);
+      onRefreshData?.();
     } catch (err: any) {
       showToast(err.message || 'Failed to delete staff account', 'error');
     }

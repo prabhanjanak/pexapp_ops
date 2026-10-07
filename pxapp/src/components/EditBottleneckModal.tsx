@@ -41,7 +41,7 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
   const [title, setTitle] = useState(bottleneck.title || '');
   const [category, setCategory] = useState<BottleneckCategory>(bottleneck.category || 'OPD Wait Time');
   const [department, setDepartment] = useState(bottleneck.department || '');
-  const [status, setStatus] = useState<BottleneckStatus>(bottleneck.status || 'Pending');
+  const [status, setStatus] = useState<BottleneckStatus>(bottleneck.status === 'Pending' ? 'Not Started' : (bottleneck.status || 'Not Started'));
   const [percentComplete, setPercentComplete] = useState<number>(bottleneck.percentComplete || 0);
   const [owner, setOwner] = useState(bottleneck.owner || '');
   const [impactLevel, setImpactLevel] = useState<'High' | 'Medium' | 'Low'>(bottleneck.impactLevel || 'Medium');
@@ -64,7 +64,7 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
       setTitle(bottleneck.title || '');
       setCategory(bottleneck.category || 'OPD Wait Time');
       setDepartment(bottleneck.department || '');
-      setStatus(bottleneck.status || 'Pending');
+      setStatus(bottleneck.status === 'Pending' ? 'Not Started' : (bottleneck.status || 'Not Started'));
       setPercentComplete(bottleneck.percentComplete || 0);
       setOwner(bottleneck.owner || '');
       setImpactLevel(bottleneck.impactLevel || 'Medium');
@@ -94,7 +94,7 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
   const handleStatusChange = (newStatus: BottleneckStatus) => {
     setStatus(newStatus);
     if (newStatus === 'Completed') setPercentComplete(100);
-    else if (newStatus === 'Pending') setPercentComplete(0);
+    else if (newStatus === 'Not Started') setPercentComplete(0);
     else if (percentComplete === 0 || percentComplete === 100) setPercentComplete(50);
   };
 
@@ -102,7 +102,7 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
     const clamped = Math.max(0, Math.min(100, Math.round(pct)));
     setPercentComplete(clamped);
     if (clamped >= 100) setStatus('Completed');
-    else if (clamped <= 0) setStatus('Pending');
+    else if (clamped <= 0) setStatus('Not Started');
     else setStatus('In progress');
   };
 
@@ -349,7 +349,7 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
                 onChange={(e) => handleStatusChange(e.target.value as BottleneckStatus)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="Pending">🟡 Pending / Not Started</option>
+                <option value="Not Started">🟡 Not Started</option>
                 <option value="In progress">🔵 In Progress</option>
                 <option value="Completed">🟢 Completed / Resolved</option>
               </select>

@@ -1,16 +1,16 @@
 export type BottleneckStatus = 
-  | 'Pending' 
+  | 'Not Started' 
   | 'In progress' 
   | 'Completed';
 
 export const STATUS_STAGES: BottleneckStatus[] = [
-  'Pending',
+  'Not Started',
   'In progress',
   'Completed'
 ];
 
 export const STATUS_PERCENT_MAP: Record<BottleneckStatus, number> = {
-  'Pending': 0,
+  'Not Started': 0,
   'In progress': 50,
   'Completed': 100
 };
@@ -76,6 +76,8 @@ export interface Bottleneck {
 
 export interface HospitalUnit {
   id: string;
+  code?: string;
+  imageUrl?: string;
   name: string;
   city: string;
   state: string;

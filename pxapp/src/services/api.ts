@@ -93,19 +93,37 @@ function getLocalUsersList(): User[] {
 function saveLocalUserRecord(user: User) {
   try {
     const list = getLocalUsersList();
-    const idx = list.findIndex(u => u.id === user.id || (user.email && u.email.toLowerCase() === user.email.toLowerCase()));
+    const idx = list.findIndex(u => u.id === user.id || (user.email && u.email && u.email.toLowerCase() === user.email.toLowerCase()));
     if (idx >= 0) {
       list[idx] = { ...list[idx], ...user };
     } else {
       list.push(user);
     }
     localStorage.setItem(USERS_OVERRIDE_KEY, JSON.stringify(list));
+
+    // Instantly sync active session if updated user is currently logged in
+    const activeRaw = localStorage.getItem('sankara_auth_user');
+    if (activeRaw) {
+      const active = JSON.parse(activeRaw);
+      if (active.id === user.id || (active.email && user.email && active.email.toLowerCase() === user.email.toLowerCase())) {
+        const merged = { ...active, ...user };
+        localStorage.setItem('sankara_auth_user', JSON.stringify(merged));
+      }
+    }
   } catch (_) {}
 }
 
 export const api = {
   // Authentication (supports email or Employee ID with offline cloud resilience)
   login: async (identifier: string, password?: string): Promise<AuthSession> => {
+    // Purge any stale session caches before starting fresh login
+    localStorage.removeItem('sankara_auth_token');
+    localStorage.removeItem('sankara_auth_user');
+    localStorage.removeItem('sankara_5s_auth_user');
+    localStorage.removeItem('sankara_5s_token');
+    localStorage.removeItem('sankara_5s_user');
+    sessionStorage.clear();
+
     try {
       const data = await fetchJson<AuthSession>('/auth/login', {
         method: 'POST',
@@ -159,6 +177,10 @@ export const api = {
   logout: () => {
     localStorage.removeItem('sankara_auth_token');
     localStorage.removeItem('sankara_auth_user');
+    localStorage.removeItem('sankara_5s_auth_user');
+    localStorage.removeItem('sankara_5s_token');
+    localStorage.removeItem('sankara_5s_user');
+    sessionStorage.clear();
   },
 
   // Users Directory (Super Admin Only CRUD)
@@ -451,17 +473,45 @@ export const api = {
     );
   },
 
-  // Directives & Comments
   addComment: async (bottleneckId: string, commentData: {
     authorName: string;
     authorRole: string;
     authorEmail?: string;
     message: string;
   }): Promise<Bottleneck> => {
-    return fetchJson<Bottleneck>(`/bottlenecks/${bottleneckId}/comments`, {
-      method: 'POST',
-      body: JSON.stringify(commentData)
-    });
+    try {
+      return await fetchJson<Bottleneck>(`/bottlenecks/${bottleneckId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify(commentData)
+      });
+    } catch (err: any) {
+      console.warn('Backend addComment fallback:', err.message);
+      const newComment = {
+        id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        authorName: commentData.authorName,
+        authorRole: commentData.authorRole,
+        authorEmail: commentData.authorEmail || '',
+        message: commentData.message.trim(),
+        createdAt: new Date().toISOString()
+      };
+      for (const u of INITIAL_UNITS) {
+        const found = u.bottlenecks.find(b => b.id === bottleneckId);
+        if (found) {
+          found.comments = [...(found.comments || []), newComment];
+          return found;
+        }
+      }
+      return {
+        id: bottleneckId,
+        title: 'Bottleneck',
+        category: 'General',
+        status: 'In progress',
+        percentComplete: 50,
+        owner: commentData.authorName,
+        lastUpdated: new Date().toISOString().split('T')[0],
+        comments: [newComment]
+      };
+    }
   },
 
   // Categories API

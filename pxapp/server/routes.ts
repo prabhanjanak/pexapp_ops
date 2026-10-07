@@ -11,19 +11,19 @@ function formatBottleneck(row: any) {
   try {
     if (typeof row.before_photos === 'string') beforePhotos = JSON.parse(row.before_photos);
     else if (Array.isArray(row.before_photos)) beforePhotos = row.before_photos;
-  } catch (_) {}
+  } catch (_) { }
   try {
     if (typeof row.after_photos === 'string') afterPhotos = JSON.parse(row.after_photos);
     else if (Array.isArray(row.after_photos)) afterPhotos = row.after_photos;
-  } catch (_) {}
+  } catch (_) { }
   try {
     if (typeof row.comments === 'string') comments = JSON.parse(row.comments);
     else if (Array.isArray(row.comments)) comments = row.comments;
-  } catch (_) {}
+  } catch (_) { }
   try {
     if (typeof row.tasks === 'string') tasks = JSON.parse(row.tasks);
     else if (Array.isArray(row.tasks)) tasks = row.tasks;
-  } catch (_) {}
+  } catch (_) { }
 
   // Normalize status if legacy
   let status = row.status;
@@ -57,6 +57,8 @@ function formatUnit(row: any, bottlenecks: any[] = []) {
 
   return {
     id: row.id,
+    code: row.code || (row as any).code || undefined,
+    imageUrl: row.image_url || row.imageUrl || (row as any).imageUrl || undefined,
     name: row.name,
     city: row.city,
     state: row.state,
@@ -99,7 +101,7 @@ router.get('/health', async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM users) AS users_count
     `);
     const latency = Date.now() - startTime;
-    
+
     res.json({
       status: 'healthy',
       database: 'PostgreSQL',
@@ -201,7 +203,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
        VALUES ($1, 'STAFF_LOGIN', $2, $3)`,
       [user.unit_id, JSON.stringify({ email: user.email, empId: user.emp_id, role: user.role }), user.role]
     );
-  } catch (_) {}
+  } catch (_) { }
 
   res.json({
     token: `sankara_token_${user.id}_${Date.now()}`,
@@ -217,9 +219,16 @@ router.get('/auth/me', async (req: Request, res: Response) => {
   }
 
   try {
-    const token = authHeader.replace('Bearer ', '');
-    const parts = token.split('_');
-    const userId = parts[2];
+    const token = authHeader.replace('Bearer ', '').trim();
+    let userId = '';
+    const prefix = 'sankara_token_';
+    if (token.startsWith(prefix)) {
+      const remainder = token.slice(prefix.length);
+      const lastUnderscore = remainder.lastIndexOf('_');
+      userId = lastUnderscore > 0 ? remainder.substring(0, lastUnderscore) : remainder;
+    } else {
+      userId = token;
+    }
 
     if (!userId) {
       return res.status(401).json({ error: 'Invalid token structure' });
@@ -229,7 +238,7 @@ router.get('/auth/me', async (req: Request, res: Response) => {
       SELECT u.*, un.name AS unit_name
       FROM users u
       LEFT JOIN units un ON u.unit_id = un.id
-      WHERE u.id = $1
+      WHERE u.id = $1 OR LOWER(u.email) = LOWER($1)
     `, [userId]);
 
     if (userRes.rows.length === 0) {
@@ -510,14 +519,18 @@ router.get('/units/:id', async (req: Request, res: Response) => {
 // 7b. Update Unit Metadata & Details (Super Admin)
 router.put('/units/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, city, state, cmo, unitHead, contactHead, establishedYear, bedCapacity, unitHeadEmail, unitHeadEmpId, unitHeadDesignation } = req.body;
+  const { name, code, imageUrl, image_url, city, state, cmo, unitHead, contactHead, establishedYear, bedCapacity, unitHeadEmail, unitHeadEmpId, unitHeadDesignation } = req.body;
 
   const resolvedHead = (unitHead !== undefined ? unitHead : (contactHead !== undefined ? contactHead : '')).trim();
+  const resolvedCode = code !== undefined ? code.trim().toUpperCase() : undefined;
+  const resolvedImage = (imageUrl || image_url) !== undefined ? (imageUrl || image_url).trim() : undefined;
 
   // Update in-memory unit
   const memUnit = SANKARA_INITIAL_UNITS.find((u) => u.id === id);
   if (memUnit) {
     if (name) memUnit.name = name.trim();
+    if (resolvedCode) (memUnit as any).code = resolvedCode;
+    if (resolvedImage) (memUnit as any).image_url = resolvedImage;
     if (city) memUnit.city = city.trim();
     if (state) memUnit.state = state.trim();
     if (cmo !== undefined) memUnit.cmo = cmo.trim();
@@ -558,6 +571,8 @@ router.put('/units/:id', async (req: Request, res: Response) => {
     if (existing.rows.length > 0) {
       const current = existing.rows[0];
       const newName = name ? name.trim() : current.name;
+      const newCode = resolvedCode !== undefined ? resolvedCode : current.code;
+      const newImage = resolvedImage !== undefined ? resolvedImage : current.image_url;
       const newCity = city ? city.trim() : current.city;
       const newState = state ? state.trim() : current.state;
       const newCmo = cmo !== undefined ? cmo.trim() : current.cmo;
@@ -568,17 +583,17 @@ router.put('/units/:id', async (req: Request, res: Response) => {
 
       const updateRes = await pool.query(`
         UPDATE units
-        SET name = $1, city = $2, state = $3, cmo = $4, unit_head = $5, contact_head = $6, established_year = $7, bed_capacity = $8, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $9
+        SET name = $1, city = $2, state = $3, cmo = $4, unit_head = $5, contact_head = $6, established_year = $7, bed_capacity = $8, code = $9, image_url = $10, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $11
         RETURNING *
-      `, [newName, newCity, newState, newCmo, newUnitHead, newContactHead, newYear, newBedCapacity, id]);
+      `, [newName, newCity, newState, newCmo, newUnitHead, newContactHead, newYear, newBedCapacity, newCode, newImage, id]);
 
       if (unitHeadEmail) {
         await pool.query(`
           UPDATE users
           SET email = $1, name = COALESCE(NULLIF($2, ''), name)
           WHERE unit_id = $3 AND role = 'Unit Head'
-        `, [unitHeadEmail.trim().toLowerCase(), resolvedHead, id]).catch(() => {});
+        `, [unitHeadEmail.trim().toLowerCase(), resolvedHead, id]).catch(() => { });
       }
 
       return res.json(formatUnit(updateRes.rows[0]));
@@ -695,7 +710,7 @@ router.post('/units/:id/unit-head', async (req: Request, res: Response) => {
         await client.query('COMMIT');
       }
     } catch (dbErr) {
-      await client.query('ROLLBACK').catch(() => {});
+      await client.query('ROLLBACK').catch(() => { });
     } finally {
       client.release();
     }
@@ -866,11 +881,11 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     const updatedTarget = targetDate !== undefined ? targetDate : current.target_date;
     const updatedNotes = notes !== undefined ? notes : current.notes;
     const updatedRemarks = remarks !== undefined ? remarks : current.remarks;
-    const updatedBeforePhotos = beforePhotos !== undefined 
-      ? (typeof beforePhotos === 'string' ? beforePhotos : JSON.stringify(beforePhotos)) 
+    const updatedBeforePhotos = beforePhotos !== undefined
+      ? (typeof beforePhotos === 'string' ? beforePhotos : JSON.stringify(beforePhotos))
       : current.before_photos;
-    const updatedAfterPhotos = afterPhotos !== undefined 
-      ? (typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos)) 
+    const updatedAfterPhotos = afterPhotos !== undefined
+      ? (typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos))
       : current.after_photos;
     const updatedTasks = tasks !== undefined
       ? (typeof tasks === 'string' ? tasks : JSON.stringify(tasks))
@@ -962,7 +977,7 @@ router.delete('/bottlenecks/:id', async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     if (client) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
+      try { await client.query('ROLLBACK'); } catch (_) { }
     }
     console.warn('[PostgreSQL Offline Delete Bottleneck]', error.message);
   } finally {
@@ -1018,7 +1033,7 @@ router.post('/db/reset', async (req: Request, res: Response) => {
     dbResetSuccess = true;
   } catch (error: any) {
     if (client) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
+      try { await client.query('ROLLBACK'); } catch (_) { }
     }
     console.warn('[PostgreSQL Offline/Failed DB Reset]', error.message);
   } finally {
@@ -1123,7 +1138,7 @@ router.post('/bottlenecks/:id/comments', async (req: Request, res: Response) => 
     try {
       if (typeof item.comments === 'string') comments = JSON.parse(item.comments);
       else if (Array.isArray(item.comments)) comments = item.comments;
-    } catch (_) {}
+    } catch (_) { }
 
     const newComment = {
       id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -1217,7 +1232,7 @@ router.delete('/categories/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM categories WHERE id = $1', [id]);
-  } catch (error: any) {}
+  } catch (error: any) { }
   res.json({ success: true, deletedId: id });
 });
 
@@ -1279,6 +1294,6 @@ router.delete('/departments/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM departments WHERE id = $1', [id]);
-  } catch (error: any) {}
+  } catch (error: any) { }
   res.json({ success: true, deletedId: id });
 });

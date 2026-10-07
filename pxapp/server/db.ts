@@ -17,25 +17,25 @@ const useSsl = process.env.PGSSL === 'true' || Boolean(process.env.DATABASE_URL 
 export const pool = new Pool(
   process.env.DATABASE_URL
     ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-        max: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 3000,
-        query_timeout: 4000,
-      }
+      connectionString: process.env.DATABASE_URL,
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 3000,
+      query_timeout: 4000,
+    }
     : {
-        user: DB_USER,
-        host: DB_HOST,
-        database: DB_NAME,
-        password: DB_PASSWORD,
-        port: DB_PORT,
-        ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-        max: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 3000,
-        query_timeout: 4000,
-      }
+      user: DB_USER,
+      host: DB_HOST,
+      database: DB_NAME,
+      password: DB_PASSWORD,
+      port: DB_PORT,
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 3000,
+      query_timeout: 4000,
+    }
 );
 
 // Comprehensive list of 14 Sankara Eye Hospital Units with CMO and Unit Head Leadership
@@ -297,7 +297,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Initialize database schema and seeds
 export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
   console.log(`[Postgres] Connecting to PostgreSQL at ${DB_HOST}:${DB_PORT}/${DB_NAME}...`);
-  
+
   // Resilient connection retry loop for Docker / Server startups
   let connectedClient: any = null;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -423,6 +423,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
 
     // Schema Migrations if table already existed
     await client.query(`
+      ALTER TABLE units ADD COLUMN IF NOT EXISTS code VARCHAR(20);
+      ALTER TABLE units ADD COLUMN IF NOT EXISTS image_url TEXT;
       ALTER TABLE units ADD COLUMN IF NOT EXISTS cmo VARCHAR(150);
       ALTER TABLE units ADD COLUMN IF NOT EXISTS unit_head VARCHAR(150);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS emp_id VARCHAR(50);
@@ -431,8 +433,22 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS after_photos JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS tasks JSONB DEFAULT '[]'::jsonb;
-      UPDATE bottlenecks SET status = 'Pending' WHERE status = 'Not Started' OR status = 'Acknowledge';
+      UPDATE bottlenecks SET status = 'Not Started' WHERE status = 'Pending' OR status = 'Acknowledge';
       UPDATE bottlenecks SET status = 'In progress' WHERE status = 'Assigned work' OR status = 'In Progress';
+      UPDATE units SET code = 'CBE', image_url = '/units/coimbatore.jpg' WHERE id = 'unit-coimbatore';
+      UPDATE units SET code = 'CBC', image_url = '/units/coimbatore-rs-puram.jpg' WHERE id = 'unit-coimbatore-city';
+      UPDATE units SET code = 'GNT', image_url = '/units/guntur.jpg' WHERE id = 'unit-guntur';
+      UPDATE units SET code = 'BLR', image_url = '/units/bangalore.jpg' WHERE id = 'unit-bangalore';
+      UPDATE units SET code = 'SMG', image_url = '/units/shimoga.jpg' WHERE id = 'unit-shimoga';
+      UPDATE units SET code = 'KKVL', image_url = '/units/krishnankoil.jpg' WHERE id = 'unit-krishnankoil';
+      UPDATE units SET code = 'AND', image_url = '/units/coimbatore.jpg' WHERE id = 'unit-anand' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'KNP', image_url = '/units/guntur.jpg' WHERE id = 'unit-kanpur' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'JPR', image_url = '/units/shimoga.jpg' WHERE id = 'unit-jaipur' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'LUD', image_url = '/units/bangalore.jpg' WHERE id = 'unit-ludhiana' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'IND', image_url = '/units/shimoga.jpg' WHERE id = 'unit-indore' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'PNV', image_url = '/units/coimbatore.jpg' WHERE id = 'unit-panvel' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'HYD', image_url = '/units/bangalore.jpg' WHERE id = 'unit-hyderabad' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'VRN', image_url = '/units/guntur.jpg' WHERE id = 'unit-varanasi' AND (code IS NULL OR image_url IS NULL);
     `);
 
     // Audit Logs Table
@@ -538,7 +554,7 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
 
     // Clean up stale demo users that are not in the new initial list
     const validUserIds = SANKARA_INITIAL_USERS.map(u => u.id);
-    await client.query(`DELETE FROM users WHERE id NOT IN (${validUserIds.map((_, i) => `$${i+1}`).join(',')}) AND role != 'Unit Head'`, validUserIds);
+    await client.query(`DELETE FROM users WHERE id NOT IN (${validUserIds.map((_, i) => `$${i + 1}`).join(',')}) AND role != 'Unit Head'`, validUserIds);
 
   } catch (err: any) {
     await client.query('ROLLBACK');

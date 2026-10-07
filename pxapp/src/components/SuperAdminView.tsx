@@ -171,7 +171,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
     const clamped = Math.max(0, Math.min(100, Math.round(percent)));
     let targetStatus: BottleneckStatus = 'In progress';
     if (clamped >= 100) targetStatus = 'Completed';
-    else if (clamped <= 0) targetStatus = 'Pending';
+    else if (clamped <= 0) targetStatus = 'Not Started';
 
     onUpdateBottleneck?.(unitId, bottleneck.id, {
       status: targetStatus,

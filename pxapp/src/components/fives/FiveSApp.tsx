@@ -17,53 +17,62 @@ interface FiveSAppProps {
   onBackToPortal?: () => void;
 }
 
+function mapPortalUserToFiveSUser(portalUser: User | null | undefined): FiveSUser | null {
+  if (!portalUser) return null;
+  const portalRole = (portalUser.role || '').toLowerCase();
+  if (portalRole.includes('president')) {
+    const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'president') || FIVE_S_DEFAULT_USERS[5];
+    return { ...base, name: portalUser.name || base.name, email: portalUser.email || base.email };
+  }
+  if (portalRole.includes('admin')) {
+    const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin') || FIVE_S_DEFAULT_USERS[4];
+    return { ...base, name: portalUser.name || base.name, email: portalUser.email || base.email };
+  }
+  if (portalRole.includes('unit head')) {
+    const matched = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'unithead') || FIVE_S_DEFAULT_USERS[3];
+    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : matched.unit;
+    return {
+      ...matched,
+      name: portalUser.name || matched.name,
+      email: portalUser.email || matched.email,
+      unit: matchedUnit
+    };
+  }
+  if (portalRole.includes('operations')) {
+    return {
+      id: 'usr-ops-lead',
+      name: portalUser.name || 'Operations Lead',
+      email: portalUser.email || 'operations@sankaraeye.com',
+      username: 'operations',
+      role: 'superadmin',
+      roleLabel: 'Operations Team Lead',
+      unit: 'All 14 Units',
+      designation: 'Operations & Quality Directorate',
+      avatarInitials: 'OP'
+    };
+  }
+  return FIVE_S_DEFAULT_USERS[0];
+}
+
 export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onBackToPortal }) => {
-  // 5S Authenticated User State
+  // 5S Authenticated User State (portalUser strictly overrides stale local storage)
   const [fivesUser, setFivesUser] = useState<FiveSUser | null>(() => {
+    if (portalUser) return mapPortalUserToFiveSUser(portalUser);
     try {
       const saved = localStorage.getItem('sankara_5s_auth_user');
       if (saved) return JSON.parse(saved);
-
-      // If user came from main portal, auto-map their role to a matching 5S user
-      if (portalUser) {
-        const portalRole = portalUser.role.toLowerCase();
-        if (portalRole.includes('president')) {
-          return FIVE_S_DEFAULT_USERS.find((u) => u.role === 'president') || FIVE_S_DEFAULT_USERS[5];
-        }
-        if (portalRole.includes('admin')) {
-          return FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin') || FIVE_S_DEFAULT_USERS[4];
-        }
-        if (portalRole.includes('unit head')) {
-          const matched = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'unithead') || FIVE_S_DEFAULT_USERS[3];
-          const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : matched.unit;
-          return {
-            ...matched,
-            name: portalUser.name || matched.name,
-            email: portalUser.email || matched.email,
-            unit: matchedUnit
-          };
-        }
-        if (portalRole.includes('operations')) {
-          return {
-            id: 'usr-ops-lead',
-            name: portalUser.name || 'Operations Lead',
-            email: portalUser.email || 'operations@sankaraeye.com',
-            username: 'operations',
-            role: 'superadmin',
-            roleLabel: 'Operations Team Lead',
-            unit: 'All 14 Units',
-            designation: 'Operations & Quality Directorate',
-            avatarInitials: 'OP'
-          };
-        }
-        // Default to auditor
-        return FIVE_S_DEFAULT_USERS[0];
-      }
       return null;
     } catch (_) {
       return null;
     }
   });
+
+  // Keep 5S user synchronized whenever the authenticated portalUser changes
+  useEffect(() => {
+    if (portalUser) {
+      setFivesUser(mapPortalUserToFiveSUser(portalUser));
+    }
+  }, [portalUser]);
 
   // Active Screen: 'dashboard' | 'reports'
   const [activeScreen, setActiveScreen] = useState<'dashboard' | 'reports'>('dashboard');

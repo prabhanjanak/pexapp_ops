@@ -22,6 +22,8 @@ export const CATEGORIES = [
 export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-coimbatore',
+    code: 'CBE',
+    imageUrl: '/units/coimbatore.jpg',
     name: 'Sankara Eye Hospital Coimbatore',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
@@ -35,6 +37,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-coimbatore-city',
+    code: 'CBC',
+    imageUrl: '/units/coimbatore-rs-puram.jpg',
     name: 'Sankara Eye Hospital Coimbatore (RS Puram)',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
@@ -48,6 +52,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-guntur',
+    code: 'GNT',
+    imageUrl: '/units/guntur.jpg',
     name: 'Sankara Eye Hospital Guntur',
     city: 'Guntur',
     state: 'Andhra Pradesh',
@@ -61,6 +67,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-bangalore',
+    code: 'BLR',
+    imageUrl: '/units/bangalore.jpg',
     name: 'Sankara Eye Hospital Bengaluru',
     city: 'Bengaluru',
     state: 'Karnataka',
@@ -74,6 +82,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-shimoga',
+    code: 'SMG',
+    imageUrl: '/units/shimoga.jpg',
     name: 'Sankara Eye Hospital Shivamogga',
     city: 'Shivamogga',
     state: 'Karnataka',
@@ -87,6 +97,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-anand',
+    code: 'AND',
+    imageUrl: '/units/bangalore.jpg',
     name: 'Sankara Eye Hospital Anand',
     city: 'Anand',
     state: 'Gujarat',
@@ -100,6 +112,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-kanpur',
+    code: 'KNP',
+    imageUrl: '/units/coimbatore.jpg',
     name: 'Sankara Eye Hospital Kanpur',
     city: 'Kanpur',
     state: 'Uttar Pradesh',
@@ -113,6 +127,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-jaipur',
+    code: 'JPR',
+    imageUrl: '/units/bangalore.jpg',
     name: 'Sankara Eye Hospital Jaipur',
     city: 'Jaipur',
     state: 'Rajasthan',
@@ -126,6 +142,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-ludhiana',
+    code: 'LDH',
+    imageUrl: '/units/coimbatore.jpg',
     name: 'Sankara Eye Hospital Ludhiana',
     city: 'Ludhiana',
     state: 'Punjab',
@@ -139,6 +157,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-indore',
+    code: 'IND',
+    imageUrl: '/units/shimoga.jpg',
     name: 'Sankara Eye Hospital Indore',
     city: 'Indore',
     state: 'Madhya Pradesh',
@@ -152,6 +172,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-panvel',
+    code: 'PNV',
+    imageUrl: '/units/coimbatore.jpg',
     name: 'Sankara Eye Hospital Panvel',
     city: 'Panvel',
     state: 'Maharashtra',
@@ -165,6 +187,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-hyderabad',
+    code: 'HYD',
+    imageUrl: '/units/bangalore.jpg',
     name: 'Sankara Eye Hospital Hyderabad',
     city: 'Hyderabad',
     state: 'Telangana',
@@ -178,6 +202,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-varanasi',
+    code: 'VNS',
+    imageUrl: '/units/guntur.jpg',
     name: 'Sankara Eye Hospital Varanasi',
     city: 'Varanasi',
     state: 'Uttar Pradesh',
@@ -191,6 +217,8 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   },
   {
     id: 'unit-krishnankoil',
+    code: 'KKVL',
+    imageUrl: '/units/krishnankoil.jpg',
     name: 'Sankara Eye Hospital Krishnankoil',
     city: 'Krishnankoil',
     state: 'Tamil Nadu',

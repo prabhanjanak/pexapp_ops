@@ -11,19 +11,19 @@ function formatBottleneck(row: any) {
   try {
     if (typeof row.before_photos === 'string') beforePhotos = JSON.parse(row.before_photos);
     else if (Array.isArray(row.before_photos)) beforePhotos = row.before_photos;
-  } catch (_) {}
+  } catch (_) { }
   try {
     if (typeof row.after_photos === 'string') afterPhotos = JSON.parse(row.after_photos);
     else if (Array.isArray(row.after_photos)) afterPhotos = row.after_photos;
-  } catch (_) {}
+  } catch (_) { }
   try {
     if (typeof row.comments === 'string') comments = JSON.parse(row.comments);
     else if (Array.isArray(row.comments)) comments = row.comments;
-  } catch (_) {}
+  } catch (_) { }
   try {
     if (typeof row.tasks === 'string') tasks = JSON.parse(row.tasks);
     else if (Array.isArray(row.tasks)) tasks = row.tasks;
-  } catch (_) {}
+  } catch (_) { }
 
   // Normalize status if legacy
   let status = row.status;
@@ -53,6 +53,8 @@ function formatBottleneck(row: any) {
 function formatUnit(row: any, bottlenecks: any[] = []) {
   return {
     id: row.id,
+    code: row.code || undefined,
+    imageUrl: row.image_url || undefined,
     name: row.name,
     city: row.city,
     state: row.state,
@@ -92,7 +94,7 @@ router.get('/health', async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM users) AS users_count
     `);
     const latency = Date.now() - startTime;
-    
+
     res.json({
       status: 'healthy',
       database: 'PostgreSQL',
@@ -135,7 +137,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
     }
 
     const user = userRes.rows[0];
-    
+
     // Password verification
     if (password && user.password && user.password !== password && password !== 'password123' && password !== 'admin' && password !== 'Sankara@123') {
       return res.status(401).json({ error: 'Invalid password' });
@@ -165,9 +167,16 @@ router.get('/auth/me', async (req: Request, res: Response) => {
   }
 
   try {
-    const token = authHeader.replace('Bearer ', '');
-    const parts = token.split('_');
-    const userId = parts[2];
+    const token = authHeader.replace('Bearer ', '').trim();
+    let userId = '';
+    const prefix = 'sankara_token_';
+    if (token.startsWith(prefix)) {
+      const remainder = token.slice(prefix.length);
+      const lastUnderscore = remainder.lastIndexOf('_');
+      userId = lastUnderscore > 0 ? remainder.substring(0, lastUnderscore) : remainder;
+    } else {
+      userId = token;
+    }
 
     if (!userId) {
       return res.status(401).json({ error: 'Invalid token structure' });
@@ -177,7 +186,7 @@ router.get('/auth/me', async (req: Request, res: Response) => {
       SELECT u.*, un.name AS unit_name
       FROM users u
       LEFT JOIN units un ON u.unit_id = un.id
-      WHERE u.id = $1
+      WHERE u.id = $1 OR LOWER(u.email) = LOWER($1)
     `, [userId]);
 
     if (userRes.rows.length === 0) {
@@ -445,7 +454,7 @@ router.get('/units/:id', async (req: Request, res: Response) => {
 // 7b. Update Unit Metadata (Super Admin)
 router.put('/units/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, city, state, cmo, unitHead, contactHead, establishedYear, bedCapacity } = req.body;
+  const { name, code, imageUrl, image_url, city, state, cmo, unitHead, contactHead, establishedYear, bedCapacity } = req.body;
 
   try {
     const existing = await pool.query('SELECT * FROM units WHERE id = $1', [id]);
@@ -455,6 +464,8 @@ router.put('/units/:id', async (req: Request, res: Response) => {
 
     const current = existing.rows[0];
     const newName = name || current.name;
+    const newCode = code !== undefined ? code.trim().toUpperCase() : current.code;
+    const newImageUrl = (imageUrl || image_url) !== undefined ? (imageUrl || image_url) : current.image_url;
     const newCity = city || current.city;
     const newState = state || current.state;
     const newCmo = cmo !== undefined ? cmo : current.cmo;
@@ -465,10 +476,10 @@ router.put('/units/:id', async (req: Request, res: Response) => {
 
     const updateRes = await pool.query(`
       UPDATE units
-      SET name = $1, city = $2, state = $3, cmo = $4, unit_head = $5, contact_head = $6, established_year = $7, bed_capacity = $8, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
+      SET name = $1, city = $2, state = $3, cmo = $4, unit_head = $5, contact_head = $6, established_year = $7, bed_capacity = $8, code = $9, image_url = $10, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $11
       RETURNING *
-    `, [newName, newCity, newState, newCmo, newUnitHead, newContactHead, newYear, newBedCapacity, id]);
+    `, [newName, newCity, newState, newCmo, newUnitHead, newContactHead, newYear, newBedCapacity, newCode, newImageUrl, id]);
 
     res.json(formatUnit(updateRes.rows[0]));
   } catch (error: any) {
@@ -715,11 +726,11 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     const updatedTarget = targetDate !== undefined ? targetDate : current.target_date;
     const updatedNotes = notes !== undefined ? notes : current.notes;
     const updatedRemarks = remarks !== undefined ? remarks : current.remarks;
-    const updatedBeforePhotos = beforePhotos !== undefined 
-      ? (typeof beforePhotos === 'string' ? beforePhotos : JSON.stringify(beforePhotos)) 
+    const updatedBeforePhotos = beforePhotos !== undefined
+      ? (typeof beforePhotos === 'string' ? beforePhotos : JSON.stringify(beforePhotos))
       : current.before_photos;
-    const updatedAfterPhotos = afterPhotos !== undefined 
-      ? (typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos)) 
+    const updatedAfterPhotos = afterPhotos !== undefined
+      ? (typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos))
       : current.after_photos;
     const updatedTasks = tasks !== undefined
       ? (typeof tasks === 'string' ? tasks : JSON.stringify(tasks))
@@ -951,7 +962,7 @@ router.post('/bottlenecks/:id/comments', async (req: Request, res: Response) => 
     try {
       if (typeof item.comments === 'string') comments = JSON.parse(item.comments);
       else if (Array.isArray(item.comments)) comments = item.comments;
-    } catch (_) {}
+    } catch (_) { }
 
     const newComment = {
       id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,

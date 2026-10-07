@@ -9,9 +9,6 @@ import { ImageLightboxModal } from './ImageLightboxModal';
 import { AssignDeadlineModal } from './AssignDeadlineModal';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
-import { Record5SAuditModal } from './fives/Record5SAuditModal';
-import { FIVE_S_UNITS } from './fives/seedData';
-import { FiveSUser, FiveSAudit, FiveSNonConformity } from './fives/types';
 import {
   Building2,
   Plus,
@@ -90,8 +87,6 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBottleneck, setEditingBottleneck] = useState<Bottleneck | null>(null);
-  const [isRecord5SModalOpen, setIsRecord5SModalOpen] = useState(false);
-  const [fivesSuccessMsg, setFivesSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'completed') {
@@ -154,7 +149,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
       const c = catMap.get(b.category)!;
       c.total++;
       if (norm === 'Completed') c.resolved++;
-      else if (norm === 'Pending') c.pending++;
+      else if (norm === 'Not Started' || norm === 'Pending') c.pending++;
       else c.inProgress++;
     }
 
@@ -238,7 +233,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     const clamped = Math.max(0, Math.min(100, Math.round(percent)));
     let targetStatus: BottleneckStatus = 'In progress';
     if (clamped >= 100) targetStatus = 'Completed';
-    else if (clamped <= 0) targetStatus = 'Pending';
+    else if (clamped <= 0) targetStatus = 'Not Started';
 
     onUpdateBottleneck?.(currentUnit.id, bottleneck.id, {
       status: targetStatus,
@@ -339,16 +334,6 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
             </button>
           )}
 
-          {!viewOnly && (
-            <button
-              onClick={() => setIsRecord5SModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow-md shadow-orange-600/20 flex items-center gap-1.5 cursor-pointer transition-all"
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              <span>Audit 5S / Add Points</span>
-            </button>
-          )}
-
           {!viewOnly && onAddBottleneck && (
             <button
               onClick={() => setIsAddModalOpen(true)}
@@ -361,18 +346,6 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
         </div>
       </div>
 
-      {fivesSuccessMsg && (
-        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 p-4 rounded-2xl flex items-center justify-between text-xs font-bold text-orange-950 shadow-2xs">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
-            <span>{fivesSuccessMsg}</span>
-          </div>
-          <button onClick={() => setFivesSuccessMsg(null)} className="text-orange-700 hover:text-orange-950 cursor-pointer">
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* DASHBOARD TAB */}
       {activeTab === 'dashboard' && (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -384,8 +357,8 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
               <p className="text-[11px] text-slate-400 mt-1">Logged for this unit</p>
             </div>
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending / Not Started</p>
-              <p className="text-3xl font-black text-slate-700 mt-1">{stats.pending}</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Not Started</p>
+              <p className="text-3xl font-black text-slate-700 mt-1">{stats.notStarted || stats.pending}</p>
               <p className="text-[11px] text-slate-400 mt-1">Awaiting initiation</p>
             </div>
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
@@ -677,7 +650,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                             onChange={(e) => handleStatusChange(item, e.target.value as BottleneckStatus)}
                             className={`w-full px-3 py-1.5 rounded-xl text-xs font-black border cursor-pointer ${badge.badge}`}
                           >
-                            <option value="Pending">🟡 1. Pending / Not Started (0%)</option>
+                            <option value="Not Started">🟡 1. Not Started (0%)</option>
                             <option value="In progress">🔵 2. In Progress (50%)</option>
                             <option value="Completed">🟢 3. Completed (100%)</option>
                           </select>
@@ -822,41 +795,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
         />
       )}
 
-      {/* Record 5S Audit Modal pre-scoped to this Unit */}
-      {isRecord5SModalOpen && (
-        <Record5SAuditModal
-          isOpen={isRecord5SModalOpen}
-          onClose={() => setIsRecord5SModalOpen(false)}
-          currentUser={{
-            id: currentUser.id || 'unithead',
-            name: currentUser.name,
-            email: currentUser.email,
-            username: currentUser.email.split('@')[0],
-            role: 'unithead',
-            roleLabel: 'Unit Head',
-            unit: currentUnit.code || currentUnit.id.toUpperCase(),
-            designation: 'Unit Head & Medical Administrator'
-          }}
-          units={FIVE_S_UNITS}
-          defaultUnitCode={currentUnit.code || currentUnit.id.toUpperCase()}
-          lockUnit={true}
-          onAuditSubmitted={(audit, newNcs) => {
-            try {
-              const existingAudits = JSON.parse(localStorage.getItem('sankara_5s_audits') || '[]');
-              localStorage.setItem('sankara_5s_audits', JSON.stringify([audit, ...existingAudits]));
-              if (newNcs.length > 0) {
-                const existingNcs = JSON.parse(localStorage.getItem('sankara_5s_ncs') || '[]');
-                localStorage.setItem('sankara_5s_ncs', JSON.stringify([...newNcs, ...existingNcs]));
-              }
-            } catch (e) {
-              console.error('Failed to sync 5s audit', e);
-            }
-            setIsRecord5SModalOpen(false);
-            setFivesSuccessMsg(`Audit #${audit.id} successfully recorded! Score: ${audit.overallScore}/108 (${audit.compliancePercentage}% Compliance).`);
-            setTimeout(() => setFivesSuccessMsg(null), 6000);
-          }}
-        />
-      )}
+
 
       {/* Edit Bottleneck Modal */}
       {editingBottleneck && (

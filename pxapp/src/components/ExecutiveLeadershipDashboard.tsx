@@ -39,21 +39,25 @@ interface ExecutiveLeadershipDashboardProps {
   onAddBottleneck?: (unitId: string, newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>) => void;
 }
 
-// Curated Hospital Unit Building Visuals
+// Curated Sankara Hospital Unit Real Visuals
 const HOSPITAL_CARD_IMAGES: Record<string, string> = {
-  'unit-guntur': 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&auto=format&fit=crop&q=80',
-  'unit-bangalore': 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600&auto=format&fit=crop&q=80',
-  'unit-coimbatore': 'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=600&auto=format&fit=crop&q=80',
-  'unit-jaipur': 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=600&auto=format&fit=crop&q=80',
-  'unit-varanasi': 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=600&auto=format&fit=crop&q=80',
-  'unit-anand': 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&auto=format&fit=crop&q=80',
-  'unit-shimoga': 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600&auto=format&fit=crop&q=80',
-  'unit-ludhiana': 'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=600&auto=format&fit=crop&q=80',
-  'unit-panvel': 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=600&auto=format&fit=crop&q=80',
-  'unit-kanpur': 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=600&auto=format&fit=crop&q=80'
+  'unit-coimbatore': '/units/coimbatore.jpg',
+  'unit-coimbatore-city': '/units/coimbatore-rs-puram.jpg',
+  'unit-shimoga': '/units/shimoga.jpg',
+  'unit-bangalore': '/units/bangalore.jpg',
+  'unit-krishnankoil': '/units/krishnankoil.jpg',
+  'unit-guntur': '/units/guntur.jpg',
+  'unit-anand': '/units/coimbatore.jpg',
+  'unit-kanpur': '/units/guntur.jpg',
+  'unit-jaipur': '/units/shimoga.jpg',
+  'unit-ludhiana': '/units/bangalore.jpg',
+  'unit-indore': '/units/shimoga.jpg',
+  'unit-panvel': '/units/coimbatore.jpg',
+  'unit-hyderabad': '/units/bangalore.jpg',
+  'unit-varanasi': '/units/guntur.jpg'
 };
 
-const DEFAULT_HOSPITAL_IMG = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600&auto=format&fit=crop&q=80';
+const DEFAULT_HOSPITAL_IMG = '/units/coimbatore.jpg';
 
 export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboardProps> = ({
   units,
@@ -275,7 +279,7 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
       if (ticketSubTab === 'my_tasks' && currentUser.unitId && t.unitId !== currentUser.unitId) return false;
 
       if (ticketStatusFilter !== 'ALL') {
-        if (ticketStatusFilter === 'Pending' && t.status !== 'Pending') return false;
+        if (ticketStatusFilter === 'Not Started' && t.status !== 'Not Started' && t.status !== 'Pending') return false;
         if (ticketStatusFilter === 'In progress' && t.status !== 'In progress') return false;
         if (ticketStatusFilter === 'Completed' && t.status !== 'Completed') return false;
       }
@@ -396,7 +400,7 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
               {visibleUnits.map((u, idx) => {
                 const globalIndex = carouselIndex + idx + 1;
                 const isSelected = selectedUnitId === u.id;
-                const imgUrl = HOSPITAL_CARD_IMAGES[u.id] || DEFAULT_HOSPITAL_IMG;
+                const imgUrl = u.imageUrl || HOSPITAL_CARD_IMAGES[u.id] || DEFAULT_HOSPITAL_IMG;
                 const activeCount = u.bottlenecks.filter((b) => b.status !== 'Completed').length;
 
                 return (
@@ -421,9 +425,16 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
                     {/* Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
 
-                    {/* Top Number Badge */}
-                    <div className="absolute top-2 left-2 w-5 h-5 rounded-md bg-slate-900/90 text-white text-[10px] font-black flex items-center justify-center shadow-xs">
-                      {globalIndex}
+                    {/* Top Badges (Number + Unit Code) */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1">
+                      <div className="w-5 h-5 rounded-md bg-slate-900/90 text-white text-[10px] font-black flex items-center justify-center shadow-xs">
+                        {globalIndex}
+                      </div>
+                      {u.code && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-orange-600 text-white text-[9px] font-black tracking-wider uppercase shadow-xs">
+                          {u.code}
+                        </span>
+                      )}
                     </div>
 
                     {/* Active Bottlenecks Pill */}
@@ -436,7 +447,7 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
                     {/* Bottom Hospital City Name */}
                     <div className="absolute bottom-2 left-2 right-2">
                       <p className="text-xs font-black text-white truncate drop-shadow-md">
-                        {u.id === 'unit-coimbatore' ? 'Coimbatore HQ' : u.city}
+                        {u.code ? `[${u.code}] ` : ''}{u.city}
                       </p>
                       <p className="text-[10px] text-slate-300 truncate font-medium">
                         {u.state}
@@ -777,7 +788,7 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
                   className="px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-orange-500 cursor-pointer"
                 >
                   <option value="ALL">All Statuses</option>
-                  <option value="Pending">Pending</option>
+                  <option value="Not Started">Not Started</option>
                   <option value="In progress">In Progress</option>
                   <option value="Completed">Completed</option>
                 </select>

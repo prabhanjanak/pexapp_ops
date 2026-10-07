@@ -64,7 +64,7 @@ export const BottleneckTaskChecklist: React.FC<BottleneckTaskChecklistProps> = (
       newPercent = Math.round((newCompletedCount / updatedTasks.length) * 100);
       if (newPercent >= 100) newStatus = 'Completed';
       else if (newPercent > 0) newStatus = 'In progress';
-      else newStatus = 'Pending';
+      else newStatus = 'Not Started';
     }
 
     onUpdateBottleneck(unitId, bottleneck.id, {

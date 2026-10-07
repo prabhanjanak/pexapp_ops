@@ -58,7 +58,7 @@ export const FIVE_S_UNITS: FiveSUnitConfig[] = [
     }
   },
   {
-    code: 'Bangalore',
+    code: 'BLR',
     name: 'Sankara Eye Hospital Bengaluru',
     city: 'Bengaluru',
     state: 'Karnataka',
@@ -180,7 +180,7 @@ export const FIVE_S_UNITS: FiveSUnitConfig[] = [
     }
   },
   {
-    code: 'Shimoga',
+    code: 'SMG',
     name: 'Sankara Eye Hospital Shivamogga',
     city: 'Shivamogga',
     state: 'Karnataka',

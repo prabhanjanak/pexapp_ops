@@ -106,6 +106,24 @@ export default function App() {
 
   useEffect(() => {
     loadData();
+    // Validate and sync latest user profile & role from database
+    const token = localStorage.getItem('sankara_auth_token');
+    if (token) {
+      api.getCurrentUser()
+        .then((freshUser) => {
+          if (freshUser && freshUser.id) {
+            setCurrentUser(freshUser);
+            localStorage.setItem('sankara_auth_user', JSON.stringify(freshUser));
+          }
+        })
+        .catch((err) => {
+          console.warn('Session verification notice:', err);
+          if (err.message && (err.message.includes('401') || err.message.includes('404') || err.message.includes('User not found'))) {
+            handleLogout();
+          }
+        });
+    }
+
     const interval = setInterval(() => {
       api.getHealth().then(setDbHealth).catch(() => {});
     }, 15000);
@@ -115,6 +133,12 @@ export default function App() {
   // Logout handler
   const handleLogout = () => {
     api.logout();
+    localStorage.removeItem('sankara_auth_token');
+    localStorage.removeItem('sankara_auth_user');
+    localStorage.removeItem('sankara_5s_auth_user');
+    localStorage.removeItem('sankara_5s_token');
+    localStorage.removeItem('sankara_5s_user');
+    sessionStorage.clear();
     setCurrentUser(null);
     setPortalView('portal');
     addToast('Logged out successfully', 'info');
@@ -122,6 +146,9 @@ export default function App() {
 
   // Login handler
   const handleLoginSuccess = (user: User) => {
+    localStorage.removeItem('sankara_5s_auth_user');
+    localStorage.removeItem('sankara_5s_token');
+    localStorage.removeItem('sankara_5s_user');
     setCurrentUser(user);
     if (user.unitId) {
       setSelectedUnitId(user.unitId);
@@ -354,7 +381,15 @@ export default function App() {
         currentUser={currentUser}
         units={units}
         onBackToPortal={() => setPortalView('portal')}
-        onRefreshData={() => loadData(true)}
+        onRefreshData={() => {
+          loadData(true);
+          api.getCurrentUser().then((fresh) => {
+            if (fresh && fresh.id) {
+              setCurrentUser(fresh);
+              localStorage.setItem('sankara_auth_user', JSON.stringify(fresh));
+            }
+          }).catch(() => {});
+        }}
       />
     );
   }

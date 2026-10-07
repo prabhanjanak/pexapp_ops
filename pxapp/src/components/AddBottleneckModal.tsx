@@ -27,7 +27,7 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<BottleneckCategory>('OPD Wait Time');
   const [department, setDepartment] = useState('');
-  const [status, setStatus] = useState<BottleneckStatus>('Pending');
+  const [status, setStatus] = useState<BottleneckStatus>('Not Started');
   const [owner, setOwner] = useState('');
   const [impactLevel, setImpactLevel] = useState<'High' | 'Medium' | 'Low'>('High');
   const [targetDate, setTargetDate] = useState('');
@@ -167,7 +167,7 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
 
     // Reset form
     setTitle('');
-    setStatus('Pending');
+    setStatus('Not Started');
     setOwner('');
     setDepartment('');
     setNotes('');
@@ -307,7 +307,7 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
                 onChange={(e) => setStatus(e.target.value as BottleneckStatus)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-bold text-slate-800"
               >
-                <option value="Pending">🟡 1. Pending / Not Started (0%)</option>
+                <option value="Not Started">🟡 1. Not Started (0%)</option>
                 <option value="In progress">🔵 2. In progress (50%)</option>
                 <option value="Completed">🟢 3. Completed (100%)</option>
               </select>

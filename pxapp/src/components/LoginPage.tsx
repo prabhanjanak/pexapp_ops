@@ -239,7 +239,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <span>Sri Kanchi Kamakoti Medical Trust</span>
           </div>
           <div className="flex items-center gap-2 text-slate-600 font-medium">
-            <span>Coimbatore HQ</span>
+            <span>Coimbatore</span>
             <span>•</span>
             <span className="font-semibold text-slate-700">All rights reserved © 2026</span>
           </div>
