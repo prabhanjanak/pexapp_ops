@@ -80,10 +80,12 @@ function formatUser(row: any) {
     id: row.id,
     name: row.name,
     email: row.email,
-    empId: row.emp_id || undefined,
+    empId: row.emp_id || (row as any).empId || undefined,
     role: row.role,
-    unitId: row.unit_id,
-    unitName: row.unit_name || undefined,
+    unitId: row.unit_id || (row as any).unitId,
+    unitName: row.unit_name || (row as any).unitName || undefined,
+    zoneId: row.zone_id || (row as any).zoneId || undefined,
+    department: row.department || (row as any).department || undefined,
     appAccess: row.app_access || (row as any).appAccess || 'both',
     designation: row.designation,
     avatarInitials: row.avatar_initials || row.name.slice(0, 2).toUpperCase()
@@ -321,11 +323,13 @@ router.get('/users', async (req: Request, res: Response) => {
 
 // 5. Create User (Super Admin Only • Default Password: Sankara@123)
 router.post('/users', async (req: Request, res: Response) => {
-  const { name, unit, unitId, role, empId, email, orgEmail, designation, appAccess, app_access } = req.body;
+  const { name, unit, unitId, role, empId, email, orgEmail, designation, appAccess, app_access, zoneId, zone_id, department } = req.body;
   const userEmail = (email || orgEmail || '').trim().toLowerCase();
   const employeeId = (empId || '').trim();
   const userName = (name || '').trim();
   const finalAppAccess = appAccess || app_access || 'both';
+  const finalZoneId = zoneId || zone_id || null;
+  const finalDepartment = department || null;
 
   if (!userName || !userEmail || !role) {
     return res.status(400).json({ error: 'Name, Org Email, and Role are required' });
@@ -344,6 +348,8 @@ router.post('/users', async (req: Request, res: Response) => {
     password: defaultPassword,
     role,
     unit_id: finalUnitId || null,
+    zone_id: finalZoneId,
+    department: finalDepartment,
     designation: designation || '',
     avatar_initials: initials,
     app_access: finalAppAccess
@@ -358,15 +364,15 @@ router.post('/users', async (req: Request, res: Response) => {
     }
 
     const insertRes = await pool.query(`
-      INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials, app_access)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO users (id, name, email, emp_id, password, role, unit_id, zone_id, department, designation, avatar_initials, app_access)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
-    `, [userId, userName, userEmail, employeeId || null, defaultPassword, role, finalUnitId || null, designation || '', initials, finalAppAccess]);
+    `, [userId, userName, userEmail, employeeId || null, defaultPassword, role, finalUnitId || null, finalZoneId, finalDepartment, designation || '', initials, finalAppAccess]);
 
     await pool.query(`
       INSERT INTO audit_logs (user_role, action, details)
       VALUES ($1, $2, $3)
-    `, ['Super Admin', 'USER_CREATED', JSON.stringify({ userId, name: userName, email: userEmail, empId: employeeId, role, unitId: finalUnitId, appAccess: finalAppAccess })]);
+    `, ['Super Admin', 'USER_CREATED', JSON.stringify({ userId, name: userName, email: userEmail, empId: employeeId, role, unitId: finalUnitId, zoneId: finalZoneId, department: finalDepartment, appAccess: finalAppAccess })]);
 
     return res.status(201).json(formatUser(insertRes.rows[0]));
   } catch (error: any) {
@@ -378,11 +384,13 @@ router.post('/users', async (req: Request, res: Response) => {
 // 5b. Update User (Super Admin Only)
 router.put('/users/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, unitId, unit, role, empId, email, orgEmail, designation, appAccess, app_access } = req.body;
+  const { name, unitId, unit, role, empId, email, orgEmail, designation, appAccess, app_access, zoneId, zone_id, department } = req.body;
   const userEmail = (email || orgEmail || '').trim().toLowerCase();
   const employeeId = (empId || '').trim();
   const userName = (name || '').trim();
   const finalUnitId = unitId !== undefined ? unitId : (unit !== undefined ? unit : null);
+  const finalZoneId = zoneId !== undefined ? zoneId : (zone_id !== undefined ? zone_id : undefined);
+  const finalDepartment = department !== undefined ? department : undefined;
 
   // Update in-memory user
   let memUser = SANKARA_INITIAL_USERS.find(u => u.id === id);
@@ -392,6 +400,8 @@ router.put('/users/:id', async (req: Request, res: Response) => {
     if (role) memUser.role = role;
     if (employeeId !== undefined) memUser.emp_id = employeeId;
     if (finalUnitId !== undefined) memUser.unit_id = finalUnitId;
+    if (finalZoneId !== undefined) (memUser as any).zone_id = finalZoneId;
+    if (finalDepartment !== undefined) (memUser as any).department = finalDepartment;
     if (designation !== undefined) memUser.designation = designation;
     if (appAccess !== undefined || app_access !== undefined) (memUser as any).app_access = appAccess || app_access;
   }
@@ -405,21 +415,23 @@ router.put('/users/:id', async (req: Request, res: Response) => {
       const newRole = role || current.role;
       const newEmpId = employeeId !== undefined ? employeeId : current.emp_id;
       const newUnitId = finalUnitId !== undefined ? finalUnitId : current.unit_id;
+      const newZoneId = finalZoneId !== undefined ? finalZoneId : current.zone_id;
+      const newDepartment = finalDepartment !== undefined ? finalDepartment : current.department;
       const newDesignation = designation !== undefined ? designation : current.designation;
       const newAppAccess = appAccess !== undefined ? appAccess : (app_access !== undefined ? app_access : (current.app_access || 'both'));
       const initials = newName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'SK';
 
       const updateRes = await pool.query(`
         UPDATE users 
-        SET name = $1, email = $2, emp_id = $3, role = $4, unit_id = $5, designation = $6, avatar_initials = $7, app_access = $8
-        WHERE id = $9
+        SET name = $1, email = $2, emp_id = $3, role = $4, unit_id = $5, zone_id = $6, department = $7, designation = $8, avatar_initials = $9, app_access = $10
+        WHERE id = $11
         RETURNING *
-      `, [newName, newEmail, newEmpId, newRole, newUnitId || null, newDesignation, initials, newAppAccess, id]);
+      `, [newName, newEmail, newEmpId, newRole, newUnitId || null, newZoneId || null, newDepartment || null, newDesignation, initials, newAppAccess, id]);
 
       await pool.query(`
         INSERT INTO audit_logs (user_role, action, details)
         VALUES ($1, $2, $3)
-      `, ['Super Admin', 'USER_UPDATED', JSON.stringify({ userId: id, name: newName, email: newEmail, role: newRole, appAccess: newAppAccess })]);
+      `, ['Super Admin', 'USER_UPDATED', JSON.stringify({ userId: id, name: newName, email: newEmail, role: newRole, zoneId: newZoneId, department: newDepartment, appAccess: newAppAccess })]);
 
       return res.json(formatUser(updateRes.rows[0]));
     }

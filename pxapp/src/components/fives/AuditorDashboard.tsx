@@ -16,14 +16,16 @@ import {
   Building2,
   MapPin,
   Check,
-  X,
-  Upload
+  X
 } from 'lucide-react';
+import { NcReviewSection } from './NcReviewSection';
 
 interface AuditorDashboardProps {
   currentUser: FiveSUser;
   units: FiveSUnitConfig[];
   audits: FiveSAudit[];
+  ncs: FiveSNonConformity[];
+  onUpdateNc: (ncId: string, updates: Partial<FiveSNonConformity>) => void;
   onSaveAudit: (audit: Partial<FiveSAudit>) => void;
   onAuditSubmitted: (audit: FiveSAudit, newNcs: FiveSNonConformity[]) => void;
 }
@@ -32,10 +34,12 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
   currentUser,
   units,
   audits,
+  ncs,
+  onUpdateNc,
   onSaveAudit,
   onAuditSubmitted
 }) => {
-  const [activeTab, setActiveTab] = useState<'conduct' | 'history'>('conduct');
+  const [activeTab, setActiveTab] = useState<'conduct' | 'history' | 'nc_review'>('conduct');
 
   // Assigned Scope Filtering (Strict Enforcement)
   const allowedUnitCodes = currentUser.allowedUnits || [currentUser.unit];
@@ -224,6 +228,17 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
           >
             <History className="w-4 h-4" />
             <span>My Submitted Audits ({myAudits.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('nc_review')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'nc_review'
+                ? 'bg-gradient-to-r from-orange-600 to-amber-500 text-white shadow-sm'
+                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <span>NC Review & Verification</span>
           </button>
         </div>
 
@@ -639,6 +654,18 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
             </table>
           </div>
         </div>
+      )}
+
+      {/* TAB 3: AUDITOR NC REVIEW & CLOSURE */}
+      {activeTab === 'nc_review' && (
+        <NcReviewSection
+          currentUser={currentUser}
+          ncs={ncs}
+          onUpdateNc={onUpdateNc}
+          allowedUnits={allowedUnitCodes}
+          title="Auditor NC Review & Verification Portal"
+          subtitle="Review before/after remedial evidence, verify corrective & preventive actions, request additional clarifications/photographs, or confirm resolution."
+        />
       )}
 
     </div>

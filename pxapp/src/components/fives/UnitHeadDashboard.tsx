@@ -23,6 +23,7 @@ import {
   Trash2,
   Search
 } from 'lucide-react';
+import { NcReviewSection } from './NcReviewSection';
 
 interface UnitHeadDashboardProps {
   currentUser: FiveSUser;
@@ -174,7 +175,7 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-8 py-6 space-y-6">
-      
+
       {/* Toast Notification */}
       {successToast && (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-500 text-white font-bold text-xs sm:text-sm flex items-center justify-between shadow-lg shadow-orange-500/20 animate-in fade-in duration-300">
@@ -358,18 +359,17 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
               z.compliance >= 80
                 ? 'text-orange-700 bg-orange-50 border-orange-200'
                 : z.compliance >= 70
-                ? 'text-amber-700 bg-amber-50 border-amber-200'
-                : 'text-rose-700 bg-rose-50 border-rose-200';
+                  ? 'text-amber-700 bg-amber-50 border-amber-200'
+                  : 'text-rose-700 bg-rose-50 border-rose-200';
 
             return (
               <div
                 key={z.name}
                 onClick={() => setSelectedZone(z.name)}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-                  isSelected
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${isSelected
                     ? 'border-orange-500 bg-orange-50/50 ring-2 ring-orange-400/30 shadow-xs'
                     : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'
-                }`}
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -560,11 +560,10 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
                 <div key={m.m} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
                   <span className="text-[10px] font-bold text-slate-500">{m.val}%</span>
                   <div
-                    className={`w-full rounded-t-lg transition-all ${
-                      m.m === selectedMonth
+                    className={`w-full rounded-t-lg transition-all ${m.m === selectedMonth
                         ? 'bg-gradient-to-t from-orange-600 to-amber-500 shadow-sm'
                         : 'bg-slate-300 hover:bg-slate-400'
-                    }`}
+                      }`}
                     style={{ height: `${(m.val / 100) * 100}%` }}
                   />
                   <span className={`text-[11px] font-bold ${m.m === selectedMonth ? 'text-orange-700 font-black' : 'text-slate-600'}`}>
@@ -669,83 +668,16 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
         )}
       </div>
 
-      {/* Unit Non-Conformities (NC) Management */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              <h3 className="text-base font-extrabold text-slate-900">
-                {targetUnitCode} Non-Conformity (NC) & Corrective Action Log
-              </h3>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Review audit findings, update CAPA actions, close resolved items, or remove observations.
-            </p>
-          </div>
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            {openNcs.length} Pending Resolution
-          </span>
-        </div>
-
-        {unitNcs.length === 0 ? (
-          <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1.5" />
-            <p className="text-xs font-bold text-slate-700">Zero Open Non-Conformities</p>
-            <p className="text-[11px] text-slate-400">All 5S checkpoints for this hospital unit meet compliance standards.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {unitNcs.map((nc) => (
-              <div
-                key={nc.id}
-                className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200">
-                      {nc.zone} • {nc.department}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                      nc.status === 'Closed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}>
-                      {nc.status}
-                    </span>
-                    <span className="text-[11px] text-slate-400">Raised: {nc.raisedDate}</span>
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-800">{nc.checkpointText}</h4>
-                  <p className="text-xs text-slate-600 font-normal">{nc.auditorComment}</p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <select
-                    value={nc.status}
-                    onChange={(e) => onUpdateNc?.(nc.id, { status: e.target.value as any })}
-                    className="text-xs font-bold px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 cursor-pointer focus:ring-2 focus:ring-orange-500 outline-none"
-                  >
-                    <option value="Open">🟡 Open</option>
-                    <option value="In Progress">🔵 In Progress</option>
-                    <option value="Submitted for Verification">🟣 Verification</option>
-                    <option value="Closed">🟢 Closed</option>
-                  </select>
-
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Delete NC observation "${nc.checkpointText}"?`)) {
-                        onDeleteNc?.(nc.id);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer border border-slate-200 hover:border-rose-200"
-                    title="Delete Non-Conformity"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Unit Non-Conformities (NC) Review & Closure */}
+      <NcReviewSection
+        currentUser={currentUser}
+        ncs={unitNcs}
+        onUpdateNc={(id, updates) => onUpdateNc?.(id, updates)}
+        onDeleteNc={(id) => onDeleteNc?.(id)}
+        allowedUnits={[targetUnitCode]}
+        title={`${targetUnitCode} Non-Conformity (NC) Review & Closure Portal`}
+        subtitle="Formal review, verification, and closure governance for 5S audit observations across this hospital unit."
+      />
 
       {/* Modal for Recording 5S Audits & Points */}
       <Record5SAuditModal
@@ -771,7 +703,7 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
           defaultDeptName={editingAudit.department}
           lockUnit={true}
           initialAudit={editingAudit}
-          onAuditSubmitted={() => {}}
+          onAuditSubmitted={() => { }}
           onEditAudit={(id, updates) => {
             onUpdateAudit?.(id, updates);
             setEditingAudit(null);

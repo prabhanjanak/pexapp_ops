@@ -109,7 +109,16 @@ export interface DepartmentItem {
   createdAt?: string;
 }
 
-export type UserRole = 'President' | 'Super Admin' | 'IT Admin' | 'Operations Team' | 'Unit Head' | 'Super Admin (View Only)';
+export type UserRole = 
+  | 'President' 
+  | 'Super Admin' 
+  | 'IT Admin' 
+  | 'Operations Team' 
+  | 'Unit Head' 
+  | 'Zonal Incharge' 
+  | 'Department Incharge' 
+  | 'Auditor' 
+  | 'Super Admin (View Only)';
 
 export type AppAccessType = 'both' | 'bottleneck' | 'fives';
 
@@ -119,8 +128,10 @@ export interface User {
   email: string;
   empId?: string;
   role: UserRole;
-  unitId?: string; // only for Unit Head
+  unitId?: string; // for Unit Head, Zonal, Dept, Auditor
   unitName?: string;
+  zoneId?: string; // for Zonal Incharge or Dept Incharge (e.g. 'Zone 1')
+  department?: string; // for Department Incharge (e.g. 'Doctor consultation rooms')
   appAccess?: AppAccessType; // 'both' | 'bottleneck' | 'fives'
   avatarInitials: string;
   designation?: string;

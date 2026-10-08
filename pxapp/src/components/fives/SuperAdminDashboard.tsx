@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FiveSUser, FiveSUnitConfig, FiveSAudit, FiveSNonConformity, FiveSRole } from './types';
 import { FIVE_S_CHECKLIST, FIVE_S_DEFAULT_USERS, UNIT_BASE_SCORES } from './seedData';
 import { Record5SAuditModal } from './Record5SAuditModal';
+import { NcReviewSection } from './NcReviewSection';
 import {
   ShieldAlert,
   Building2,
@@ -37,6 +38,8 @@ interface SuperAdminDashboardProps {
   onAuditSubmitted?: (audit: FiveSAudit, newNcs: FiveSNonConformity[]) => void;
   onUpdateAudit?: (auditId: string, updates: Partial<FiveSAudit>) => void;
   onDeleteAudit?: (auditId: string) => void;
+  onUpdateNc?: (ncId: string, updates: Partial<FiveSNonConformity>) => void;
+  onDeleteNc?: (ncId: string) => void;
 }
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
@@ -48,9 +51,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   onGoReports,
   onAuditSubmitted,
   onUpdateAudit,
-  onDeleteAudit
+  onDeleteAudit,
+  onUpdateNc,
+  onDeleteNc
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'units' | 'zones' | 'checklist' | 'audits'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'units' | 'zones' | 'checklist' | 'audits' | 'nc_review'>('overview');
   const [editingAudit, setEditingAudit] = useState<FiveSAudit | null>(null);
 
   // Master Data Local State
@@ -295,6 +300,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 gap-1">
           {[
             { id: 'overview', label: 'Network Overview', icon: FileCheck2 },
+            { id: 'nc_review', label: 'NC Review & Closure', icon: AlertTriangle },
             { id: 'units', label: 'Units Manager', icon: Building2 },
             { id: 'zones', label: 'Zones & Departments', icon: Layers },
             { id: 'checklist', label: 'Checklist Standards', icon: Settings },
@@ -826,9 +832,17 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         </div>
       )}
 
-
-
-      {/* Modal: Record 5S Audit & Add Points across any unit */}
+      {/* TAB: ENTERPRISE NC REVIEW & CLOSURE */}
+      {activeTab === 'nc_review' && (
+        <NcReviewSection
+          currentUser={currentUser}
+          ncs={ncs}
+          onUpdateNc={(id, updates) => onUpdateNc?.(id, updates)}
+          onDeleteNc={(id) => onDeleteNc?.(id)}
+          title="Super Admin 5S Non-Conformity (NC) Review & Closure Portal"
+          subtitle="Enterprise-wide review, verification, and closure oversight across all 14 hospital units. Close, reopen, or request clarifications/photographs."
+        />
+      )}
       <Record5SAuditModal
         isOpen={isRecordAuditOpen}
         onClose={() => setIsRecordAuditOpen(false)}

@@ -58,6 +58,8 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
   const [formEmpId, setFormEmpId] = useState('');
   const [formRole, setFormRole] = useState<UserRole>('Unit Head');
   const [formUnitId, setFormUnitId] = useState(units[0]?.id || 'unit-coimbatore');
+  const [formZoneId, setFormZoneId] = useState('Zone 1');
+  const [formDepartment, setFormDepartment] = useState('Doctor consultation rooms');
   const [formAppAccess, setFormAppAccess] = useState<AppAccessType>('both');
 
   // Toast State
@@ -91,6 +93,8 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
     setFormEmpId('');
     setFormRole('Unit Head');
     setFormUnitId(units[0]?.id || 'unit-coimbatore');
+    setFormZoneId('Zone 1');
+    setFormDepartment('Doctor consultation rooms');
     setFormAppAccess('both');
     setEditingUser(null);
   };
@@ -106,7 +110,10 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
       return;
     }
 
-    const assignedUnit = formRole === 'Unit Head' ? units.find(u => u.id === formUnitId) : undefined;
+    const isUnitScoped = formRole === 'Unit Head' || formRole === 'Zonal Incharge' || formRole === 'Department Incharge' || formRole === 'Auditor';
+    const assignedUnit = isUnitScoped ? units.find(u => u.id === formUnitId) : undefined;
+    const isZoneScoped = formRole === 'Zonal Incharge' || formRole === 'Department Incharge';
+    const isDeptScoped = formRole === 'Department Incharge';
 
     try {
       const newUser = await api.createUser({
@@ -114,11 +121,19 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
         email: cleanEmail,
         empId: cleanEmpId || undefined,
         role: formRole,
-        unitId: formRole === 'Unit Head' ? formUnitId : undefined,
+        unitId: isUnitScoped ? formUnitId : undefined,
         unitName: assignedUnit ? assignedUnit.name : undefined,
+        zoneId: isZoneScoped ? formZoneId : undefined,
+        department: isDeptScoped ? formDepartment : undefined,
         appAccess: formAppAccess,
         designation: formRole === 'Unit Head'
           ? `${assignedUnit?.name || 'Unit'} Head`
+          : formRole === 'Zonal Incharge'
+          ? `Zonal In-Charge • ${formZoneId}`
+          : formRole === 'Department Incharge'
+          ? `Department In-Charge • ${formDepartment}`
+          : formRole === 'Auditor'
+          ? 'Internal 5S Auditor'
           : formRole === 'President'
           ? 'President of Hospital Operations'
           : formRole
@@ -145,7 +160,10 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
     const cleanEmail = formEmail.trim().toLowerCase();
     const cleanName = formName.trim();
     const cleanEmpId = formEmpId.trim();
-    const assignedUnit = formRole === 'Unit Head' ? units.find(u => u.id === formUnitId) : undefined;
+    const isUnitScoped = formRole === 'Unit Head' || formRole === 'Zonal Incharge' || formRole === 'Department Incharge' || formRole === 'Auditor';
+    const assignedUnit = isUnitScoped ? units.find(u => u.id === formUnitId) : undefined;
+    const isZoneScoped = formRole === 'Zonal Incharge' || formRole === 'Department Incharge';
+    const isDeptScoped = formRole === 'Department Incharge';
 
     try {
       const updated = await api.updateUser(editingUser.id, {
@@ -153,11 +171,19 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
         email: cleanEmail,
         empId: cleanEmpId,
         role: formRole,
-        unitId: formRole === 'Unit Head' ? formUnitId : undefined,
+        unitId: isUnitScoped ? formUnitId : undefined,
         unitName: assignedUnit ? assignedUnit.name : undefined,
+        zoneId: isZoneScoped ? formZoneId : undefined,
+        department: isDeptScoped ? formDepartment : undefined,
         appAccess: formAppAccess,
         designation: formRole === 'Unit Head'
           ? `${assignedUnit?.name || 'Unit'} Head`
+          : formRole === 'Zonal Incharge'
+          ? `Zonal In-Charge • ${formZoneId}`
+          : formRole === 'Department Incharge'
+          ? `Department In-Charge • ${formDepartment}`
+          : formRole === 'Auditor'
+          ? 'Internal 5S Auditor'
           : formRole === 'President'
           ? 'President of Hospital Operations'
           : formRole
@@ -226,6 +252,8 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
     setFormEmpId(u.empId || '');
     setFormRole(u.role as UserRole);
     setFormUnitId(u.unitId || units[0]?.id || '');
+    setFormZoneId(u.zoneId || 'Zone 1');
+    setFormDepartment(u.department || 'Doctor consultation rooms');
     setFormAppAccess(u.appAccess || 'both');
     setShowAddModal(true);
   };
@@ -237,7 +265,9 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
       u.name.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       (u.empId && u.empId.toLowerCase().includes(q)) ||
-      (u.unitName && u.unitName.toLowerCase().includes(q));
+      (u.unitName && u.unitName.toLowerCase().includes(q)) ||
+      (u.zoneId && u.zoneId.toLowerCase().includes(q)) ||
+      (u.department && u.department.toLowerCase().includes(q));
 
     const matchesRole = selectedRoleFilter === 'ALL' || u.role === selectedRoleFilter;
     return matchesSearch && matchesRole;
@@ -248,6 +278,9 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
   const unitHeadsCount = usersList.filter(u => u.role === 'Unit Head').length;
   const opsTeamCount = usersList.filter(u => u.role === 'Operations Team').length;
   const superAdminCount = usersList.filter(u => u.role === 'Super Admin' || u.role === 'IT Admin').length;
+  const zonalCount = usersList.filter(u => u.role === 'Zonal Incharge').length;
+  const deptCount = usersList.filter(u => u.role === 'Department Incharge').length;
+  const auditorCount = usersList.filter(u => u.role === 'Auditor').length;
 
   // Security Check: Only Super Admin can view Staff Directory
   if (!isSuperAdmin) {
@@ -427,7 +460,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
           {/* Role Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filter Role:</span>
-            {['ALL', 'Super Admin', 'Operations Team', 'Unit Head', 'President'].map((role) => (
+            {['ALL', 'Super Admin', 'Operations Team', 'Unit Head', 'Zonal Incharge', 'Department Incharge', 'Auditor', 'President'].map((role) => (
               <button
                 key={role}
                 onClick={() => setSelectedRoleFilter(role)}
@@ -520,6 +553,12 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
                                 ? 'bg-blue-50 text-blue-800 border-blue-200'
                                 : u.role === 'Unit Head'
                                 ? 'bg-orange-50 text-orange-800 border-orange-200'
+                                : u.role === 'Zonal Incharge'
+                                ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                                : u.role === 'Department Incharge'
+                                ? 'bg-violet-50 text-violet-800 border-violet-200'
+                                : u.role === 'Auditor'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : 'bg-slate-100 text-slate-800 border-slate-200'
                             }`}
                           >
@@ -529,10 +568,17 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
 
                         {/* Assigned Unit */}
                         <td className="py-3.5 px-4">
-                          <span className="text-slate-700 font-bold flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{u.unitName || (u.unitId ? units.find(x => x.id === u.unitId)?.name : 'All 14 Units Network')}</span>
-                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-slate-700 font-bold flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span>{u.unitName || (u.unitId ? units.find(x => x.id === u.unitId)?.name : 'All 14 Units Network')}</span>
+                            </span>
+                            {(u.zoneId || u.department) && (
+                              <span className="text-[10px] text-slate-500 font-semibold pl-5">
+                                {[u.zoneId, u.department].filter(Boolean).join(' • ')}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Application Access */}
@@ -680,13 +726,16 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
                 >
                   <option value="Unit Head">Unit Head (Scoped to Assigned Unit)</option>
+                  <option value="Zonal Incharge">Zonal Incharge (Zone Audit Governance)</option>
+                  <option value="Department Incharge">Department Incharge (Before & After CAPA)</option>
+                  <option value="Auditor">Auditor (Internal 5S Auditing)</option>
                   <option value="Operations Team">Operations Team (14 Units Access)</option>
                   <option value="Super Admin">Super Admin (All Access + Master Data CRUD)</option>
                   <option value="President">President of Hospital Operations</option>
                 </select>
               </div>
 
-              {formRole === 'Unit Head' && (
+              {(formRole === 'Unit Head' || formRole === 'Zonal Incharge' || formRole === 'Department Incharge' || formRole === 'Auditor') && (
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Assigned Hospital Unit *</label>
                   <select
@@ -700,6 +749,41 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {(formRole === 'Zonal Incharge' || formRole === 'Department Incharge') && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Assigned Zone Scope *</label>
+                  <select
+                    value={formZoneId}
+                    onChange={(e) => setFormZoneId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
+                  >
+                    <option value="Zone 1">Zone 1 (Doctor Consultation Rooms)</option>
+                    <option value="Zone 2">Zone 2 (Diagnostics, Lab, Pharmacy & Store)</option>
+                    <option value="Zone 3">Zone 3 (Inpatient, Pre-Op, Post-Op & Wards)</option>
+                    <option value="Zone 4">Zone 4 (Operation Theatres & CSSD)</option>
+                    <option value="Zone 5">Zone 5 (Reception, Billing, Waiting & Optical)</option>
+                    <option value="Zone 6">Zone 6 (Administration, HR, Accounts & Cafeteria)</option>
+                  </select>
+                </div>
+              )}
+
+              {formRole === 'Department Incharge' && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Assigned Department Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Doctor consultation rooms / Optical store / Pharmacy"
+                    value={formDepartment}
+                    onChange={(e) => setFormDepartment(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-semibold focus:ring-2 focus:ring-orange-500 outline-none"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Department name links this in-charge account directly to their 5S audit checklist & CAPA.
+                  </p>
                 </div>
               )}
 

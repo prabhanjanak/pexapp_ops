@@ -71,7 +71,15 @@ export interface FiveSNonConformity {
   beforePhoto?: string;
   afterPhoto?: string;
   correctiveAction?: string;
-  status: 'Pending' | 'In Progress' | 'Submitted for Verification' | 'Closed';
+  preventiveAction?: string; // Systemic prevention to avoid recurrence
+  supportingAnswer?: string; // Department In-Charge detailed explanation / response
+  reopenReason?: string; // Reason when Auditor / Unit Head / Super Admin reopens NC
+  infoRequestedNotes?: string; // Clarifications requested by Auditor / Unit Head / Super Admin
+  requestPhotos?: boolean; // Flag indicating supporting photographs/documents requested
+  closureReviewedBy?: string;
+  closureReviewedRole?: string;
+  closureComments?: string;
+  status: 'Pending' | 'In Progress' | 'Submitted for Verification' | 'Closed' | 'Reopened' | 'Info Requested';
   raisedDate: string;
   closedDate?: string;
   daysToClose?: number;

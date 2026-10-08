@@ -38,6 +38,40 @@ function mapPortalUserToFiveSUser(portalUser: User | null | undefined): FiveSUse
       unit: matchedUnit
     };
   }
+  if (portalRole.includes('zonal')) {
+    const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'zonal') || FIVE_S_DEFAULT_USERS[2];
+    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : base.unit;
+    return {
+      ...base,
+      name: portalUser.name || base.name,
+      email: portalUser.email || base.email,
+      unit: matchedUnit,
+      zone: portalUser.zoneId || base.zone || 'Zone 1'
+    };
+  }
+  if (portalRole.includes('department') || portalRole.includes('incharge')) {
+    const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'incharge') || FIVE_S_DEFAULT_USERS[1];
+    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : base.unit;
+    return {
+      ...base,
+      name: portalUser.name || base.name,
+      email: portalUser.email || base.email,
+      unit: matchedUnit,
+      zone: portalUser.zoneId || base.zone || 'Zone 1',
+      department: portalUser.department || base.department || 'Doctor consultation rooms'
+    };
+  }
+  if (portalRole.includes('auditor')) {
+    const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'auditor') || FIVE_S_DEFAULT_USERS[0];
+    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : base.unit;
+    return {
+      ...base,
+      name: portalUser.name || base.name,
+      email: portalUser.email || base.email,
+      unit: matchedUnit,
+      allowedUnits: [matchedUnit]
+    };
+  }
   if (portalRole.includes('operations')) {
     return {
       id: 'usr-ops-lead',
@@ -225,6 +259,8 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
                 currentUser={fivesUser}
                 units={units}
                 audits={audits}
+                ncs={ncs}
+                onUpdateNc={handleUpdateNc}
                 onSaveAudit={() => {}}
                 onAuditSubmitted={handleAuditSubmitted}
               />
@@ -280,6 +316,8 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
                 onAuditSubmitted={handleAuditSubmitted}
                 onUpdateAudit={handleUpdateAudit}
                 onDeleteAudit={handleDeleteAudit}
+                onUpdateNc={handleUpdateNc}
+                onDeleteNc={handleDeleteNc}
               />
             )}
 

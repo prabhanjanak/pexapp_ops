@@ -44,13 +44,23 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
   const openNcs = deptNcs.filter((n) => n.status !== 'Closed');
   const closedNcs = deptNcs.filter((n) => n.status === 'Closed');
 
-  // Local state for editing corrective actions
+  // Local state for editing corrective, preventive, and supporting answers
   const [editingActions, setEditingActions] = useState<Record<string, string>>({});
+  const [editingPreventive, setEditingPreventive] = useState<Record<string, string>>({});
+  const [editingAnswers, setEditingAnswers] = useState<Record<string, string>>({});
   const [afterPhotos, setAfterPhotos] = useState<Record<string, string>>({});
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleCorrectiveActionChange = (id: string, text: string) => {
     setEditingActions((prev) => ({ ...prev, [id]: text }));
+  };
+
+  const handlePreventiveActionChange = (id: string, text: string) => {
+    setEditingPreventive((prev) => ({ ...prev, [id]: text }));
+  };
+
+  const handleSupportingAnswerChange = (id: string, text: string) => {
+    setEditingAnswers((prev) => ({ ...prev, [id]: text }));
   };
 
   const handleAfterPhotoUpload = (ncId: string) => {
@@ -64,9 +74,16 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
   };
 
   const handleSubmitVerification = (nc: FiveSNonConformity) => {
-    const actionText = editingActions[nc.id] || nc.correctiveAction;
-    if (!actionText?.trim()) {
-      alert('Please describe the corrective action taken before submitting.');
+    const actionText = editingActions[nc.id] !== undefined ? editingActions[nc.id] : (nc.correctiveAction || '');
+    const prevText = editingPreventive[nc.id] !== undefined ? editingPreventive[nc.id] : (nc.preventiveAction || '');
+    const ansText = editingAnswers[nc.id] !== undefined ? editingAnswers[nc.id] : (nc.supportingAnswer || '');
+
+    if (!actionText.trim()) {
+      alert('Please describe the immediate corrective action taken before submitting.');
+      return;
+    }
+    if (!prevText.trim()) {
+      alert('Please describe the preventive action taken to prevent recurrence.');
       return;
     }
 
@@ -74,11 +91,13 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
 
     onUpdateNc(nc.id, {
       correctiveAction: actionText,
+      preventiveAction: prevText,
+      supportingAnswer: ansText,
       afterPhoto: photo,
       status: 'Submitted for Verification'
     });
 
-    setSuccessMsg(`Corrective action for ${nc.id} submitted for Zonal/Auditor verification!`);
+    setSuccessMsg(`Corrective & Preventive Action for ${nc.id} submitted for Auditor/Unit Head verification!`);
     setTimeout(() => setSuccessMsg(null), 5000);
   };
 
@@ -307,16 +326,70 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
                     </div>
                   </div>
 
+                  {/* Reviewer Feedback / Clarification Notices */}
+                  {nc.reopenReason && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-900 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-black">NC Reopened by Auditor / Unit Head:</span> {nc.reopenReason}
+                      </div>
+                    </div>
+                  )}
+
+                  {nc.infoRequestedNotes && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-900 flex items-start gap-2">
+                      <FileText className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-black">Clarification Requested by Reviewer:</span> {nc.infoRequestedNotes}
+                      </div>
+                    </div>
+                  )}
+
+                  {nc.requestPhotos && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-900 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="font-bold">Auditor requested additional photographic evidence showing restored 5S state.</span>
+                    </div>
+                  )}
+
+                  {/* Supporting Answer Input */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Supporting Answer / Department Explanation *
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editingAnswers[nc.id] !== undefined ? editingAnswers[nc.id] : (nc.supportingAnswer || '')}
+                      onChange={(e) => handleSupportingAnswerChange(nc.id, e.target.value)}
+                      placeholder="Explain the background, reason for deviation, and how the department evaluated this checkpoint..."
+                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
                   {/* Corrective Action Input */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Corrective Action Taken & Preventive Measure
+                      Corrective Action Taken (Immediate Remediation) *
                     </label>
                     <textarea
                       rows={2}
                       value={currentAction}
                       onChange={(e) => handleCorrectiveActionChange(nc.id, e.target.value)}
-                      placeholder="Detail the root cause resolution, physical reorganization, and prevention mechanism implemented..."
+                      placeholder="Detail immediate physical rearrangement, removal of unnecessary items, or standard restoring actions..."
+                      className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  {/* Preventive Action Input */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Preventive Action (Systemic Fix to Avoid Recurrence) *
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editingPreventive[nc.id] !== undefined ? editingPreventive[nc.id] : (nc.preventiveAction || '')}
+                      onChange={(e) => handlePreventiveActionChange(nc.id, e.target.value)}
+                      placeholder="Detail daily check frequency, departmental responsibilities, or signage installed to ensure sustained adherence..."
                       className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
@@ -326,8 +399,15 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        onUpdateNc(nc.id, { correctiveAction: currentAction, afterPhoto: currentAfterPhoto });
-                        alert('Draft corrective action saved.');
+                        const curPrev = editingPreventive[nc.id] !== undefined ? editingPreventive[nc.id] : (nc.preventiveAction || '');
+                        const curAns = editingAnswers[nc.id] !== undefined ? editingAnswers[nc.id] : (nc.supportingAnswer || '');
+                        onUpdateNc(nc.id, {
+                          correctiveAction: currentAction,
+                          preventiveAction: curPrev,
+                          supportingAnswer: curAns,
+                          afterPhoto: currentAfterPhoto
+                        });
+                        alert('Draft response, corrective action, and preventive action saved.');
                       }}
                       className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                     >

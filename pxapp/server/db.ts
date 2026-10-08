@@ -301,6 +301,45 @@ export const SANKARA_INITIAL_USERS = [
     unit_id: null,
     designation: 'IT & Systems Admin • Digital Infrastructure',
     avatar_initials: 'SR'
+  },
+  {
+    id: 'user-zonal-1',
+    name: 'Dr. Suresh Babu',
+    email: 'zonal01@sankaraeye.com',
+    emp_id: 'ZON-001',
+    password: 'Sankara@123',
+    role: 'Zonal Incharge',
+    unit_id: 'unit-coimbatore',
+    zone_id: 'Zone 1',
+    app_access: 'both',
+    designation: 'Zonal In-Charge • Zone 1 Clinical Governance',
+    avatar_initials: 'SB'
+  },
+  {
+    id: 'user-incharge-1',
+    name: 'Sister Mary Varghese',
+    email: 'incharge01@sankaraeye.com',
+    emp_id: 'DEP-001',
+    password: 'Sankara@123',
+    role: 'Department Incharge',
+    unit_id: 'unit-coimbatore',
+    zone_id: 'Zone 1',
+    department: 'Doctor consultation rooms',
+    app_access: 'both',
+    designation: 'Department In-Charge • Consultation Rooms',
+    avatar_initials: 'MV'
+  },
+  {
+    id: 'user-auditor-1',
+    name: 'Ganesh Ramamurthy',
+    email: 'auditor01@sankaraeye.com',
+    emp_id: 'AUD-001',
+    password: 'Sankara@123',
+    role: 'Auditor',
+    unit_id: 'unit-coimbatore',
+    app_access: 'both',
+    designation: 'Certified 5S Auditor • Quality Excellence',
+    avatar_initials: 'GR'
   }
 ];
 
@@ -386,6 +425,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
         designation VARCHAR(255),
         avatar_initials VARCHAR(10),
         app_access VARCHAR(30) DEFAULT 'both',
+        zone_id VARCHAR(50),
+        department VARCHAR(100),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -443,6 +484,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       ALTER TABLE units ADD COLUMN IF NOT EXISTS unit_head VARCHAR(150);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS emp_id VARCHAR(50);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS app_access VARCHAR(30) DEFAULT 'both';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS zone_id VARCHAR(50);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(100);
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS remarks TEXT;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS before_photos JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS after_photos JSONB DEFAULT '[]'::jsonb;
@@ -552,8 +595,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
     // Seed users (upsert on unique email)
     for (const u of SANKARA_INITIAL_USERS) {
       await client.query(
-        `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials, app_access)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, zone_id, department, designation, avatar_initials, app_access)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (email) DO UPDATE SET
            id = EXCLUDED.id,
            name = EXCLUDED.name,
@@ -561,10 +604,12 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
            password = EXCLUDED.password,
            role = EXCLUDED.role,
            unit_id = EXCLUDED.unit_id,
+           zone_id = EXCLUDED.zone_id,
+           department = EXCLUDED.department,
            designation = EXCLUDED.designation,
            avatar_initials = EXCLUDED.avatar_initials,
            app_access = COALESCE(users.app_access, EXCLUDED.app_access)`,
-        [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials, (u as any).app_access || 'both']
+        [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, (u as any).zone_id || null, (u as any).department || null, u.designation, u.avatar_initials, (u as any).app_access || 'both']
       );
     }
 
