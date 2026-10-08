@@ -217,6 +217,7 @@ export const api = {
     unit?: string;
     empId?: string;
     designation?: string;
+    appAccess?: 'both' | 'bottleneck' | 'fives';
   }): Promise<User> => {
     const userEmail = (userData.email || userData.orgEmail || '').trim().toLowerCase();
     const finalUnitId = userData.unitId || userData.unit;
@@ -229,6 +230,7 @@ export const api = {
       role: userData.role as any,
       unitId: finalUnitId,
       unitName: assignedUnit?.name,
+      appAccess: userData.appAccess || 'both',
       designation: userData.designation || (userData.role === 'Unit Head' ? `${assignedUnit?.name || 'Unit'} Head` : userData.role),
       avatarInitials: userData.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SK'
     };
@@ -259,6 +261,7 @@ export const api = {
     unit?: string;
     empId?: string;
     designation?: string;
+    appAccess?: 'both' | 'bottleneck' | 'fives';
   }): Promise<User> => {
     const existing = (await api.getUsers()).find(u => u.id === id);
     const updatedUser: User = {
@@ -268,7 +271,8 @@ export const api = {
       ...(updates.empId !== undefined ? { empId: updates.empId } : {}),
       ...(updates.role ? { role: updates.role as any } : {}),
       ...(updates.unitId !== undefined ? { unitId: updates.unitId } : {}),
-      ...(updates.designation !== undefined ? { designation: updates.designation } : {})
+      ...(updates.designation !== undefined ? { designation: updates.designation } : {}),
+      ...(updates.appAccess !== undefined ? { appAccess: updates.appAccess } : {})
     };
     saveLocalUserRecord(updatedUser);
 

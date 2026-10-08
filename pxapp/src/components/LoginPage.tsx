@@ -155,7 +155,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               </AnimatePresence>
 
               {/* Sign In Form */}
-              <form onSubmit={handleFormSubmit} className="space-y-3.5">
+              <form onSubmit={handleFormSubmit} className="space-y-3.5" autoComplete="off">
                 
                 {/* Email ID Input */}
                 <div>
@@ -169,6 +169,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                       required
                       id="login-identifier-input"
                       placeholder=""
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"
@@ -189,7 +193,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                       type="password"
                       id="login-password-input"
                       placeholder=""
-                      autoComplete="current-password"
+                      autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"

@@ -77,6 +77,7 @@ function formatUser(row: any) {
     role: row.role,
     unitId: row.unit_id,
     unitName: row.unit_name || undefined,
+    appAccess: row.app_access || (row as any).appAccess || 'both',
     designation: row.designation,
     avatarInitials: row.avatar_initials || row.name.slice(0, 2).toUpperCase()
   };
@@ -267,10 +268,11 @@ router.get('/users', async (req: Request, res: Response) => {
 
 // 5. Create User (Super Admin Only • Default Password: Sankara@123)
 router.post('/users', async (req: Request, res: Response) => {
-  const { name, unit, unitId, role, empId, email, orgEmail, designation } = req.body;
+  const { name, unit, unitId, role, empId, email, orgEmail, designation, appAccess, app_access } = req.body;
   const userEmail = (email || orgEmail || '').trim().toLowerCase();
   const employeeId = (empId || '').trim();
   const userName = (name || '').trim();
+  const finalAppAccess = appAccess || app_access || 'both';
 
   if (!userName || !userEmail || !role) {
     return res.status(400).json({ error: 'Name, Org Email, and Role are required' });
@@ -289,15 +291,15 @@ router.post('/users', async (req: Request, res: Response) => {
     }
 
     const insertRes = await pool.query(`
-      INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials, app_access)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
-    `, [userId, userName, userEmail, employeeId || null, defaultPassword, role, finalUnitId || null, designation || '', initials]);
+    `, [userId, userName, userEmail, employeeId || null, defaultPassword, role, finalUnitId || null, designation || '', initials, finalAppAccess]);
 
     await pool.query(`
       INSERT INTO audit_logs (user_role, action, details)
       VALUES ($1, $2, $3)
-    `, ['Super Admin', 'USER_CREATED', JSON.stringify({ userId, name: userName, email: userEmail, empId: employeeId, role, unitId: finalUnitId })]);
+    `, ['Super Admin', 'USER_CREATED', JSON.stringify({ userId, name: userName, email: userEmail, empId: employeeId, role, unitId: finalUnitId, appAccess: finalAppAccess })]);
 
     res.status(201).json(formatUser(insertRes.rows[0]));
   } catch (error: any) {
@@ -308,7 +310,7 @@ router.post('/users', async (req: Request, res: Response) => {
 // 5b. Update User (Super Admin Only)
 router.put('/users/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, unitId, unit, role, empId, email, orgEmail, designation } = req.body;
+  const { name, unitId, unit, role, empId, email, orgEmail, designation, appAccess, app_access } = req.body;
   const userEmail = (email || orgEmail || '').trim().toLowerCase();
   const employeeId = (empId || '').trim();
   const userName = (name || '').trim();
@@ -327,19 +329,20 @@ router.put('/users/:id', async (req: Request, res: Response) => {
     const newEmpId = employeeId !== undefined ? employeeId : current.emp_id;
     const newUnitId = finalUnitId !== undefined ? finalUnitId : current.unit_id;
     const newDesignation = designation !== undefined ? designation : current.designation;
+    const newAppAccess = appAccess !== undefined ? appAccess : (app_access !== undefined ? app_access : (current.app_access || 'both'));
     const initials = newName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'SK';
 
     const updateRes = await pool.query(`
       UPDATE users 
-      SET name = $1, email = $2, emp_id = $3, role = $4, unit_id = $5, designation = $6, avatar_initials = $7
-      WHERE id = $8
+      SET name = $1, email = $2, emp_id = $3, role = $4, unit_id = $5, designation = $6, avatar_initials = $7, app_access = $8
+      WHERE id = $9
       RETURNING *
-    `, [newName, newEmail, newEmpId, newRole, newUnitId || null, newDesignation, initials, id]);
+    `, [newName, newEmail, newEmpId, newRole, newUnitId || null, newDesignation, initials, newAppAccess, id]);
 
     await pool.query(`
       INSERT INTO audit_logs (user_role, action, details)
       VALUES ($1, $2, $3)
-    `, ['Super Admin', 'USER_UPDATED', JSON.stringify({ userId: id, name: newName, email: newEmail, role: newRole })]);
+    `, ['Super Admin', 'USER_UPDATED', JSON.stringify({ userId: id, name: newName, email: newEmail, role: newRole, appAccess: newAppAccess })]);
 
     res.json(formatUser(updateRes.rows[0]));
   } catch (error: any) {
@@ -827,12 +830,13 @@ router.delete('/bottlenecks/:id', async (req: Request, res: Response) => {
   }
 });
 
-// 12. Reset Database (Restores canonical 14 units & users with empty bottleneck table - Exclusive to Prabhanjan)
+// 12. Reset Database (Restores canonical 14 units & users with empty bottleneck table - Super Admin Exclusive)
 router.post('/db/reset', async (req: Request, res: Response) => {
   const userEmail = (req.body?.userEmail || req.headers['x-user-email'] || '').toString().toLowerCase();
-  if (!userEmail.includes('prabhanjan')) {
+  const isAuthorized = userEmail.includes('prabhanjan') || userEmail.includes('saurabh') || userEmail.includes('admin');
+  if (!isAuthorized) {
     return res.status(403).json({
-      error: 'Permission Denied: Only Super Administrator Prabhanjan has the exclusive authority to reset the database.'
+      error: 'Permission Denied: Only Central Super Administrators have authority to execute a full database reset.'
     });
   }
 
@@ -845,19 +849,53 @@ router.post('/db/reset', async (req: Request, res: Response) => {
     await client.query('DELETE FROM users');
     await client.query('DELETE FROM units');
 
+    const UNIT_CODES_MAP: Record<string, { code: string; image_url: string }> = {
+      'unit-coimbatore': { code: 'CBE', image_url: '/units/coimbatore.jpg' },
+      'unit-coimbatore-city': { code: 'CBC', image_url: '/units/coimbatore-rs-puram.jpg' },
+      'unit-guntur': { code: 'GNT', image_url: '/units/guntur.jpg' },
+      'unit-bangalore': { code: 'BLR', image_url: '/units/bangalore.jpg' },
+      'unit-shimoga': { code: 'SMG', image_url: '/units/shimoga.jpg' },
+      'unit-krishnankoil': { code: 'KKVL', image_url: '/units/krishnankoil.jpg' },
+      'unit-anand': { code: 'AND', image_url: '/units/anand.jpg' },
+      'unit-kanpur': { code: 'KNP', image_url: '/units/kanpur.jpg' },
+      'unit-jaipur': { code: 'JPR', image_url: '/units/jaipur.jpg' },
+      'unit-ludhiana': { code: 'LDH', image_url: '/units/ludhiana.jpg' },
+      'unit-indore': { code: 'IND', image_url: '/units/indore.jpg' },
+      'unit-panvel': { code: 'PNV', image_url: '/units/panvel.jpg' },
+      'unit-hyderabad': { code: 'HYD', image_url: '/units/hyderabad.jpg' },
+      'unit-varanasi': { code: 'VNS', image_url: '/units/varanasi.jpg' },
+    };
+
     for (const unit of SANKARA_INITIAL_UNITS) {
+      const uInfo = UNIT_CODES_MAP[unit.id] || {
+        code: unit.id.replace('unit-', '').toUpperCase().slice(0, 4),
+        image_url: `/units/${unit.id.replace('unit-', '')}.jpg`
+      };
       await client.query(
-        `INSERT INTO units (id, name, city, state, cmo, unit_head, is_assessed, established_year, bed_capacity, contact_head)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [unit.id, unit.name, unit.city, unit.state, unit.cmo, unit.unit_head, false, unit.established_year, unit.bed_capacity, unit.contact_head]
+        `INSERT INTO units (id, code, image_url, name, city, state, cmo, unit_head, is_assessed, established_year, bed_capacity, contact_head)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          unit.id,
+          uInfo.code,
+          uInfo.image_url,
+          unit.name,
+          unit.city,
+          unit.state,
+          unit.cmo,
+          unit.unit_head,
+          false,
+          unit.established_year,
+          unit.bed_capacity,
+          unit.contact_head
+        ]
       );
     }
 
     for (const u of SANKARA_INITIAL_USERS) {
       await client.query(
-        `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials]
+        `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials, app_access)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials, (u as any).app_access || 'both']
       );
     }
 

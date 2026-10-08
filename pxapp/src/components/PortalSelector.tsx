@@ -15,7 +15,8 @@ import {
   UserCheck,
   TrendingUp,
   Award,
-  Users
+  Users,
+  Lock
 } from 'lucide-react';
 
 interface PortalSelectorProps {
@@ -32,6 +33,8 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
   onOpenProfile
 }) => {
   const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.email?.toLowerCase().includes('prabhanjan') || currentUser.name?.toLowerCase().includes('prabhanjan');
+  const canAccessBottleneck = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'bottleneck';
+  const canAccess5S = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'fives';
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between selection:bg-orange-500 selection:text-white relative font-sans">
       
@@ -116,23 +119,47 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
           {/* Card 1: 5S : Rapid Transformation Initiative */}
           <div
             onClick={() => onSelectPortal('5s')}
-            className="group relative bg-white hover:bg-gradient-to-br hover:from-white hover:via-amber-50/40 hover:to-orange-50/50 border-2 border-slate-200 hover:border-orange-400 rounded-3xl p-6 sm:p-8 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-orange-500/10 cursor-pointer flex flex-col justify-between overflow-hidden"
+            className={`group relative bg-white hover:bg-gradient-to-br border-2 rounded-3xl p-6 sm:p-8 transition-all duration-300 shadow-lg hover:shadow-2xl cursor-pointer flex flex-col justify-between overflow-hidden ${
+              canAccess5S
+                ? 'hover:from-white hover:via-amber-50/40 hover:to-orange-50/50 border-slate-200 hover:border-orange-400 hover:shadow-orange-500/10'
+                : 'border-rose-200/80 bg-rose-50/20 hover:border-rose-400 hover:shadow-rose-500/10'
+            }`}
           >
-            {/* Top Accent Orange Gradient Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 to-orange-500" />
+            {/* Top Accent Bar */}
+            <div
+              className={`absolute top-0 left-0 right-0 h-1.5 ${
+                canAccess5S
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500'
+                  : 'bg-gradient-to-r from-rose-400 to-rose-600'
+              }`}
+            />
             
             {/* Ambient subtle glow */}
             <div className="absolute -top-12 -right-12 w-40 h-40 bg-amber-400/10 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-400/20 transition-all duration-500" />
 
             <div>
               <div className="flex items-center justify-between mb-5">
-                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform duration-300">
-                  <Layers className="w-6 h-6" />
+                <div
+                  className={`w-13 h-13 rounded-2xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-300 ${
+                    canAccess5S
+                      ? 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-orange-500/20'
+                      : 'bg-gradient-to-br from-rose-500 to-rose-700 shadow-rose-500/20'
+                  }`}
+                >
+                  {canAccess5S ? <Layers className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
                 </div>
-                <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300/80 flex items-center gap-1.5 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                  Rapid Transformation
-                </span>
+
+                {canAccess5S ? (
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300/80 flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    Rapid Transformation
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1.5 shadow-2xs">
+                    <Lock className="w-3 h-3 text-rose-600" />
+                    Access Restricted
+                  </span>
+                )}
               </div>
 
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-orange-600 transition-colors mb-2.5 flex items-center gap-2">
@@ -159,8 +186,18 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-emerald-700 font-black text-xs sm:text-sm group-hover:translate-x-1 transition-transform">
-              <span>Enter 5S Digital Audit Application</span>
+            <div
+              className={`pt-4 border-t flex items-center justify-between font-black text-xs sm:text-sm group-hover:translate-x-1 transition-transform ${
+                canAccess5S
+                  ? 'border-slate-100 text-emerald-700'
+                  : 'border-rose-100 text-rose-600'
+              }`}
+            >
+              <span>
+                {canAccess5S
+                  ? 'Enter 5S Digital Audit Application'
+                  : '🔒 Locked • Click to view access details'}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </div>
           </div>
@@ -168,23 +205,47 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
           {/* Card 2: Project Patient Experience */}
           <div
             onClick={() => onSelectPortal('bottleneck')}
-            className="group relative bg-gradient-to-br from-white via-orange-50/20 to-amber-50/30 hover:to-orange-50/50 border-2 border-orange-300 hover:border-orange-500 rounded-3xl p-6 sm:p-8 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-orange-500/15 cursor-pointer flex flex-col justify-between overflow-hidden"
+            className={`group relative bg-gradient-to-br border-2 rounded-3xl p-6 sm:p-8 transition-all duration-300 shadow-xl hover:shadow-2xl cursor-pointer flex flex-col justify-between overflow-hidden ${
+              canAccessBottleneck
+                ? 'from-white via-orange-50/20 to-amber-50/30 hover:to-orange-50/50 border-orange-300 hover:border-orange-500 hover:shadow-orange-500/15'
+                : 'from-white via-rose-50/20 to-rose-50/30 border-rose-200/80 hover:border-rose-400 hover:shadow-rose-500/10'
+            }`}
           >
-            {/* Top Saffron Gradient Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-600 via-amber-500 to-orange-400" />
+            {/* Top Saffron / Rose Bar */}
+            <div
+              className={`absolute top-0 left-0 right-0 h-1.5 ${
+                canAccessBottleneck
+                  ? 'bg-gradient-to-r from-orange-600 via-amber-500 to-orange-400'
+                  : 'bg-gradient-to-r from-rose-400 to-rose-600'
+              }`}
+            />
             
             {/* Ambient glow */}
             <div className="absolute -top-12 -right-12 w-44 h-44 bg-orange-500/15 rounded-full blur-2xl pointer-events-none group-hover:bg-orange-500/25 transition-all duration-500" />
 
             <div>
               <div className="flex items-center justify-between mb-5">
-                <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-orange-600 via-amber-500 to-rose-500 flex items-center justify-center text-white shadow-md shadow-orange-600/30 group-hover:scale-105 transition-transform duration-300">
-                  <Activity className="w-6 h-6" />
+                <div
+                  className={`w-13 h-13 rounded-2xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-300 ${
+                    canAccessBottleneck
+                      ? 'bg-gradient-to-br from-orange-600 via-amber-500 to-rose-500 shadow-orange-600/30'
+                      : 'bg-gradient-to-br from-rose-500 to-rose-700 shadow-rose-500/20'
+                  }`}
+                >
+                  {canAccessBottleneck ? <Activity className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
                 </div>
-                <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300/90 flex items-center gap-1.5 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Production • Active
-                </span>
+
+                {canAccessBottleneck ? (
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300/90 flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Live Production • Active
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1.5 shadow-2xs">
+                    <Lock className="w-3 h-3 text-rose-600" />
+                    Access Restricted
+                  </span>
+                )}
               </div>
 
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-orange-600 transition-colors mb-2.5 flex items-center gap-2">
@@ -211,11 +272,21 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
               </div>
             </div>
 
-            <div className="pt-4 border-t border-orange-100 flex items-center justify-between text-orange-600 font-black text-xs sm:text-sm group-hover:translate-x-1 transition-transform">
+            <div
+              className={`pt-4 border-t flex items-center justify-between font-black text-xs sm:text-sm group-hover:translate-x-1 transition-transform ${
+                canAccessBottleneck
+                  ? 'border-orange-100 text-orange-600'
+                  : 'border-rose-100 text-rose-600'
+              }`}
+            >
               <span className="flex items-center gap-1.5">
-                <span>Launch Patient Experience Workspace</span>
+                <span>
+                  {canAccessBottleneck
+                    ? 'Launch Patient Experience Workspace'
+                    : '🔒 Locked • Click to view access details'}
+                </span>
               </span>
-              <ArrowRight className="w-4 h-4 text-orange-600" />
+              <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 

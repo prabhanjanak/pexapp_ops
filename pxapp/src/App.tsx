@@ -23,6 +23,7 @@ import { OperationsTeamView } from './components/OperationsTeamView';
 import { SuperAdminView } from './components/SuperAdminView';
 import { AuditLogModal } from './components/AuditLogModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { ApplicationLockedScreen } from './components/ApplicationLockedScreen';
 import { CheckCircle2, AlertTriangle, RefreshCw, X } from 'lucide-react';
 
 interface Toast {
@@ -138,6 +139,8 @@ export default function App() {
     localStorage.removeItem('sankara_5s_auth_user');
     localStorage.removeItem('sankara_5s_token');
     localStorage.removeItem('sankara_5s_user');
+    localStorage.removeItem('sankara_local_users_overrides_v1');
+    localStorage.removeItem('sankara_offline_bottlenecks');
     sessionStorage.clear();
     setCurrentUser(null);
     setPortalView('portal');
@@ -153,7 +156,13 @@ export default function App() {
     if (user.unitId) {
       setSelectedUnitId(user.unitId);
     }
-    setPortalView('portal');
+    if (user.appAccess === 'fives') {
+      setPortalView('5s');
+    } else if (user.appAccess === 'bottleneck') {
+      setPortalView('bottleneck');
+    } else {
+      setPortalView('portal');
+    }
     addToast(`Welcome back, ${user.name}! Logged in as ${user.role}.`, 'success');
   };
 
@@ -364,8 +373,26 @@ export default function App() {
     );
   }
 
-  // Step 3: Render 5S Kaizen Audit In-Progress View
+  // Step 2b: Portal Access Permissions Verification
+  const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.email?.toLowerCase().includes('prabhanjan') || currentUser.name?.toLowerCase().includes('prabhanjan');
+  const canAccessBottleneck = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'bottleneck';
+  const canAccess5S = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'fives';
+
+  // Step 3: Render 5S Kaizen Audit In-Progress View (Guarded)
   if (portalView === '5s') {
+    if (!canAccess5S) {
+      return (
+        <ApplicationLockedScreen
+          attemptedApp="5s"
+          allowedApp="bottleneck"
+          currentUser={currentUser}
+          onNavigateToAllowed={() => setPortalView('bottleneck')}
+          onBackToPortal={() => setPortalView('portal')}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
     return (
       <FiveSInProgressView
         currentUser={currentUser}
@@ -394,7 +421,20 @@ export default function App() {
     );
   }
 
-  // Step 4: Render Full Bottleneck (PPE) Workspace with Left Sidebar Pane
+  // Step 4: Render Full Bottleneck (PPE) Workspace with Left Sidebar Pane (Guarded)
+  if (!canAccessBottleneck) {
+    return (
+      <ApplicationLockedScreen
+        attemptedApp="bottleneck"
+        allowedApp="5s"
+        currentUser={currentUser}
+        onNavigateToAllowed={() => setPortalView('5s')}
+        onBackToPortal={() => setPortalView('portal')}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   const isSuperAdminOrPresident = currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president');
 
   const currentTab = currentUser.role === 'Unit Head'

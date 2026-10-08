@@ -372,6 +372,7 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
         unit_id VARCHAR(64) REFERENCES units(id) ON DELETE SET NULL,
         designation VARCHAR(255),
         avatar_initials VARCHAR(10),
+        app_access VARCHAR(30) DEFAULT 'both',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -428,6 +429,7 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       ALTER TABLE units ADD COLUMN IF NOT EXISTS cmo VARCHAR(150);
       ALTER TABLE units ADD COLUMN IF NOT EXISTS unit_head VARCHAR(150);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS emp_id VARCHAR(50);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS app_access VARCHAR(30) DEFAULT 'both';
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS remarks TEXT;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS before_photos JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS after_photos JSONB DEFAULT '[]'::jsonb;
@@ -537,8 +539,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
     // Seed users (upsert on unique email)
     for (const u of SANKARA_INITIAL_USERS) {
       await client.query(
-        `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, designation, avatar_initials, app_access)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (email) DO UPDATE SET
            id = EXCLUDED.id,
            name = EXCLUDED.name,
@@ -547,8 +549,9 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
            role = EXCLUDED.role,
            unit_id = EXCLUDED.unit_id,
            designation = EXCLUDED.designation,
-           avatar_initials = EXCLUDED.avatar_initials`,
-        [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials]
+           avatar_initials = EXCLUDED.avatar_initials,
+           app_access = COALESCE(users.app_access, EXCLUDED.app_access)`,
+        [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, u.designation, u.avatar_initials, (u as any).app_access || 'both']
       );
     }
 

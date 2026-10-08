@@ -111,6 +111,8 @@ export interface DepartmentItem {
 
 export type UserRole = 'President' | 'Super Admin' | 'IT Admin' | 'Operations Team' | 'Unit Head' | 'Super Admin (View Only)';
 
+export type AppAccessType = 'both' | 'bottleneck' | 'fives';
+
 export interface User {
   id: string;
   name: string;
@@ -119,6 +121,7 @@ export interface User {
   role: UserRole;
   unitId?: string; // only for Unit Head
   unitName?: string;
+  appAccess?: AppAccessType; // 'both' | 'bottleneck' | 'fives'
   avatarInitials: string;
   designation?: string;
 }

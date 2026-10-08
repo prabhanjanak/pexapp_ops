@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, HospitalUnit, UserRole } from '../types';
+import { User, HospitalUnit, UserRole, AppAccessType } from '../types';
 import { api } from '../services/api';
 import {
   Users,
@@ -18,7 +18,11 @@ import {
   Mail,
   UserCheck,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Activity,
+  Layers,
+  Database,
+  RotateCcw
 } from 'lucide-react';
 
 interface StaffDirectoryViewProps {
@@ -45,6 +49,8 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteTargetUser, setDeleteTargetUser] = useState<User | null>(null);
+  const [showResetDbModal, setShowResetDbModal] = useState(false);
+  const [isResettingDb, setIsResettingDb] = useState(false);
 
   // Form Fields
   const [formName, setFormName] = useState('');
@@ -52,6 +58,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
   const [formEmpId, setFormEmpId] = useState('');
   const [formRole, setFormRole] = useState<UserRole>('Unit Head');
   const [formUnitId, setFormUnitId] = useState(units[0]?.id || 'unit-coimbatore');
+  const [formAppAccess, setFormAppAccess] = useState<AppAccessType>('both');
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -84,6 +91,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
     setFormEmpId('');
     setFormRole('Unit Head');
     setFormUnitId(units[0]?.id || 'unit-coimbatore');
+    setFormAppAccess('both');
     setEditingUser(null);
   };
 
@@ -108,6 +116,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
         role: formRole,
         unitId: formRole === 'Unit Head' ? formUnitId : undefined,
         unitName: assignedUnit ? assignedUnit.name : undefined,
+        appAccess: formAppAccess,
         designation: formRole === 'Unit Head'
           ? `${assignedUnit?.name || 'Unit'} Head`
           : formRole === 'President'
@@ -146,6 +155,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
         role: formRole,
         unitId: formRole === 'Unit Head' ? formUnitId : undefined,
         unitName: assignedUnit ? assignedUnit.name : undefined,
+        appAccess: formAppAccess,
         designation: formRole === 'Unit Head'
           ? `${assignedUnit?.name || 'Unit'} Head`
           : formRole === 'President'
@@ -189,6 +199,26 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
     }
   };
 
+  const handleExecuteDbReset = async () => {
+    setIsResettingDb(true);
+    try {
+      await api.resetDatabase(currentUser.email);
+      // Clean local cache keys
+      localStorage.removeItem('sankara_local_units_overrides_v1');
+      localStorage.removeItem('sankara_px_local_overrides');
+      localStorage.removeItem('sankara_offline_bottlenecks');
+      localStorage.removeItem('sankara_local_users_overrides_v1');
+      setShowResetDbModal(false);
+      showToast('Database reset to clean state! Stale bottlenecks wiped successfully.');
+      await loadUsers();
+      onRefreshData?.();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to reset database', 'error');
+    } finally {
+      setIsResettingDb(false);
+    }
+  };
+
   const startEditUser = (u: User) => {
     setEditingUser(u);
     setFormName(u.name);
@@ -196,6 +226,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
     setFormEmpId(u.empId || '');
     setFormRole(u.role as UserRole);
     setFormUnitId(u.unitId || units[0]?.id || '');
+    setFormAppAccess(u.appAccess || 'both');
     setShowAddModal(true);
   };
 
@@ -274,11 +305,22 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
               <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
               Super Admin Console
             </span>
+
+            {isSuperAdmin && (
+              <button
+                onClick={() => setShowResetDbModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                title="Wipe database and restore clean baseline"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                <span className="hidden sm:inline">Reset Database</span>
+              </button>
+            )}
 
             <button
               onClick={() => { resetForm(); setShowAddModal(true); }}
@@ -434,6 +476,7 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
                     <th className="py-3 px-4">EMP ID</th>
                     <th className="py-3 px-4">Role Permission</th>
                     <th className="py-3 px-4">Assigned Unit Scope</th>
+                    <th className="py-3 px-4">Application Access</th>
                     <th className="py-3 px-5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -490,6 +533,28 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
                             <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>{u.unitName || (u.unitId ? units.find(x => x.id === u.unitId)?.name : 'All 14 Units Network')}</span>
                           </span>
+                        </td>
+
+                        {/* Application Access */}
+                        <td className="py-3.5 px-4">
+                          {(!u.appAccess || u.appAccess === 'both') && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-indigo-500" />
+                              Both Apps
+                            </span>
+                          )}
+                          {u.appAccess === 'bottleneck' && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                              <Activity className="w-3 h-3 text-amber-600" />
+                              Bottleneck Only
+                            </span>
+                          )}
+                          {u.appAccess === 'fives' && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
+                              <Layers className="w-3 h-3 text-emerald-600" />
+                              5S Only
+                            </span>
+                          )}
                         </td>
 
                         {/* Actions */}
@@ -638,6 +703,22 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
                 </div>
               )}
 
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Application Access (Workspace License) *</label>
+                <select
+                  value={formAppAccess}
+                  onChange={(e) => setFormAppAccess(e.target.value as AppAccessType)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
+                >
+                  <option value="both">Both Applications (Full Access to Bottlenecks & 5S Kaizen)</option>
+                  <option value="bottleneck">Project Patient Experience (Bottleneck Management Only)</option>
+                  <option value="fives">5S : Rapid Transformation Initiative Only</option>
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  If single application is chosen, the other workspace will display the Access Restricted lock interface.
+                </p>
+              </div>
+
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] font-medium">
                 Default password for new staff is set to <strong className="font-bold text-slate-900">Sankara@123</strong>. They can change their password at any time via profile settings.
               </div>
@@ -691,6 +772,59 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
                 className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/25 transition-colors cursor-pointer"
               >
                 Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Database Reset Confirmation Modal */}
+      {showResetDbModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border-2 border-rose-200 w-full max-w-md p-6 text-center space-y-4 overflow-hidden relative">
+            <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+              <RotateCcw className="w-7 h-7" />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                Super Admin Master Control
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">Database Clean Baseline Reset</h3>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed font-medium">
+                This operation will completely wipe all logged bottlenecks, comments, and test audit history across the database.
+              </p>
+              <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200 text-left text-[11px] text-slate-600 space-y-1.5 mt-3">
+                <div className="flex items-center gap-2 font-bold text-slate-800">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Restores all 14 units with authentic codes & images</span>
+                </div>
+                <div className="flex items-center gap-2 font-bold text-slate-800">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Clears all test bottlenecks (clean slate)</span>
+                </div>
+                <div className="flex items-center gap-2 font-bold text-slate-800">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Re-seeds canonical baseline accounts (Prabhanjan, Saurabh, etc.)</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isResettingDb}
+                onClick={() => setShowResetDbModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isResettingDb}
+                onClick={handleExecuteDbReset}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isResettingDb ? 'animate-spin' : ''}`} />
+                <span>{isResettingDb ? 'Resetting...' : 'Execute Clean Reset'}</span>
               </button>
             </div>
           </div>
