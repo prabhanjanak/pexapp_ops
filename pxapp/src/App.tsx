@@ -139,8 +139,6 @@ export default function App() {
     localStorage.removeItem('sankara_5s_auth_user');
     localStorage.removeItem('sankara_5s_token');
     localStorage.removeItem('sankara_5s_user');
-    localStorage.removeItem('sankara_local_users_overrides_v1');
-    localStorage.removeItem('sankara_offline_bottlenecks');
     sessionStorage.clear();
     setCurrentUser(null);
     setPortalView('portal');

@@ -234,22 +234,39 @@ export const INITIAL_UNITS: HospitalUnit[] = [
 
 export const INITIAL_USERS: any[] = [
   {
-    id: 'user-bharath-president',
-    name: 'Bharath Balasubramanian',
-    email: 'bharath@sankaraeye.com',
-    empId: 'PRES-001',
-    role: 'President',
+    id: 'user-demo',
+    name: 'Demo User',
+    email: 'demo@sankaraeye.com',
+    empId: 'DEMO-001',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unitId: 'unit-coimbatore',
+    unitName: 'Sankara Eye Hospital Coimbatore',
+    appAccess: 'both',
+    designation: 'Demonstration Account • Unit Head',
+    avatarInitials: 'DU'
+  },
+  {
+    id: 'user-prabhanjan-itadmin',
+    name: 'Prabhanjan',
+    email: 'prabhanjan@sankaraeye.com',
+    empId: '010177',
+    password: 'Sankara@123',
+    role: 'Super Admin',
     unitId: undefined,
-    designation: 'President of Hospital Operations • Executive Directorate',
-    avatarInitials: 'BB'
+    appAccess: 'both',
+    designation: 'Super Administrator • Central Directorate',
+    avatarInitials: 'PR'
   },
   {
     id: 'user-saurabh-admin',
     name: 'Saurabh Rai',
     email: 'saurabhrai@sankaraeye.com',
     empId: 'OPS-001',
+    password: 'Sankara@123',
     role: 'Super Admin',
     unitId: undefined,
+    appAccess: 'both',
     designation: 'Central Operations Directorate • Admin',
     avatarInitials: 'SR'
   },
@@ -258,18 +275,34 @@ export const INITIAL_USERS: any[] = [
     name: 'Saurabh Rai',
     email: 'saurabh@sankaraeye.com',
     empId: 'OPS-001B',
+    password: 'Sankara@123',
     role: 'Super Admin',
     unitId: undefined,
+    appAccess: 'both',
     designation: 'Central Operations Directorate • Admin',
     avatarInitials: 'SR'
+  },
+  {
+    id: 'user-bharath-president',
+    name: 'Bharath Balasubramanian',
+    email: 'bharath@sankaraeye.com',
+    empId: 'PRES-001',
+    password: 'password123',
+    role: 'President',
+    unitId: undefined,
+    appAccess: 'both',
+    designation: 'President of Hospital Operations • Executive Directorate',
+    avatarInitials: 'BB'
   },
   {
     id: 'user-arsh-ops',
     name: 'Arsh Mishra',
     email: 'arsh.mishra@sankaraeye.com',
     empId: 'OPS-002',
+    password: 'password123',
     role: 'Operations Team',
     unitId: undefined,
+    appAccess: 'both',
     designation: 'Operations & Quality Specialist',
     avatarInitials: 'AM'
   },
@@ -278,30 +311,63 @@ export const INITIAL_USERS: any[] = [
     name: 'Sudarshan',
     email: 'sudarshan@sankaraeye.com',
     empId: 'OPS-003',
+    password: 'Sankara@123',
     role: 'Super Admin',
     unitId: undefined,
+    appAccess: 'both',
     designation: 'Central Operations Directorate • Admin',
     avatarInitials: 'SD'
-  },
-  {
-    id: 'user-prabhanjan-itadmin',
-    name: 'Prabhanjan',
-    email: 'prabhanjan@sankaraeye.com',
-    empId: '010177',
-    role: 'Super Admin',
-    unitId: undefined,
-    designation: 'Super Administrator • Central Directorate',
-    avatarInitials: 'PR'
   },
   {
     id: 'user-saravanan-itadmin',
     name: 'Saravanan',
     email: 'saravanan@sankaraeye.com',
     empId: '010178',
+    password: 'Sankara@123',
     role: 'IT Admin',
     unitId: undefined,
+    appAccess: 'both',
     designation: 'IT & Systems Admin • Digital Infrastructure',
     avatarInitials: 'SR'
+  },
+  {
+    id: 'user-head-panvel',
+    name: 'Dr. Rajesh Kapse',
+    email: 'head.panvel@sankaraeye.com',
+    empId: 'UH-PNV01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unitId: 'unit-panvel',
+    unitName: 'Sankara Eye Hospital Panvel',
+    appAccess: 'both',
+    designation: 'Unit Head • Panvel Hospital',
+    avatarInitials: 'RK'
+  },
+  {
+    id: 'user-head-coimbatore',
+    name: 'Ms. Binitha Harish',
+    email: 'head.coimbatore@sankaraeye.com',
+    empId: 'UH-CBE01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unitId: 'unit-coimbatore',
+    unitName: 'Sankara Eye Hospital Coimbatore',
+    appAccess: 'both',
+    designation: 'Unit Head • Coimbatore Hospital',
+    avatarInitials: 'BH'
+  },
+  {
+    id: 'user-head-bangalore',
+    name: 'Lt. Col. S. Guruprasad (Retd.)',
+    email: 'head.bangalore@sankaraeye.com',
+    empId: 'UH-BLR01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unitId: 'unit-bangalore',
+    unitName: 'Sankara Eye Hospital Bengaluru',
+    appAccess: 'both',
+    designation: 'Unit Head • Bengaluru Hospital',
+    avatarInitials: 'SG'
   }
 ];
 

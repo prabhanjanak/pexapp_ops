@@ -202,6 +202,18 @@ export const SANKARA_INITIAL_UNITS = [
 // Predefined Sankara users
 export const SANKARA_INITIAL_USERS = [
   {
+    id: 'user-demo',
+    name: 'Demo User',
+    email: 'demo@sankaraeye.com',
+    emp_id: 'DEMO-001',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-coimbatore',
+    app_access: 'both',
+    designation: 'Demonstration Account • Unit Head',
+    avatar_initials: 'DU'
+  },
+  {
     id: 'user-bharath-president',
     name: 'Bharath Balasubramanian',
     email: 'bharath@sankaraeye.com',
@@ -209,6 +221,7 @@ export const SANKARA_INITIAL_USERS = [
     password: 'password123',
     role: 'President',
     unit_id: null,
+    app_access: 'both',
     designation: 'President of Hospital Operations • Executive Directorate',
     avatar_initials: 'BB'
   },
