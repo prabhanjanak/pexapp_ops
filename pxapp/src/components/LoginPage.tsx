@@ -8,7 +8,9 @@ import {
   ArrowRight,
   AlertCircle,
   ShieldCheck,
-  Building2
+  Building2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 interface LoginPageProps {
@@ -18,6 +20,7 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -190,14 +193,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       id="login-password-input"
                       placeholder=""
                       autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200/90 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none font-medium transition-all shadow-inner"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer rounded-lg hover:bg-slate-100"
+                      title={showPassword ? 'Hide password' : 'View password'}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4 text-slate-600" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-slate-400" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
