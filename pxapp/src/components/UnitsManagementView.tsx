@@ -30,7 +30,15 @@ const REAL_HOSPITAL_PHOTO_PRESETS = [
   { label: 'Shivamogga (SMG)', value: '/units/shimoga.jpg', code: 'SMG' },
   { label: 'Bangalore (BLR)', value: '/units/bangalore.jpg', code: 'BLR' },
   { label: 'Krishnankovil (KKVL)', value: '/units/krishnankoil.jpg', code: 'KKVL' },
-  { label: 'Guntur (GNT)', value: '/units/guntur.jpg', code: 'GNT' }
+  { label: 'Guntur (GNT)', value: '/units/guntur.jpg', code: 'GNT' },
+  { label: 'Anand (AND)', value: '/units/anand.jpg', code: 'AND' },
+  { label: 'Kanpur (KNP)', value: '/units/kanpur.jpg', code: 'KNP' },
+  { label: 'Jaipur (JPR)', value: '/units/jaipur.jpg', code: 'JPR' },
+  { label: 'Ludhiana (LDH)', value: '/units/ludhiana.jpg', code: 'LDH' },
+  { label: 'Indore (IND)', value: '/units/indore.jpg', code: 'IND' },
+  { label: 'Panvel (PNV)', value: '/units/panvel.jpg', code: 'PNV' },
+  { label: 'Hyderabad (HYD)', value: '/units/hyderabad.jpg', code: 'HYD' },
+  { label: 'Varanasi (VNS)', value: '/units/varanasi.jpg', code: 'VNS' }
 ];
 
 interface UnitsManagementViewProps {

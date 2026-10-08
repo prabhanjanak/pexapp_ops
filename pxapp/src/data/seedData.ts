@@ -98,7 +98,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-anand',
     code: 'AND',
-    imageUrl: '/units/bangalore.jpg',
+    imageUrl: '/units/anand.jpg',
     name: 'Sankara Eye Hospital Anand',
     city: 'Anand',
     state: 'Gujarat',
@@ -113,7 +113,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-kanpur',
     code: 'KNP',
-    imageUrl: '/units/coimbatore.jpg',
+    imageUrl: '/units/kanpur.jpg',
     name: 'Sankara Eye Hospital Kanpur',
     city: 'Kanpur',
     state: 'Uttar Pradesh',
@@ -128,7 +128,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-jaipur',
     code: 'JPR',
-    imageUrl: '/units/bangalore.jpg',
+    imageUrl: '/units/jaipur.jpg',
     name: 'Sankara Eye Hospital Jaipur',
     city: 'Jaipur',
     state: 'Rajasthan',
@@ -143,7 +143,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-ludhiana',
     code: 'LDH',
-    imageUrl: '/units/coimbatore.jpg',
+    imageUrl: '/units/ludhiana.jpg',
     name: 'Sankara Eye Hospital Ludhiana',
     city: 'Ludhiana',
     state: 'Punjab',
@@ -158,7 +158,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-indore',
     code: 'IND',
-    imageUrl: '/units/shimoga.jpg',
+    imageUrl: '/units/indore.jpg',
     name: 'Sankara Eye Hospital Indore',
     city: 'Indore',
     state: 'Madhya Pradesh',
@@ -173,7 +173,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-panvel',
     code: 'PNV',
-    imageUrl: '/units/coimbatore.jpg',
+    imageUrl: '/units/panvel.jpg',
     name: 'Sankara Eye Hospital Panvel',
     city: 'Panvel',
     state: 'Maharashtra',
@@ -188,7 +188,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-hyderabad',
     code: 'HYD',
-    imageUrl: '/units/bangalore.jpg',
+    imageUrl: '/units/hyderabad.jpg',
     name: 'Sankara Eye Hospital Hyderabad',
     city: 'Hyderabad',
     state: 'Telangana',
@@ -203,7 +203,7 @@ export const INITIAL_UNITS: HospitalUnit[] = [
   {
     id: 'unit-varanasi',
     code: 'VNS',
-    imageUrl: '/units/guntur.jpg',
+    imageUrl: '/units/varanasi.jpg',
     name: 'Sankara Eye Hospital Varanasi',
     city: 'Varanasi',
     state: 'Uttar Pradesh',

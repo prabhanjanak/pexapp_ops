@@ -441,14 +441,14 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       UPDATE units SET code = 'BLR', image_url = '/units/bangalore.jpg' WHERE id = 'unit-bangalore';
       UPDATE units SET code = 'SMG', image_url = '/units/shimoga.jpg' WHERE id = 'unit-shimoga';
       UPDATE units SET code = 'KKVL', image_url = '/units/krishnankoil.jpg' WHERE id = 'unit-krishnankoil';
-      UPDATE units SET code = 'AND', image_url = '/units/coimbatore.jpg' WHERE id = 'unit-anand' AND (code IS NULL OR image_url IS NULL);
-      UPDATE units SET code = 'KNP', image_url = '/units/guntur.jpg' WHERE id = 'unit-kanpur' AND (code IS NULL OR image_url IS NULL);
-      UPDATE units SET code = 'JPR', image_url = '/units/shimoga.jpg' WHERE id = 'unit-jaipur' AND (code IS NULL OR image_url IS NULL);
-      UPDATE units SET code = 'LUD', image_url = '/units/bangalore.jpg' WHERE id = 'unit-ludhiana' AND (code IS NULL OR image_url IS NULL);
-      UPDATE units SET code = 'IND', image_url = '/units/shimoga.jpg' WHERE id = 'unit-indore' AND (code IS NULL OR image_url IS NULL);
-      UPDATE units SET code = 'PNV', image_url = '/units/coimbatore.jpg' WHERE id = 'unit-panvel' AND (code IS NULL OR image_url IS NULL);
-      UPDATE units SET code = 'HYD', image_url = '/units/bangalore.jpg' WHERE id = 'unit-hyderabad' AND (code IS NULL OR image_url IS NULL);
-      UPDATE units SET code = 'VRN', image_url = '/units/guntur.jpg' WHERE id = 'unit-varanasi' AND (code IS NULL OR image_url IS NULL);
+      UPDATE units SET code = 'AND', image_url = '/units/anand.jpg' WHERE id = 'unit-anand';
+      UPDATE units SET code = 'KNP', image_url = '/units/kanpur.jpg' WHERE id = 'unit-kanpur';
+      UPDATE units SET code = 'JPR', image_url = '/units/jaipur.jpg' WHERE id = 'unit-jaipur';
+      UPDATE units SET code = 'LDH', image_url = '/units/ludhiana.jpg' WHERE id = 'unit-ludhiana';
+      UPDATE units SET code = 'IND', image_url = '/units/indore.jpg' WHERE id = 'unit-indore';
+      UPDATE units SET code = 'PNV', image_url = '/units/panvel.jpg' WHERE id = 'unit-panvel';
+      UPDATE units SET code = 'HYD', image_url = '/units/hyderabad.jpg' WHERE id = 'unit-hyderabad';
+      UPDATE units SET code = 'VNS', image_url = '/units/varanasi.jpg' WHERE id = 'unit-varanasi';
     `);
 
     // Audit Logs Table

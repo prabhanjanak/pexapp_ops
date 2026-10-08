@@ -47,14 +47,14 @@ const HOSPITAL_CARD_IMAGES: Record<string, string> = {
   'unit-bangalore': '/units/bangalore.jpg',
   'unit-krishnankoil': '/units/krishnankoil.jpg',
   'unit-guntur': '/units/guntur.jpg',
-  'unit-anand': '/units/coimbatore.jpg',
-  'unit-kanpur': '/units/guntur.jpg',
-  'unit-jaipur': '/units/shimoga.jpg',
-  'unit-ludhiana': '/units/bangalore.jpg',
-  'unit-indore': '/units/shimoga.jpg',
-  'unit-panvel': '/units/coimbatore.jpg',
-  'unit-hyderabad': '/units/bangalore.jpg',
-  'unit-varanasi': '/units/guntur.jpg'
+  'unit-anand': '/units/anand.jpg',
+  'unit-kanpur': '/units/kanpur.jpg',
+  'unit-jaipur': '/units/jaipur.jpg',
+  'unit-ludhiana': '/units/ludhiana.jpg',
+  'unit-indore': '/units/indore.jpg',
+  'unit-panvel': '/units/panvel.jpg',
+  'unit-hyderabad': '/units/hyderabad.jpg',
+  'unit-varanasi': '/units/varanasi.jpg'
 };
 
 const DEFAULT_HOSPITAL_IMG = '/units/coimbatore.jpg';
