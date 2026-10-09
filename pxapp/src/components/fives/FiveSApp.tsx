@@ -17,59 +17,111 @@ interface FiveSAppProps {
   onBackToPortal?: () => void;
 }
 
+const UNIT_MAP: Record<string, string> = {
+  'unit-coimbatore': 'CBE',
+  'unit-coimbatore-city': 'CCH',
+  'unit-bangalore': 'BLR',
+  'unit-guntur': 'Guntur',
+  'unit-shimoga': 'SMG',
+  'unit-anand': 'Anand',
+  'unit-ludhiana': 'Ludhiana',
+  'unit-panvel': 'Panvel',
+  'unit-kanpur': 'Kanpur',
+  'unit-jaipur': 'Jaipur',
+  'unit-indore': 'Indore',
+  'unit-hyderabad': 'Hyderabad',
+  'unit-varanasi': 'Varanasi',
+  'unit-krishnankoil': 'Krishnankoil'
+};
+
+function resolveFiveSUnitCode(unitId?: string, unitName?: string): string {
+  if (!unitId && !unitName) return 'CBE';
+  const id = (unitId || '').toLowerCase().trim();
+  if (UNIT_MAP[id]) return UNIT_MAP[id];
+
+  const name = (unitName || '').toLowerCase().trim();
+  if (id.includes('city') || id.includes('rs-puram') || name.includes('city') || name.includes('rs puram')) return 'CCH';
+  if (id.includes('coimbatore') || name.includes('coimbatore')) return 'CBE';
+  if (id.includes('bangalore') || name.includes('bangalore') || name.includes('bengaluru')) return 'BLR';
+  if (id.includes('guntur') || name.includes('guntur')) return 'Guntur';
+  if (id.includes('shimoga') || name.includes('shimoga') || name.includes('shivamogga')) return 'SMG';
+  if (id.includes('anand') || name.includes('anand')) return 'Anand';
+  if (id.includes('kanpur') || name.includes('kanpur')) return 'Kanpur';
+  if (id.includes('jaipur') || name.includes('jaipur')) return 'Jaipur';
+  if (id.includes('ludhiana') || name.includes('ludhiana')) return 'Ludhiana';
+  if (id.includes('indore') || name.includes('indore')) return 'Indore';
+  if (id.includes('panvel') || name.includes('panvel') || name.includes('mumbai')) return 'Panvel';
+  if (id.includes('hyderabad') || name.includes('hyderabad')) return 'Hyderabad';
+  if (id.includes('varanasi') || name.includes('varanasi')) return 'Varanasi';
+  if (id.includes('krishnankoil') || name.includes('krishnankoil')) return 'Krishnankoil';
+
+  const match = FIVE_S_UNITS.find(
+    (u) =>
+      u.code.toLowerCase() === id ||
+      u.name.toLowerCase().includes(id) ||
+      (name && u.name.toLowerCase().includes(name))
+  );
+  return match ? match.code : 'CBE';
+}
+
 function mapPortalUserToFiveSUser(portalUser: User | null | undefined): FiveSUser | null {
   if (!portalUser) return null;
   const portalRole = (portalUser.role || '').toLowerCase();
+  const allNetworkUnitCodes = FIVE_S_UNITS.map((u) => u.code);
+
   if (portalRole.includes('president')) {
     const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'president') || FIVE_S_DEFAULT_USERS[5];
-    return { ...base, name: portalUser.name || base.name, email: portalUser.email || base.email };
+    return { ...base, name: portalUser.name || base.name, email: portalUser.email || base.email, allowedUnits: allNetworkUnitCodes };
   }
   if (portalRole.includes('admin')) {
     const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin') || FIVE_S_DEFAULT_USERS[4];
-    return { ...base, name: portalUser.name || base.name, email: portalUser.email || base.email };
+    return { ...base, name: portalUser.name || base.name, email: portalUser.email || base.email, allowedUnits: allNetworkUnitCodes };
   }
   if (portalRole.includes('unit head')) {
     const matched = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'unithead') || FIVE_S_DEFAULT_USERS[3];
-    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : matched.unit;
+    const unitCode = resolveFiveSUnitCode(portalUser.unitId, portalUser.unitName);
     return {
       ...matched,
       name: portalUser.name || matched.name,
       email: portalUser.email || matched.email,
-      unit: matchedUnit
+      unit: unitCode,
+      allowedUnits: [unitCode]
     };
   }
   if (portalRole.includes('zonal')) {
     const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'zonal') || FIVE_S_DEFAULT_USERS[2];
-    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : base.unit;
+    const unitCode = resolveFiveSUnitCode(portalUser.unitId, portalUser.unitName);
     return {
       ...base,
       name: portalUser.name || base.name,
       email: portalUser.email || base.email,
-      unit: matchedUnit,
+      unit: unitCode,
+      allowedUnits: [unitCode],
       zone: portalUser.zoneId || base.zone || 'Zone 1'
     };
   }
   if (portalRole.includes('department') || portalRole.includes('incharge')) {
     const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'incharge') || FIVE_S_DEFAULT_USERS[1];
-    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : base.unit;
+    const unitCode = resolveFiveSUnitCode(portalUser.unitId, portalUser.unitName);
     return {
       ...base,
       name: portalUser.name || base.name,
       email: portalUser.email || base.email,
-      unit: matchedUnit,
+      unit: unitCode,
+      allowedUnits: [unitCode],
       zone: portalUser.zoneId || base.zone || 'Zone 1',
       department: portalUser.department || base.department || 'Doctor consultation rooms'
     };
   }
   if (portalRole.includes('auditor')) {
     const base = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'auditor') || FIVE_S_DEFAULT_USERS[0];
-    const matchedUnit = portalUser.unitId ? portalUser.unitId.replace('unit-', '').toUpperCase() : base.unit;
+    const unitCode = resolveFiveSUnitCode(portalUser.unitId, portalUser.unitName);
     return {
       ...base,
       name: portalUser.name || base.name,
       email: portalUser.email || base.email,
-      unit: matchedUnit,
-      allowedUnits: [matchedUnit]
+      unit: unitCode,
+      allowedUnits: allNetworkUnitCodes // Internal Auditor can inspect and audit all 14 hospital units
     };
   }
   if (portalRole.includes('operations')) {
@@ -82,7 +134,8 @@ function mapPortalUserToFiveSUser(portalUser: User | null | undefined): FiveSUse
       roleLabel: 'Operations Team Lead',
       unit: 'All 14 Units',
       designation: 'Operations & Quality Directorate',
-      avatarInitials: 'OP'
+      avatarInitials: 'OP',
+      allowedUnits: allNetworkUnitCodes
     };
   }
   return FIVE_S_DEFAULT_USERS[0];

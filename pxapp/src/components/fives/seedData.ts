@@ -652,15 +652,7 @@ export const FIVE_S_DEFAULT_USERS: FiveSUser[] = [
     unit: 'CBE',
     zone: 'Zone 1',
     department: 'Doctor consultation rooms',
-    allowedUnits: ['CBE'],
-    allowedZones: ['Zone 1'],
-    allowedDepartments: [
-      'Registration area',
-      'Refraction lounges',
-      'Waiting lounges',
-      'Doctor consultation rooms',
-      'Counselling rooms'
-    ],
+    allowedUnits: ['CBE', 'BLR', 'CCH', 'Guntur', 'SMG', 'Anand', 'Ludhiana', 'Panvel', 'Kanpur', 'Jaipur', 'Indore', 'Hyderabad', 'Varanasi', 'Krishnankoil'],
     designation: 'Internal Auditor • Quality Assurance',
     phone: '+91 98421 23450',
     avatarInitials: 'RK'

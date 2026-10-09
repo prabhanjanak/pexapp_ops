@@ -41,23 +41,65 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'conduct' | 'history' | 'nc_review'>('conduct');
 
-  // Assigned Scope Filtering (Strict Enforcement)
-  const allowedUnitCodes = currentUser.allowedUnits || [currentUser.unit];
-  const availableUnits = units.filter((u) => allowedUnitCodes.includes(u.code));
-  
-  const [selectedUnit, setSelectedUnit] = useState<string>(availableUnits[0]?.code || 'CBE');
-  const currentUnitConfig = units.find((u) => u.code === selectedUnit) || units[0];
+  // Hospital Units available to the auditor (defaults to all 14 network units)
+  const availableUnits = React.useMemo(() => {
+    const list = units && units.length > 0 ? units : FIVE_S_UNITS;
+    if (currentUser.allowedUnits && currentUser.allowedUnits.length > 0) {
+      const filtered = list.filter((u) => 
+        currentUser.allowedUnits?.includes(u.code) ||
+        currentUser.allowedUnits?.some(code => code.toLowerCase() === u.code.toLowerCase() || u.name.toLowerCase().includes(code.toLowerCase()))
+      );
+      if (filtered.length > 0) return filtered;
+    }
+    return list;
+  }, [units, currentUser.allowedUnits]);
 
-  const allowedZones = currentUser.allowedZones || Object.keys(currentUnitConfig.zones);
-  const availableZones = Object.keys(currentUnitConfig.zones).filter((z) => allowedZones.includes(z));
-  
+  // Resolve initial selected unit
+  const initialUnitCode = React.useMemo(() => {
+    const raw = (currentUser.unit || '').toLowerCase().trim();
+    const matched = availableUnits.find(
+      (u) => u.code.toLowerCase() === raw || u.name.toLowerCase().includes(raw)
+    );
+    return matched?.code || availableUnits[0]?.code || 'CBE';
+  }, [availableUnits, currentUser.unit]);
+
+  const [selectedUnit, setSelectedUnit] = useState<string>(initialUnitCode);
+
+  useEffect(() => {
+    if (!availableUnits.some((u) => u.code === selectedUnit)) {
+      setSelectedUnit(initialUnitCode);
+    }
+  }, [availableUnits, initialUnitCode, selectedUnit]);
+
+  const currentUnitConfig = availableUnits.find((u) => u.code === selectedUnit) || availableUnits[0] || FIVE_S_UNITS[0];
+
+  // Dynamic Zones in selected unit
+  const availableZones = React.useMemo(() => {
+    const zList = Object.keys(currentUnitConfig?.zones || {});
+    return zList.length > 0 ? zList : ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4'];
+  }, [currentUnitConfig]);
+
   const [selectedZone, setSelectedZone] = useState<string>(availableZones[0] || 'Zone 1');
-  
-  const allDeptsInZone = currentUnitConfig.zones[selectedZone] || [];
-  const allowedDepts = currentUser.allowedDepartments || allDeptsInZone;
-  const availableDepts = allDeptsInZone.filter((d) => allowedDepts.includes(d));
 
-  const [selectedDept, setSelectedDept] = useState<string>(availableDepts[0] || allDeptsInZone[0] || 'Doctor consultation rooms');
+  useEffect(() => {
+    if (!availableZones.includes(selectedZone)) {
+      setSelectedZone(availableZones[0] || 'Zone 1');
+    }
+  }, [availableZones, selectedZone]);
+
+  // Dynamic Departments in selected zone
+  const availableDepts = React.useMemo(() => {
+    const depts = currentUnitConfig?.zones?.[selectedZone] || [];
+    return depts.length > 0 ? depts : ['Doctor consultation rooms'];
+  }, [currentUnitConfig, selectedZone]);
+
+  const [selectedDept, setSelectedDept] = useState<string>(availableDepts[0] || 'Doctor consultation rooms');
+
+  useEffect(() => {
+    if (!availableDepts.includes(selectedDept)) {
+      setSelectedDept(availableDepts[0] || 'Doctor consultation rooms');
+    }
+  }, [availableDepts, selectedDept]);
 
   const [auditDate, setAuditDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [auditorName, setAuditorName] = useState<string>(currentUser.name);
@@ -191,16 +233,17 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
   return (
     <div className="max-w-[1680px] mx-auto px-4 sm:px-8 py-6 space-y-6">
       
-      {/* Scope Restriction Banner */}
+      {/* Scope Banner */}
       <div className="bg-gradient-to-r from-orange-50 via-amber-50/70 to-orange-50 border border-orange-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-orange-950 shadow-2xs">
         <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
-          <Lock className="w-4 h-4 text-orange-600 shrink-0" />
+          <Building2 className="w-4 h-4 text-orange-600 shrink-0" />
           <span>
-            <strong>Assigned Audit Scope:</strong> {currentUser.unit} • {currentUser.zone || 'Assigned Zones'} • Department: {currentUser.department || 'Assigned Departments'}
+            <strong>Current Audit Scope:</strong> {currentUnitConfig?.name || selectedUnit} • {selectedZone} • Department: {selectedDept}
           </span>
         </div>
-        <div className="text-[11px] font-bold text-orange-800 bg-white px-3 py-1 rounded-full border border-orange-200 shrink-0 shadow-2xs">
-          Auditor Access Tier (Conduct & Entry Only)
+        <div className="text-[11px] font-bold text-orange-800 bg-white px-3 py-1 rounded-full border border-orange-200 shrink-0 shadow-2xs flex items-center gap-1.5">
+          <ClipboardCheck className="w-3.5 h-3.5 text-orange-600" />
+          <span>Internal 5S Auditor • 14 Units Network</span>
         </div>
       </div>
 
@@ -280,74 +323,115 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
       {activeTab === 'conduct' && (
         <div className="space-y-6">
           
-          {/* Target Area Selectors Card */}
+          {/* Target Clinical Area Selectors Card */}
           <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500 mb-4">
-              <MapPin className="w-4 h-4 text-orange-600" />
-              Target Clinical Area (Assigned Scope)
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-3.5 border-b border-slate-100 gap-2 mb-4">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700">
+                <MapPin className="w-4 h-4 text-orange-600" />
+                Target Hospital Unit & Clinical Assessment Scope
+              </div>
+              <span className="text-xs text-slate-500 font-medium">
+                {availableUnits.length} Hospital Units Available for Internal Audit
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-4">
-              {/* Unit */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Unit Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Hospital Unit
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-orange-600" />
+                    Hospital Unit *
+                  </span>
+                  <span className="text-[10px] font-mono text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 font-bold">
+                    Code: {selectedUnit}
+                  </span>
                 </label>
                 <select
                   value={selectedUnit}
                   onChange={(e) => {
-                    setSelectedUnit(e.target.value);
-                    const u = units.find((x) => x.code === e.target.value);
+                    const newUnitCode = e.target.value;
+                    setSelectedUnit(newUnitCode);
+                    const u = availableUnits.find((x) => x.code === newUnitCode);
                     if (u) {
                       const firstZ = Object.keys(u.zones)[0] || 'Zone 1';
                       setSelectedZone(firstZ);
                       setSelectedDept(u.zones[firstZ]?.[0] || 'Doctor consultation rooms');
                     }
                   }}
-                  className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full py-2.5 px-3.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer shadow-2xs"
                 >
                   {availableUnits.map((u) => (
                     <option key={u.code} value={u.code}>
-                      {u.name} ({u.code})
+                      {u.name} ({u.city}, {u.state}) — [{u.code}]
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Zone */}
+              {/* Zone Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Zone
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Zone Classification *</span>
+                  <span className="text-[10px] text-slate-500 font-semibold">
+                    {availableZones.length} Zones Available
+                  </span>
                 </label>
                 <select
                   value={selectedZone}
                   onChange={(e) => {
-                    setSelectedZone(e.target.value);
-                    setSelectedDept(currentUnitConfig.zones[e.target.value]?.[0] || 'Doctor consultation rooms');
+                    const newZone = e.target.value;
+                    setSelectedZone(newZone);
+                    const depts = currentUnitConfig?.zones?.[newZone] || [];
+                    if (depts.length > 0) {
+                      setSelectedDept(depts[0]);
+                    }
                   }}
-                  className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full py-2.5 px-3.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer shadow-2xs"
                 >
                   {availableZones.map((z) => (
-                    <option key={z} value={z}>{z}</option>
+                    <option key={z} value={z}>
+                      {z} ({currentUnitConfig?.zones?.[z]?.length || 0} departments)
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {/* Department */}
+              {/* Department Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Department / Area
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Department / Functional Area *</span>
+                  <span className="text-[10px] text-slate-500 font-semibold">
+                    {availableDepts.length} Areas
+                  </span>
                 </label>
                 <select
                   value={selectedDept}
                   onChange={(e) => setSelectedDept(e.target.value)}
-                  className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full py-2.5 px-3.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer shadow-2xs"
                 >
                   {availableDepts.map((d) => (
-                    <option key={d} value={d}>{d}</option>
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Active Clinical Target Confirmation Strip */}
+            <div className="p-3 bg-orange-50/70 border border-orange-200/90 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-slate-700">
+                <span className="font-bold text-slate-900">Current Scope:</span>
+                <span className="font-extrabold text-orange-700">{currentUnitConfig?.name}</span>
+                <span className="text-slate-300">•</span>
+                <span className="font-bold text-slate-800">{selectedZone}</span>
+                <span className="text-slate-300">•</span>
+                <span className="font-medium text-slate-700">{selectedDept}</span>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full shrink-0">
+                Ready for Assessment
+              </span>
             </div>
 
             {/* Auditor Details & Date */}
@@ -662,7 +746,7 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
           currentUser={currentUser}
           ncs={ncs}
           onUpdateNc={onUpdateNc}
-          allowedUnits={allowedUnitCodes}
+          allowedUnits={availableUnits.map((u) => u.code)}
           title="Auditor NC Review & Verification Portal"
           subtitle="Review before/after remedial evidence, verify corrective & preventive actions, request additional clarifications/photographs, or confirm resolution."
         />
