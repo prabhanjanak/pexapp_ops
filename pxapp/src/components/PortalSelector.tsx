@@ -32,10 +32,38 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
   onLogout,
   onOpenProfile
 }) => {
-  const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.email?.toLowerCase().includes('prabhanjan') || currentUser.name?.toLowerCase().includes('prabhanjan');
-  const isAuditorOr5SRole = (currentUser.role || '').toLowerCase().includes('auditor') || (currentUser.role || '').toLowerCase().includes('zonal') || (currentUser.role || '').toLowerCase().includes('incharge') || (currentUser.role || '').toLowerCase().includes('department');
-  const canAccessBottleneck = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'bottleneck';
-  const canAccess5S = isSuperAdmin || isAuditorOr5SRole || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'fives';
+  const isSuperAdmin =
+    currentUser.role === 'Super Admin' ||
+    currentUser.role === 'IT Admin' ||
+    currentUser.email?.toLowerCase().includes('prabhanjan') ||
+    currentUser.name?.toLowerCase().includes('prabhanjan');
+
+  const roleLower = (currentUser.role || '').toLowerCase();
+  const is5SOnlyRole =
+    roleLower.includes('auditor') ||
+    roleLower.includes('zonal') ||
+    roleLower.includes('incharge') ||
+    roleLower.includes('department');
+
+  // Strict bidirectional app locking:
+  // - 5S-only roles or users with appAccess='fives' are strictly LOCKED out of Bottleneck
+  // - Users with appAccess='bottleneck' are strictly LOCKED out of 5S
+  // - Users with appAccess='both' or Super Admin have access to both
+  const canAccess5S =
+    isSuperAdmin ||
+    is5SOnlyRole ||
+    (currentUser.appAccess !== 'bottleneck' &&
+      (currentUser.appAccess === 'fives' ||
+        currentUser.appAccess === 'both' ||
+        !currentUser.appAccess));
+
+  const canAccessBottleneck =
+    isSuperAdmin ||
+    (!is5SOnlyRole &&
+      currentUser.appAccess !== 'fives' &&
+      (currentUser.appAccess === 'bottleneck' ||
+        currentUser.appAccess === 'both' ||
+        !currentUser.appAccess));
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between selection:bg-orange-500 selection:text-white relative font-sans">
       

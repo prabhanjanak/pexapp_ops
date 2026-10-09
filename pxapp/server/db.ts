@@ -311,7 +311,7 @@ export const SANKARA_INITIAL_USERS = [
     role: 'Zonal Incharge',
     unit_id: 'unit-coimbatore',
     zone_id: 'Zone 1',
-    app_access: 'both',
+    app_access: 'fives',
     designation: 'Zonal In-Charge • Zone 1 Clinical Governance',
     avatar_initials: 'SB'
   },
@@ -325,7 +325,7 @@ export const SANKARA_INITIAL_USERS = [
     unit_id: 'unit-coimbatore',
     zone_id: 'Zone 1',
     department: 'Doctor consultation rooms',
-    app_access: 'both',
+    app_access: 'fives',
     designation: 'Department In-Charge • Consultation Rooms',
     avatar_initials: 'MV'
   },
@@ -337,7 +337,7 @@ export const SANKARA_INITIAL_USERS = [
     password: 'Sankara@123',
     role: 'Auditor',
     unit_id: 'unit-coimbatore',
-    app_access: 'both',
+    app_access: 'fives',
     designation: 'Certified 5S Auditor • Quality Excellence',
     avatar_initials: 'GR'
   }
@@ -507,6 +507,7 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       UPDATE units SET code = 'PNV', image_url = '/units/panvel.jpg' WHERE id = 'unit-panvel';
       UPDATE units SET code = 'HYD', image_url = '/units/hyderabad.jpg' WHERE id = 'unit-hyderabad';
       UPDATE units SET code = 'VNS', image_url = '/units/varanasi.jpg' WHERE id = 'unit-varanasi';
+      UPDATE users SET app_access = 'fives' WHERE role IN ('Auditor', 'Zonal Incharge', 'Department Incharge');
     `);
 
     // Audit Logs Table

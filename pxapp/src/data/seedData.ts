@@ -379,7 +379,7 @@ export const INITIAL_USERS: any[] = [
     unitId: 'unit-coimbatore',
     unitName: 'Sankara Eye Hospital Coimbatore',
     zoneId: 'Zone 1',
-    appAccess: 'both',
+    appAccess: 'fives',
     designation: 'Zonal Clinical Director • Zone 1',
     avatarInitials: 'AK'
   },
@@ -394,7 +394,7 @@ export const INITIAL_USERS: any[] = [
     unitName: 'Sankara Eye Hospital Coimbatore',
     zoneId: 'Zone 1',
     department: 'Doctor consultation rooms',
-    appAccess: 'both',
+    appAccess: 'fives',
     designation: 'Department In-Charge • Consultation Rooms',
     avatarInitials: 'MV'
   },
@@ -407,7 +407,7 @@ export const INITIAL_USERS: any[] = [
     role: 'Auditor',
     unitId: 'unit-coimbatore',
     unitName: 'Sankara Eye Hospital Coimbatore',
-    appAccess: 'both',
+    appAccess: 'fives',
     designation: 'Certified 5S Auditor • Quality Excellence',
     avatarInitials: 'GR'
   },
@@ -420,7 +420,7 @@ export const INITIAL_USERS: any[] = [
     role: 'Auditor',
     unitId: 'unit-coimbatore',
     unitName: 'Sankara Eye Hospital Coimbatore',
-    appAccess: 'both',
+    appAccess: 'fives',
     designation: 'Internal 5S Auditor • Quality Excellence',
     avatarInitials: 'IA'
   },
@@ -433,7 +433,7 @@ export const INITIAL_USERS: any[] = [
     role: 'Auditor',
     unitId: 'unit-coimbatore',
     unitName: 'Sankara Eye Hospital Coimbatore',
-    appAccess: 'both',
+    appAccess: 'fives',
     designation: 'Internal 5S Auditor • Quality Assurance',
     avatarInitials: 'RK'
   }
