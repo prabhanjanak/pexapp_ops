@@ -3,13 +3,13 @@
 # PRODUCTION DOCKERFILE
 # ==============================================================================
 
-FROM node:22-alpine AS builder
+FROM node:22-alpine
 
 WORKDIR /app
 
 # Install build dependencies
-COPY package.json ./
-COPY pxapp/package.json ./pxapp/
+COPY package.json package-lock.json* ./
+COPY pxapp/package.json pxapp/package-lock.json* ./pxapp/
 
 # Configure npm for network resilience & install dependencies
 RUN npm config set fetch-retries 5 \

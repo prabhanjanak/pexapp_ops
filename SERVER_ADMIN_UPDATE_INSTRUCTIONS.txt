@@ -1,0 +1,163 @@
+================================================================================
+SANKARA EYE HOSPITAL - PROJECT PATIENT EXPERIENCE & 5S KAIZEN (2.0.0)
+SERVER ADMINISTRATOR UPDATE & REDEPLOYMENT INSTRUCTIONS
+================================================================================
+
+DATE: October 2026
+ENVIRONMENT: Production Docker Compose / Linux Server
+TARGET SERVER: 192.168.1.244 (or Cloud VM)
+APPLICATION PORT: 8500 (mapped to internal container port 3000)
+DATABASE: PostgreSQL 16 (persistent docker volume 'postgres_data')
+
+--------------------------------------------------------------------------------
+OVERVIEW OF THIS UPDATE:
+--------------------------------------------------------------------------------
+This release updates the application with:
+1. New 5S Clinical Roles: Zonal Incharge, Department Incharge, and Internal Auditor.
+2. Department-wise Before & After CAPA (Corrective & Preventive Action) workflow.
+3. Zone Incharge Dashboard with multi-department audit tracking and radar charts.
+4. Non-Conformity (NC) Review & Closure Portal with 4-step actions.
+5. Centralized Staff Directory with role and unit-scoped access control.
+
+DATABASE NOTE (IMPORTANT):
+- Your existing PostgreSQL database and records are 100% PRESERVED.
+- All database schema updates (adding zone_id, department columns to users table)
+  and new role accounts run AUTOMATICALLY on container boot.
+- NO manual SQL migration scripts are required.
+
+================================================================================
+OPTION A: UPDATE VIA GIT (RECOMMENDED - 3 COMMANDS)
+================================================================================
+
+Step 1: SSH into the server and navigate to the application directory:
+----------------------------------------------------------------------
+cd /path/to/operationsapp
+# (Typically: cd /var/www/operationsapp or ~/operationsapp)
+
+Step 2: Pull the latest committed code from repository:
+----------------------------------------------------------------------
+git pull origin main
+
+Step 3: Rebuild the application container with fresh files:
+----------------------------------------------------------------------
+docker compose build --no-cache app
+
+Step 4: Restart the app container (keeps database running uninterrupted):
+----------------------------------------------------------------------
+docker compose up -d app
+
+Step 5: Verify the automatic database migration and health check:
+----------------------------------------------------------------------
+docker compose logs -f --tail=50 app
+
+(Press Ctrl+C to exit log streaming once you see "Server running on http://0.0.0.0:3000")
+
+
+================================================================================
+OPTION B: UPDATE VIA AUTOMATED BASH SCRIPT (ONE COMMAND)
+================================================================================
+
+If you have updated files on the server, you can run the provided update script:
+
+chmod +x update.sh
+./update.sh
+
+
+================================================================================
+OPTION C: UPDATE VIA ZIP ARCHIVE (IF SERVER HAS NO DIRECT GIT ACCESS)
+================================================================================
+
+If the server has no internet access or uses manual file transfer:
+
+Step 1: Upload the fresh project files/zip to the server.
+
+Step 2: Extract over the existing directory (preserves .env and docker data):
+----------------------------------------------------------------------
+unzip -o pexapp_ops_production.zip -d /path/to/operationsapp
+cd /path/to/operationsapp
+
+Step 3: Rebuild and restart the container:
+----------------------------------------------------------------------
+docker compose build --no-cache app
+docker compose up -d app
+
+Step 4: Check logs:
+----------------------------------------------------------------------
+docker compose logs -f --tail=50 app
+
+
+================================================================================
+HOW THE AUTOMATIC DATABASE UPDATE WORKS (FOR ADMIN AUDIT)
+================================================================================
+When the 'app' container starts, the startup routine automatically performs:
+1. Database Connectivity Check with resilient retries.
+2. Safe Schema Migration:
+   - ALTER TABLE users ADD COLUMN IF NOT EXISTS emp_id VARCHAR(50);
+   - ALTER TABLE users ADD COLUMN IF NOT EXISTS app_access VARCHAR(30) DEFAULT 'both';
+   - ALTER TABLE users ADD COLUMN IF NOT EXISTS zone_id VARCHAR(50);
+   - ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(100);
+3. User Upsert (ON CONFLICT DO UPDATE):
+   - Adds default role accounts:
+     * Zonal In-Charge:      zonal01@sankaraeye.com     (Password: Sankara@123)
+     * Department In-Charge: incharge01@sankaraeye.com  (Password: Sankara@123)
+     * Internal Auditor:     auditor01@sankaraeye.com   (Password: Sankara@123)
+   - Existing staff accounts, bottlenecks, and unit setups remain untouched.
+
+
+================================================================================
+VERIFICATION & HEALTH CHECKS
+================================================================================
+
+1. Check Container Status:
+----------------------------------------------------------------------
+docker compose ps
+
+Expected output:
+NAME                 IMAGE                STATUS         PORTS
+sankara-pexapp       operationsapp-app    Up (healthy)   0.0.0.0:8500->3000/tcp
+sankara-pexapp-db    postgres:16-alpine   Up (healthy)   0.0.0.0:5432->5432/tcp
+
+2. Test API Health Endpoint via curl:
+----------------------------------------------------------------------
+curl -i http://localhost:8500/api/health
+
+Expected response:
+HTTP/1.1 200 OK
+{
+  "status": "healthy",
+  "database": "connected",
+  "unitsCount": 14,
+  ...
+}
+
+3. Access Web Application in Browser:
+----------------------------------------------------------------------
+Portal URL: http://192.168.1.244:8500  (or your server's LAN IP / Domain)
+
+Test Logins:
+- Super Admin:       prabhanjan@sankaraeye.com  / Sankara@123
+- Zonal In-Charge:   zonal01@sankaraeye.com     / Sankara@123
+- Dept In-Charge:    incharge01@sankaraeye.com  / Sankara@123
+- Internal Auditor:  auditor01@sankaraeye.com   / Sankara@123
+
+
+================================================================================
+TROUBLESHOOTING & ROLLBACK COMMANDS
+================================================================================
+
+1. View full application error logs:
+docker compose logs app
+
+2. View PostgreSQL database logs:
+docker compose logs postgres
+
+3. Restart all services:
+docker compose restart
+
+4. If port 8500 is blocked by server firewall (UFW):
+sudo ufw allow 8500/tcp
+sudo ufw reload
+
+================================================================================
+CONTACT: IT & Digital Infrastructure Directorate • Sankara Eye Hospital
+================================================================================

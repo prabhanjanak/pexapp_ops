@@ -613,9 +613,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       );
     }
 
-    // Clean up stale demo users that are not in the new initial list
-    const validUserIds = SANKARA_INITIAL_USERS.map(u => u.id);
-    await client.query(`DELETE FROM users WHERE id NOT IN (${validUserIds.map((_, i) => `$${i + 1}`).join(',')}) AND role != 'Unit Head'`, validUserIds);
+    // Clean up legacy demo users from old domain (@sankara.com)
+    await client.query(`DELETE FROM users WHERE email LIKE '%@sankara.com'`);
 
   } catch (err: any) {
     await client.query('ROLLBACK');
