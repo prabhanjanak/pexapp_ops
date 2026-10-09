@@ -154,7 +154,9 @@ export default function App() {
     if (user.unitId) {
       setSelectedUnitId(user.unitId);
     }
-    if (user.appAccess === 'fives') {
+    const roleLower = (user.role || '').toLowerCase();
+    const isAuditor = roleLower.includes('auditor');
+    if (user.appAccess === 'fives' || isAuditor) {
       setPortalView('5s');
     } else if (user.appAccess === 'bottleneck') {
       setPortalView('bottleneck');
@@ -373,8 +375,9 @@ export default function App() {
 
   // Step 2b: Portal Access Permissions Verification
   const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.email?.toLowerCase().includes('prabhanjan') || currentUser.name?.toLowerCase().includes('prabhanjan');
+  const isAuditorOr5SRole = (currentUser.role || '').toLowerCase().includes('auditor') || (currentUser.role || '').toLowerCase().includes('zonal') || (currentUser.role || '').toLowerCase().includes('incharge') || (currentUser.role || '').toLowerCase().includes('department');
   const canAccessBottleneck = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'bottleneck';
-  const canAccess5S = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'fives';
+  const canAccess5S = isSuperAdmin || isAuditorOr5SRole || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'fives';
 
   // Step 3: Render 5S Kaizen Audit In-Progress View (Guarded)
   if (portalView === '5s') {

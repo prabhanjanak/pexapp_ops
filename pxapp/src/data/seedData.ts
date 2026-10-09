@@ -368,6 +368,74 @@ export const INITIAL_USERS: any[] = [
     appAccess: 'both',
     designation: 'Unit Head • Bengaluru Hospital',
     avatarInitials: 'SG'
+  },
+  {
+    id: 'user-zonal-1',
+    name: 'Dr. Anand Kumar',
+    email: 'zonal01@sankaraeye.com',
+    empId: 'ZONE-001',
+    password: 'Sankara@123',
+    role: 'Zonal Incharge',
+    unitId: 'unit-coimbatore',
+    unitName: 'Sankara Eye Hospital Coimbatore',
+    zoneId: 'Zone 1',
+    appAccess: 'both',
+    designation: 'Zonal Clinical Director • Zone 1',
+    avatarInitials: 'AK'
+  },
+  {
+    id: 'user-dept-1',
+    name: 'Meera Varma',
+    email: 'dept01@sankaraeye.com',
+    empId: 'DEPT-001',
+    password: 'Sankara@123',
+    role: 'Department Incharge',
+    unitId: 'unit-coimbatore',
+    unitName: 'Sankara Eye Hospital Coimbatore',
+    zoneId: 'Zone 1',
+    department: 'Doctor consultation rooms',
+    appAccess: 'both',
+    designation: 'Department In-Charge • Consultation Rooms',
+    avatarInitials: 'MV'
+  },
+  {
+    id: 'user-auditor-1',
+    name: 'Ganesh Ramamurthy',
+    email: 'auditor01@sankaraeye.com',
+    empId: 'AUD-001',
+    password: 'Sankara@123',
+    role: 'Auditor',
+    unitId: 'unit-coimbatore',
+    unitName: 'Sankara Eye Hospital Coimbatore',
+    appAccess: 'both',
+    designation: 'Certified 5S Auditor • Quality Excellence',
+    avatarInitials: 'GR'
+  },
+  {
+    id: 'user-auditor-alias',
+    name: 'Internal Auditor',
+    email: 'auditor@sankaraeye.com',
+    empId: 'AUD-000',
+    password: 'Sankara@123',
+    role: 'Auditor',
+    unitId: 'unit-coimbatore',
+    unitName: 'Sankara Eye Hospital Coimbatore',
+    appAccess: 'both',
+    designation: 'Internal 5S Auditor • Quality Excellence',
+    avatarInitials: 'IA'
+  },
+  {
+    id: 'user-auditor-rk',
+    name: 'R. K. Sharma',
+    email: 'rk.sharma@sankaraeye.com',
+    empId: 'AUD-002',
+    password: 'Sankara@123',
+    role: 'Auditor',
+    unitId: 'unit-coimbatore',
+    unitName: 'Sankara Eye Hospital Coimbatore',
+    appAccess: 'both',
+    designation: 'Internal 5S Auditor • Quality Assurance',
+    avatarInitials: 'RK'
   }
 ];
 

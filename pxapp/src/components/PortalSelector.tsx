@@ -33,8 +33,9 @@ export const PortalSelector: React.FC<PortalSelectorProps> = ({
   onOpenProfile
 }) => {
   const isSuperAdmin = currentUser.role === 'Super Admin' || currentUser.email?.toLowerCase().includes('prabhanjan') || currentUser.name?.toLowerCase().includes('prabhanjan');
+  const isAuditorOr5SRole = (currentUser.role || '').toLowerCase().includes('auditor') || (currentUser.role || '').toLowerCase().includes('zonal') || (currentUser.role || '').toLowerCase().includes('incharge') || (currentUser.role || '').toLowerCase().includes('department');
   const canAccessBottleneck = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'bottleneck';
-  const canAccess5S = isSuperAdmin || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'fives';
+  const canAccess5S = isSuperAdmin || isAuditorOr5SRole || !currentUser.appAccess || currentUser.appAccess === 'both' || currentUser.appAccess === 'fives';
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between selection:bg-orange-500 selection:text-white relative font-sans">
       

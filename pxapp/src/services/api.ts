@@ -132,7 +132,8 @@ export const api = {
         (u.empId && u.empId.toLowerCase() === cleanKey) ||
         (cleanKey.includes('saurabh') && u.email?.toLowerCase().includes('saurabh')) ||
         (cleanKey.includes('sudarshan') && u.email?.toLowerCase().includes('sudarshan')) ||
-        (cleanKey.includes('prabhanjan') && u.email?.toLowerCase().includes('prabhanjan'))
+        (cleanKey.includes('prabhanjan') && u.email?.toLowerCase().includes('prabhanjan')) ||
+        (cleanKey.includes('auditor') && (u.role === 'Auditor' || u.email?.toLowerCase().includes('auditor')))
     ) || (cleanKey.includes('010177') ? (INITIAL_USERS.find((u) => u.empId === '010177') || INITIAL_USERS[1]) : null);
 
     try {
