@@ -4,6 +4,10 @@
   "description": "Sankara Eye Care Institutions - Project Patient Experience (PPE) Operations App",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "npm --prefix pxapp run dev",
     "build": "npm --prefix pxapp run build",

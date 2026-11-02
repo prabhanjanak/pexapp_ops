@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "PostgreSQL REST API Backend for Sankara Eye Hospital Patient Experience (PX) Tracker",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",

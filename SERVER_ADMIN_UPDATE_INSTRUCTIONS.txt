@@ -39,6 +39,51 @@ DATABASE NOTE (IMPORTANT):
 - NO manual SQL migration scripts are required.
 
 ================================================================================
+NODE.JS VERSION REQUIREMENT & UPDATE GUIDE (NODE.JS 22 LTS)
+================================================================================
+REQUIRED NODE VERSION: Node.js >= 20.6.0 (Recommended: Node.js 22 LTS)
+Why: React 19, Vite 6, and ES module tsx import (`--import tsx`) require Node 20+.
+
+--> IF RUNNING WITH DOCKER:
+    The Dockerfile is already configured with `FROM node:22-alpine`.
+    To ensure the host has the latest Node 22 image, simply run:
+    docker pull node:22-alpine
+    docker compose build --no-cache app
+    docker compose up -d app
+
+--> IF RUNNING NATIVELY ON LINUX (UBUNTU / DEBIAN with PM2 or systemd):
+    Run these commands to upgrade the server's Node.js to Node.js 22 LTS:
+
+    # 1. Check current node version:
+    node -v
+
+    # 2. Add official NodeSource Node.js 22 LTS repository:
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+
+    # 3. Install Node.js 22 & npm:
+    sudo apt-get install -y nodejs
+
+    # 4. Verify the new version:
+    node -v   # Should output v22.x.x
+    npm -v    # Should output 10.x.x or higher
+
+    # 5. Update PM2 to use the new Node runtime:
+    sudo npm install -g pm2
+    pm2 update
+    pm2 restart ecosystem.config.cjs --env production
+
+--> IF USING NVM (Node Version Manager):
+    nvm install 22
+    nvm use 22
+    nvm alias default 22
+    node -v
+
+--> IF RUNNING ON RHEL / CENTOS / ALMALINUX / ROCKY LINUX:
+    curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+    sudo dnf install -y nodejs
+    node -v
+
+================================================================================
 OPTION A: UPDATE VIA GIT (RECOMMENDED - 4 COMMANDS)
 ================================================================================
 
