@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import { initializeDatabase } from './db.js';
 import { router as apiRouter } from './routes.js';
@@ -15,6 +16,42 @@ const distPath = path.resolve(__dirname, '../dist');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || process.env.API_PORT || '3000', 10);
+
+// High-performance Gzip compression middleware (WAN optimization for remote hospital units)
+app.use((req, res, next) => {
+  const acceptEncoding = (req.headers['accept-encoding'] as string) || '';
+  if (!acceptEncoding.includes('gzip')) {
+    return next();
+  }
+
+  const originalSend = res.send.bind(res);
+  const originalJson = res.json.bind(res);
+
+  res.json = (body: any): any => {
+    try {
+      const payload = typeof body === 'string' ? body : JSON.stringify(body);
+      if (Buffer.byteLength(payload) < 1024) {
+        return originalSend(payload);
+      }
+      zlib.gzip(Buffer.from(payload), (err, compressed) => {
+        if (err) {
+          originalSend(payload);
+          return;
+        }
+        res.setHeader('Content-Encoding', 'gzip');
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Vary', 'Accept-Encoding');
+        res.removeHeader('Content-Length');
+        originalSend(compressed);
+      });
+      return res;
+    } catch (_) {
+      return originalJson(body);
+    }
+  };
+
+  next();
+});
 
 // Middleware
 app.use(cors({

@@ -30,6 +30,7 @@ import {
   Zap,
   Target
 } from 'lucide-react';
+import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
 
 interface ExecutiveLeadershipDashboardProps {
   units: HospitalUnit[];
@@ -37,6 +38,7 @@ interface ExecutiveLeadershipDashboardProps {
   onSelectUnit?: (unitId: string) => void;
   onSwitchPortal?: (portal: '5s' | 'bottleneck') => void;
   onAddBottleneck?: (unitId: string, newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>) => void;
+  onUpdateBottleneck?: (unitId: string, bottleneckId: string, updates: Partial<Bottleneck>) => void;
 }
 
 // Curated Sankara Hospital Unit Real Visuals
@@ -64,7 +66,8 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
   currentUser,
   onSelectUnit,
   onSwitchPortal,
-  onAddBottleneck
+  onAddBottleneck,
+  onUpdateBottleneck
 }) => {
   // Navigation & Sub-views: 'dashboard' | 'tickets'
   const [activeMainTab, setActiveMainTab] = useState<'dashboard' | 'tickets'>('dashboard');
@@ -546,176 +549,40 @@ export const ExecutiveLeadershipDashboard: React.FC<ExecutiveLeadershipDashboard
 
           </div>
 
-          {/* 3 Bottom Analytics Panels */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Panel 1: Departmental Resolution Health */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-6">
+          {/* Evidence Container: Photographic Proof & Corrective Validation */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
-                <h4 className="text-sm font-black text-slate-900 mb-4 flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Compass className="w-4 h-4 text-orange-600" />
-                    <span>Clinical Department Flow</span>
-                  </span>
-                  {currentSelectedUnit && (
-                    <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
-                      {currentSelectedUnit.city}
-                    </span>
-                  )}
-                </h4>
-
-                <div className="space-y-3.5">
-                  {departmentBreakdown.slice(0, 5).map((dept) => (
-                    <div key={dept.name} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-700">{dept.name}</span>
-                        <span className="text-slate-900 font-extrabold">{dept.pct}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all duration-500"
-                          style={{ width: `${dept.pct}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[10px] text-slate-400">
-                        <span>{dept.total} items</span>
-                        <span>{dept.resolved} resolved</span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-[11px] font-black uppercase tracking-wider mb-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-orange-600" />
+                  Photographic Validation & Evidence Container
                 </div>
+                <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <span>Clinical & Operational Evidence Container</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-1 max-w-2xl">
+                  Inspect real-time Before & After photographic evidence, departmental proof submissions, and verify corrective directives across all 14 hospital units.
+                </p>
               </div>
 
-              <div className="p-3 bg-orange-50/70 border border-orange-200/80 rounded-2xl flex items-center justify-between text-xs font-bold text-orange-950">
-                <span>High-Impact Resolution Rate</span>
-                <span className="text-sm font-black text-orange-600">{stats.highImpactRate}%</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab('tickets')}
+                  className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-black shadow-md shadow-orange-500/20 flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>Open Action Matrix</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
 
-            {/* Panel 2: Patient Touchpoint Volumes */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-6">
-              <div>
-                <h4 className="text-sm font-black text-slate-900 mb-4 flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-orange-600" />
-                    <span>Touchpoint Flow Volume</span>
-                  </span>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                    Live Operational Log
-                  </span>
-                </h4>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
-                    <p className="text-2xl font-black text-slate-900">{stats.opFeedbacks}</p>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Outpatient (OPD)</p>
-                    <p className="text-[9px] text-emerald-600 font-bold mt-1">✓ Real-time Queue Sync</p>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
-                    <p className="text-2xl font-black text-slate-900">{stats.ipFeedbacks}</p>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Inpatient (IPD / OT)</p>
-                    <p className="text-[9px] text-emerald-600 font-bold mt-1">✓ Discharge Audit Active</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                    <span>Standard Workflow Compliance</span>
-                    <span className="text-slate-900">{stats.standardRate}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                      style={{ width: `${stats.standardRate}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-900 text-white rounded-2xl flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-300">Total Active Operations Scope</span>
-                <span className="text-amber-400 font-black">{stats.totalBottlenecks} Directives</span>
-              </div>
-            </div>
-
-            {/* Panel 3: Hospital Leadership Performance Scorecard */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-orange-500" />
-                    <span>Hospital Unit Scorecard</span>
-                  </h4>
-
-                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setRankingTab('ranking')}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold cursor-pointer transition-colors ${
-                        rankingTab === 'ranking' ? 'bg-white text-orange-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                    >
-                      Top Units
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRankingTab('criteria')}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold cursor-pointer transition-colors ${
-                        rankingTab === 'criteria' ? 'bg-white text-orange-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                    >
-                      Bed Size
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {rankedUnits.slice(0, 5).map((r, i) => (
-                    <div
-                      key={r.unit.id}
-                      onClick={() => onSelectUnit?.(r.unit.id)}
-                      className="p-2.5 rounded-xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50/50 flex items-center justify-between gap-2 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 ${
-                          i === 0 ? 'bg-amber-400 text-amber-950 font-black' : 'bg-slate-100 text-slate-700'
-                        }`}>
-                          {i + 1}
-                        </span>
-                        <div className="truncate">
-                          <p className="text-xs font-black text-slate-900 group-hover:text-orange-600 transition-colors truncate">
-                            {r.city}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-semibold truncate">
-                            {r.head}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-emerald-600 block">
-                          {r.rate}%
-                        </span>
-                        <span className="text-[9px] text-slate-400 font-medium">
-                          {r.done}/{r.total} done
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setActiveMainTab('tickets')}
-                className="w-full py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-black shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <span>Open Full Action Matrix</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
+            <EvidenceApprovalGrid
+              units={units}
+              selectedUnitId={selectedUnitId !== 'ALL' ? selectedUnitId : undefined}
+              onUpdateBottleneck={onUpdateBottleneck}
+              currentUserRole={currentUser.role}
+            />
           </div>
 
         </div>

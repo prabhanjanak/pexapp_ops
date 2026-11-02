@@ -19,7 +19,12 @@ import {
   MapPin,
   UserCheck,
   Sparkles,
-  BarChart3
+  BarChart3,
+  Filter,
+  X,
+  RotateCcw,
+  ChevronRight,
+  Check
 } from 'lucide-react';
 
 interface DashboardOverviewProps {
@@ -27,21 +32,36 @@ interface DashboardOverviewProps {
   currentUser: User;
   onSelectUnit?: (unitId: string) => void;
   onAddBottleneck?: (unitId: string, newBottleneck: Omit<Bottleneck, 'id' | 'lastUpdated'>) => void;
+  onUpdateBottleneck?: (unitId: string, bottleneckId: string, updates: Partial<Bottleneck>) => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   units,
   currentUser,
   onSelectUnit,
-  onAddBottleneck
+  onAddBottleneck,
+  onUpdateBottleneck
 }) => {
   const [dashboardMode, setDashboardMode] = useState<'leadership' | 'matrix'>('leadership');
   const [searchFilter, setSearchFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [unitStatusFilter, setUnitStatusFilter] = useState<'ALL' | 'ACTIVE' | 'RESOLVED'>('ALL');
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [targetUnitForAdd, setTargetUnitForAdd] = useState<string | undefined>(currentUser.unitId);
   const orgStats = calculateOrgStats(units);
+
+  const getBottleneckDate = (b: Bottleneck): Date => {
+    if (b.lastUpdated) {
+      const parsed = new Date(b.lastUpdated);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return new Date();
+  };
+
+  const isDateFiltered = Boolean(selectedMonth || startDate || endDate);
 
   // Filter units
   const filteredUnits = useMemo(() => {
@@ -61,6 +81,60 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       return true;
     });
   }, [units, searchFilter, unitStatusFilter]);
+
+  // Dynamic Bottlenecks filtered by active Month / Date range
+  const unitsForDisplay = useMemo(() => {
+    if (!isDateFiltered) return filteredUnits;
+    return filteredUnits.map(u => ({
+      ...u,
+      bottlenecks: u.bottlenecks.filter(b => {
+        const bDate = getBottleneckDate(b);
+        if (selectedMonth) {
+          const mKey = bDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          if (mKey !== selectedMonth) return false;
+        }
+        if (startDate) {
+          const s = new Date(startDate);
+          if (bDate < s) return false;
+        }
+        if (endDate) {
+          const e = new Date(endDate);
+          e.setHours(23, 59, 59, 999);
+          if (bDate > e) return false;
+        }
+        return true;
+      })
+    }));
+  }, [filteredUnits, isDateFiltered, selectedMonth, startDate, endDate]);
+
+  // Flat list of matching bottlenecks across network for instant inspection
+  const dateFilteredBottlenecks = useMemo(() => {
+    if (!isDateFiltered) return [];
+    const list: { unit: HospitalUnit; bottleneck: Bottleneck }[] = [];
+    units.forEach(u => {
+      u.bottlenecks.forEach(b => {
+        const bDate = getBottleneckDate(b);
+        let match = true;
+        if (selectedMonth) {
+          const mKey = bDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          if (mKey !== selectedMonth) match = false;
+        }
+        if (match && startDate) {
+          const s = new Date(startDate);
+          if (bDate < s) match = false;
+        }
+        if (match && endDate) {
+          const e = new Date(endDate);
+          e.setHours(23, 59, 59, 999);
+          if (bDate > e) match = false;
+        }
+        if (match) {
+          list.push({ unit: u, bottleneck: b });
+        }
+      });
+    });
+    return list;
+  }, [units, isDateFiltered, selectedMonth, startDate, endDate]);
 
   // Compute Monthly Stats dynamically from all bottlenecks over recent months
   const monthlyData: Record<string, { total: number; pending: number; inProgress: number; completed: number }> = useMemo(() => {
@@ -158,6 +232,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           currentUser={currentUser}
           onSelectUnit={onSelectUnit}
           onAddBottleneck={onAddBottleneck}
+          onUpdateBottleneck={onUpdateBottleneck}
         />
       )}
 
@@ -243,43 +318,153 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       </div>
 
       {/* Monthly Statistics & Trends Section */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-orange-600" />
               <h3 className="text-lg font-black text-slate-900">Monthly Operational Trends & Stats</h3>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Month-on-Month operational volume and resolution progress across Sankara hospitals
+              Filter and track operational bottlenecks according to month of input or custom date range across Sankara hospitals.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-              <span className="w-3 h-3 rounded-md bg-emerald-500 inline-block" /> Completed
-            </span>
-            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-              <span className="w-3 h-3 rounded-md bg-amber-500 inline-block" /> In Progress
-            </span>
-            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-              <span className="w-3 h-3 rounded-md bg-slate-400 inline-block" /> Pending
-            </span>
+          {/* Month / Date Filter Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quick Month Select Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700">
+              <span className="text-[11px] font-bold text-slate-400">Month:</span>
+              <select
+                value={selectedMonth || ''}
+                onChange={(e) => {
+                  setSelectedMonth(e.target.value || null);
+                  if (e.target.value) {
+                    setStartDate('');
+                    setEndDate('');
+                  }
+                }}
+                className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer"
+              >
+                <option value="">All Months</option>
+                {Object.keys(monthlyData).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date Range Inputs */}
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs">
+              <span className="text-[11px] font-bold text-slate-400">From:</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setSelectedMonth(null);
+                }}
+                className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none"
+              />
+              <span className="text-[11px] font-bold text-slate-400">To:</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setSelectedMonth(null);
+                }}
+                className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none"
+              />
+            </div>
+
+            {/* Clear Filter Button */}
+            {isDateFiltered && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMonth(null);
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-900 rounded-xl text-xs font-black flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+
+            <div className="hidden xl:flex items-center gap-2 pl-2 border-l border-slate-200">
+              <span className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Done
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> In Progress
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block" /> Pending
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Monthly Breakdown Grid */}
+        {/* Active Filter Banner */}
+        {isDateFiltered && (
+          <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-orange-600 shrink-0" />
+              <div>
+                <span className="font-extrabold text-orange-950">Active Date Filter: </span>
+                <span className="font-semibold text-orange-900">
+                  {selectedMonth ? `Month of ${selectedMonth}` : `Custom Range (${startDate || 'Start'} to ${endDate || 'End'})`}
+                </span>
+                <span className="text-orange-700/80 ml-2 font-medium">
+                  • Found <strong>{dateFilteredBottlenecks.length}</strong> bottleneck directives matching this period
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMonth(null);
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="text-orange-700 hover:text-orange-900 font-bold underline cursor-pointer text-left sm:text-right shrink-0"
+            >
+              Clear Filter (Show All)
+            </button>
+          </div>
+        )}
+
+        {/* Monthly Breakdown Grid (Clickable Month Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {Object.entries(monthlyData).map(([month, data]) => {
             const compPercent = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+            const isSelected = selectedMonth === month;
             return (
               <div
                 key={month}
-                className="bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-2xl p-4 transition-colors flex flex-col justify-between"
+                onClick={() => {
+                  setSelectedMonth(isSelected ? null : month);
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className={`rounded-2xl p-4 transition-all flex flex-col justify-between cursor-pointer border ${
+                  isSelected
+                    ? 'bg-orange-50/80 border-orange-500 shadow-md ring-2 ring-orange-500/20'
+                    : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-black text-slate-800">{month}</span>
+                    <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                      <span>{month}</span>
+                      {isSelected && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase">
+                          Active
+                        </span>
+                      )}
+                    </span>
                     <span className="text-xs font-extrabold text-emerald-600">{compPercent}%</span>
                   </div>
                   <p className="text-2xl font-black text-slate-900 mb-3">{data.total} <span className="text-xs text-slate-500 font-medium">total</span></p>
@@ -301,6 +486,61 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             );
           })}
         </div>
+
+        {/* Direct Matching Bottlenecks List when Date Filter is Active */}
+        {isDateFiltered && dateFilteredBottlenecks.length > 0 && (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                <Check className="w-3.5 h-3.5 text-orange-600" />
+                <span>Bottlenecks from {selectedMonth || 'selected date range'} ({dateFilteredBottlenecks.length} items)</span>
+              </h4>
+              <span className="text-[11px] text-slate-500 font-medium">Click on any unit below to view and update</span>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+              {dateFilteredBottlenecks.map(({ unit, bottleneck }) => (
+                <div
+                  key={`${unit.id}-${bottleneck.id}`}
+                  onClick={() => onSelectUnit && onSelectUnit(unit.id)}
+                  className="p-3 bg-white rounded-xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50/40 transition-colors flex items-center justify-between gap-3 cursor-pointer"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-orange-100 text-orange-800">
+                        {unit.city}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                        {bottleneck.category}
+                      </span>
+                      <span className="text-xs font-extrabold text-slate-900 truncate">
+                        {bottleneck.title}
+                      </span>
+                    </div>
+                    {bottleneck.lastUpdated && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Logged / Updated: {new Date(bottleneck.lastUpdated).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${
+                      bottleneck.status === 'Completed' || bottleneck.percentComplete >= 100
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : bottleneck.status === 'In progress'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {bottleneck.status} ({bottleneck.percentComplete}%)
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Unit-Wise Operational Performance Matrix */}
@@ -431,14 +671,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                {filteredUnits.length === 0 ? (
+                {unitsForDisplay.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-10 text-center text-slate-400 text-xs">
                       No hospital units matching the selected filter.
                     </td>
                   </tr>
                 ) : (
-                  filteredUnits.map((u) => {
+                  unitsForDisplay.map((u) => {
                     const stats = calculateUnitStats(u.bottlenecks);
                     return (
                       <tr
@@ -533,12 +773,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* 2. CARD GRID VIEW */}
         {viewMode === 'cards' && (
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredUnits.length === 0 ? (
+            {unitsForDisplay.length === 0 ? (
               <div className="col-span-full py-10 text-center text-slate-400 text-xs">
                 No hospital units matching the selected filter.
               </div>
             ) : (
-              filteredUnits.map((u) => {
+              unitsForDisplay.map((u) => {
                 const stats = calculateUnitStats(u.bottlenecks);
                 return (
                   <div

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { HospitalUnit, SuperAdminTab, User, Bottleneck, DbHealthStatus, UserRole } from '../types';
+import { HospitalUnit, SuperAdminTab, User, Bottleneck, DbHealthStatus, UserRole, AuditLog } from '../types';
 import { DashboardOverview } from './DashboardOverview';
 import { UnitsManagementView } from './UnitsManagementView';
 import { UnitHeadView } from './UnitHeadView';
@@ -39,7 +39,10 @@ import {
   ArrowLeft,
   ArrowUpRight,
   MessageSquare,
-  Tag
+  Tag,
+  History,
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 
 interface SuperAdminViewProps {
@@ -85,13 +88,31 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   };
 
   // Active / Completed Bottleneck state
-  const [viewScope, setViewScope] = useState<'active' | 'completed' | 'all'>(
+  const [viewScope, setViewScope] = useState<'active' | 'not_started' | 'in_progress' | 'completed' | 'all'>(
     activeTab === 'completed' ? 'completed' : 'active'
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnitFilter, setSelectedUnitFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'targetDate' | 'impact'>('newest');
   const [activeCommentBottleneck, setActiveCommentBottleneck] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
+
+  // Real-time Audit Logs state
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const fetchAuditLogs = () => {
+    setLogsLoading(true);
+    api.getAuditLogs()
+      .then(setLogs)
+      .catch((err) => console.error('Failed to load audit logs:', err))
+      .finally(() => setLogsLoading(false));
+  };
+
+  useEffect(() => {
+    if (activeTab === 'activity') {
+      fetchAuditLogs();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'completed') {
@@ -101,21 +122,37 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
     }
   }, [activeTab]);
 
-  // Compute counts for Active, Completed, All across units
-  const { totalCount, activeCount, completedCount } = useMemo(() => {
+  // Compute counts for Active, Not Started, In Progress, Completed, All across units
+  const { totalCount, activeCount, notStartedCount, inProgressCount, completedCount } = useMemo(() => {
     let total = 0;
     let active = 0;
+    let notStarted = 0;
+    let inProgress = 0;
     let completed = 0;
     for (const u of units) {
       if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
       for (const b of u.bottlenecks) {
         total++;
         const norm = normalizeStatus(b.status, b.percentComplete);
-        if (norm === 'Completed') completed++;
-        else active++;
+        if (norm === 'Completed') {
+          completed++;
+        } else {
+          active++;
+          if (norm === 'In progress') {
+            inProgress++;
+          } else {
+            notStarted++;
+          }
+        }
       }
     }
-    return { totalCount: total, activeCount: active, completedCount: completed };
+    return {
+      totalCount: total,
+      activeCount: active,
+      notStartedCount: notStarted,
+      inProgressCount: inProgress,
+      completedCount: completed
+    };
   }, [units, selectedUnitFilter]);
 
   // Flattened Bottlenecks for Network Active or Completed Tab
@@ -125,6 +162,8 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
       for (const b of u.bottlenecks) {
         const norm = normalizeStatus(b.status, b.percentComplete);
         if (viewScope === 'active' && norm === 'Completed') continue;
+        if (viewScope === 'not_started' && norm !== 'Not Started' && norm !== 'Pending') continue;
+        if (viewScope === 'in_progress' && norm !== 'In progress') continue;
         if (viewScope === 'completed' && norm !== 'Completed') continue;
         if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
 
@@ -243,6 +282,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           currentUser={currentUser}
           onSelectUnit={(id) => setInspectedUnitId(id)}
           onAddBottleneck={onAddBottleneck}
+          onUpdateBottleneck={onUpdateBottleneck}
         />
       )}
 
@@ -277,7 +317,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               </div>
 
               {/* View Scope Toggle */}
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => setViewScope('active')}
@@ -287,11 +327,45 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <span>⚡ Active</span>
+                  <span>⚡ All Active</span>
                   <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
                     viewScope === 'active' ? 'bg-orange-700/50 text-white' : 'bg-slate-200 text-slate-700'
                   }`}>
                     {activeCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewScope('not_started')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewScope === 'not_started'
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <span>⏳ Not Started</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                    viewScope === 'not_started' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {notStartedCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewScope('in_progress')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewScope === 'in_progress'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <span>🔄 In Progress</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                    viewScope === 'in_progress' ? 'bg-amber-700/50 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {inProgressCount}
                   </span>
                 </button>
 
@@ -606,6 +680,63 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* 6. AUDIT LOGS TAB */}
+      {activeTab === 'activity' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <History className="w-5 h-5 text-orange-600" />
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Hospital Operational Audit Log</h3>
+                <p className="text-xs text-slate-500 font-medium">Real-time governance trail across all 14 hospital units</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={fetchAuditLogs}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${logsLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh Log</span>
+            </button>
+          </div>
+
+          {logsLoading ? (
+            <p className="text-xs text-slate-400 py-12 text-center">Loading audit records...</p>
+          ) : logs.length === 0 ? (
+            <p className="text-xs text-slate-400 py-12 text-center font-bold">No audit records logged yet.</p>
+          ) : (
+            <div className="divide-y divide-slate-100 text-xs max-h-[700px] overflow-y-auto">
+              {logs.map((l) => (
+                <div key={l.id} className="py-3.5 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-slate-900">{l.action}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold">
+                        {l.userRole || 'System'}
+                      </span>
+                      {l.unitId && (
+                        <span className="px-2 py-0.5 rounded-md bg-orange-50 text-orange-800 text-[10px] font-bold">
+                          {l.unitId}
+                        </span>
+                      )}
+                    </div>
+                    {l.details && (
+                      <p className="text-slate-600 font-mono text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-100 max-w-2xl break-all">
+                        {typeof l.details === 'string' ? l.details : JSON.stringify(l.details)}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-slate-400 shrink-0 text-[11px] font-medium">
+                    {new Date(l.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

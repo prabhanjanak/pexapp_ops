@@ -82,7 +82,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'targetDate' | 'impact' | 'updated'>('newest');
-  const [viewScope, setViewScope] = useState<'active' | 'completed' | 'all'>(
+  const [viewScope, setViewScope] = useState<'active' | 'not_started' | 'in_progress' | 'completed' | 'all'>(
     activeTab === 'completed' ? 'completed' : 'active'
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -177,6 +177,8 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
       
       // Filter based on viewScope
       if (viewScope === 'active' && norm === 'Completed') return false;
+      if (viewScope === 'not_started' && norm !== 'Not Started' && norm !== 'Pending') return false;
+      if (viewScope === 'in_progress' && norm !== 'In progress') return false;
       if (viewScope === 'completed' && norm !== 'Completed') return false;
 
       const matchesStatus =
@@ -418,7 +420,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
               </div>
 
               {/* View Scope Toggle: Active vs Completed vs All */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+              <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
                 <button
                   type="button"
                   onClick={() => setViewScope('active')}
@@ -429,6 +431,28 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                   }`}
                 >
                   ⚡ Active ({Math.max(0, stats.total - stats.completed)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewScope('not_started')}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    viewScope === 'not_started'
+                      ? 'bg-slate-700 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ⏳ Not Started ({stats.notStarted || stats.pending})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewScope('in_progress')}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    viewScope === 'in_progress'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🔄 In Progress ({stats.inProgress})
                 </button>
                 <button
                   type="button"

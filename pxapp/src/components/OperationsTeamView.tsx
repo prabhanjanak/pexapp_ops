@@ -76,7 +76,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   const [isAddBottleneckModalOpen, setIsAddBottleneckModalOpen] = useState(false);
   const [editingBottleneckData, setEditingBottleneckData] = useState<{ unitId: string; bottleneck: Bottleneck } | null>(null);
 
-  const [viewScope, setViewScope] = useState<'active' | 'completed' | 'all'>(
+  const [viewScope, setViewScope] = useState<'active' | 'not_started' | 'in_progress' | 'completed' | 'all'>(
     activeTab === 'completed' ? 'completed' : 'active'
   );
 
@@ -96,20 +96,36 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   }, [activeTab]);
 
   // Counts for Scope Pills
-  const { totalCount, activeCount, completedCount } = useMemo(() => {
+  const { totalCount, activeCount, notStartedCount, inProgressCount, completedCount } = useMemo(() => {
     let total = 0;
     let active = 0;
+    let notStarted = 0;
+    let inProgress = 0;
     let completed = 0;
     for (const u of units) {
       if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
       for (const b of u.bottlenecks) {
         total++;
         const norm = normalizeStatus(b.status, b.percentComplete);
-        if (norm === 'Completed') completed++;
-        else active++;
+        if (norm === 'Completed') {
+          completed++;
+        } else {
+          active++;
+          if (norm === 'In progress') {
+            inProgress++;
+          } else {
+            notStarted++;
+          }
+        }
       }
     }
-    return { totalCount: total, activeCount: active, completedCount: completed };
+    return {
+      totalCount: total,
+      activeCount: active,
+      notStartedCount: notStarted,
+      inProgressCount: inProgress,
+      completedCount: completed
+    };
   }, [units, selectedUnitFilter]);
 
   // Flattened Bottlenecks for Network Active or Completed Tab
@@ -119,6 +135,8 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
       for (const b of u.bottlenecks) {
         const norm = normalizeStatus(b.status, b.percentComplete);
         if (viewScope === 'active' && norm === 'Completed') continue;
+        if (viewScope === 'not_started' && norm !== 'Not Started' && norm !== 'Pending') continue;
+        if (viewScope === 'in_progress' && norm !== 'In progress') continue;
         if (viewScope === 'completed' && norm !== 'Completed') continue;
         if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
 
@@ -217,6 +235,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
           currentUser={currentUser}
           onSelectUnit={(id) => setInspectedUnitId(id)}
           onAddBottleneck={onAddBottleneck}
+          onUpdateBottleneck={onUpdateBottleneck}
         />
       )}
 
@@ -252,7 +271,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
               </div>
 
               {/* View Scope Toggle */}
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => setViewScope('active')}
@@ -262,11 +281,45 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
-                  <span>⚡ Active</span>
+                  <span>⚡ All Active</span>
                   <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
                     viewScope === 'active' ? 'bg-orange-700/50 text-white' : 'bg-slate-200 text-slate-700'
                   }`}>
                     {activeCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewScope('not_started')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewScope === 'not_started'
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <span>⏳ Not Started</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                    viewScope === 'not_started' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {notStartedCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setViewScope('in_progress')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    viewScope === 'in_progress'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <span>🔄 In Progress</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                    viewScope === 'in_progress' ? 'bg-amber-700/50 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {inProgressCount}
                   </span>
                 </button>
 

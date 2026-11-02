@@ -1,32 +1,45 @@
 ================================================================================
-SANKARA EYE HOSPITAL - PROJECT PATIENT EXPERIENCE & 5S KAIZEN (2.0.0)
+SANKARA EYE HOSPITAL - PROJECT PATIENT EXPERIENCE & 5S KAIZEN (2.1.0)
 SERVER ADMINISTRATOR UPDATE & REDEPLOYMENT INSTRUCTIONS
 ================================================================================
 
-DATE: October 2026
+DATE: November 2026
 ENVIRONMENT: Production Docker Compose / Linux Server
 TARGET SERVER: 192.168.1.244 (or Cloud VM)
 APPLICATION PORT: 8500 (mapped to internal container port 3000)
 DATABASE: PostgreSQL 16 (persistent docker volume 'postgres_data')
 
 --------------------------------------------------------------------------------
-OVERVIEW OF THIS UPDATE:
+OVERVIEW OF THIS UPDATE (v2.1.0):
 --------------------------------------------------------------------------------
-This release updates the application with:
-1. New 5S Clinical Roles: Zonal Incharge, Department Incharge, and Internal Auditor.
-2. Department-wise Before & After CAPA (Corrective & Preventive Action) workflow.
-3. Zone Incharge Dashboard with multi-department audit tracking and radar charts.
-4. Non-Conformity (NC) Review & Closure Portal with 4-step actions.
-5. Centralized Staff Directory with role and unit-scoped access control.
+This release addresses critical WAN performance, network reliability, and UI updates:
+1. FIX WAN TIMEOUT CANCELLATION FOR REMOTE UNITS (Shimoga, Jaipur, etc.):
+   - Problem: Remote hospital clients aborted /api/units after 4.45s with 0 bytes over WAN.
+   - Solution: Client-side fetch AbortController timeout extended from 4.5s to 30.0s.
+   - Server Optimization: Built-in Gzip stream compression enabled on the Node.js
+     backend (compresses JSON payloads > 1KB down to ~8-12KB, 85% bandwidth reduction).
+2. REMOVED "14 Unit & Unit Heads" TAB:
+   - Sidebar cleaned for Super Admin & Operations Team; units are seamlessly managed
+     through the executive matrix and inspect modals.
+3. BOTTLENECK FILTERS:
+   - Added explicit "Not started" and "In progress" filters alongside "Active", "Completed",
+     and "All" with real-time badge counts.
+4. EVIDENCE CONTAINER (Executive Dashboard):
+   - Replaced bottom 3 static panels with an interactive Clinical & Operational
+     Evidence Approval Container featuring Before/After photo proof, lightbox, and approvals.
+5. MONTHLY STATS DATEWISE & MONTH FILTER:
+   - Added interactive Month picker and Start/End Date range filters to dynamically
+     filter bottlenecks according to months of input across all 14 hospital units.
+6. CATEGORIES & AUDIT LOGS:
+   - Dedicated "Categories & Depts" and "Audit Logs" real-time activity views.
 
 DATABASE NOTE (IMPORTANT):
 - Your existing PostgreSQL database and records are 100% PRESERVED.
-- All database schema updates (adding zone_id, department columns to users table)
-  and new role accounts run AUTOMATICALLY on container boot.
+- Automatic schema migration and seeding run safely on container boot.
 - NO manual SQL migration scripts are required.
 
 ================================================================================
-OPTION A: UPDATE VIA GIT (RECOMMENDED - 3 COMMANDS)
+OPTION A: UPDATE VIA GIT (RECOMMENDED - 4 COMMANDS)
 ================================================================================
 
 Step 1: SSH into the server and navigate to the application directory:
@@ -52,6 +65,18 @@ docker compose logs -f --tail=50 app
 
 (Press Ctrl+C to exit log streaming once you see "Server running on http://0.0.0.0:3000")
 
+
+================================================================================
+VERIFYING THE REMOTE WAN TIMEOUT FIX:
+================================================================================
+
+1. Test API response time and gzip compression locally on the server:
+   curl -I -H "Accept-Encoding: gzip" http://127.0.0.1:8500/api/units
+   # Expected: Content-Encoding: gzip, HTTP/1.1 200 OK
+
+2. Test timing from remote branch PC (Shimoga / Jaipur):
+   curl -s -o /dev/null -w "connect:%{time_connect} ttfb:%{time_starttransfer} total:%{time_total} size:%{size_download}\n" http://192.168.1.244:8500/api/units
+   # Response size should now be ~8KB (compressed) instead of >100KB, completing in <1s.
 
 ================================================================================
 OPTION B: UPDATE VIA AUTOMATED BASH SCRIPT (ONE COMMAND)

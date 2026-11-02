@@ -77,11 +77,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president')) {
       return [
         { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
-        { id: 'units', label: '14 Units & Unit Heads', icon: Building2 },
         { id: 'bottlenecks', label: 'Active Bottlenecks', icon: Activity, count: activeCount, countColor: 'bg-amber-500 text-slate-950' },
         { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
         { id: 'evidence', label: 'Photo Approvals', icon: Camera },
         { id: 'categories', label: 'Categories & Depts', icon: Tag },
+        { id: 'activity', label: 'Audit Logs', icon: History },
         { id: 'database', label: 'Database Health', icon: Database }
       ];
     }
@@ -89,23 +89,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (currentUser.role === 'Operations Team' || currentUser.role === 'Super Admin (View Only)') {
       return [
         { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard },
-        { id: 'units', label: '14 Units & Unit Heads', icon: Building2 },
         { id: 'bottlenecks', label: 'Network Bottlenecks', icon: Activity, count: activeCount, countColor: 'bg-amber-500 text-slate-950' },
         { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
         { id: 'evidence', label: 'Evidence Approvals', icon: Camera },
         { id: 'categories', label: 'Categories & Depts', icon: Tag },
-        { id: 'activity', label: 'Audit Log Feed', icon: History }
+        { id: 'activity', label: 'Audit Logs', icon: History }
       ];
     }
 
     // Default Super Admin / All Access
     return [
       { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
-      { id: 'units', label: '14 Units & Unit Heads', icon: Building2 },
       { id: 'bottlenecks', label: 'Active Bottlenecks', icon: Activity, count: activeCount, countColor: 'bg-amber-500 text-slate-950' },
       { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
       { id: 'evidence', label: 'Photo Approvals', icon: Camera },
       { id: 'categories', label: 'Categories & Depts', icon: Tag },
+      { id: 'activity', label: 'Audit Logs', icon: History },
       { id: 'database', label: 'Database Health', icon: Database }
     ];
   };
