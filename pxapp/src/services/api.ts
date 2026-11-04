@@ -1,4 +1,4 @@
-import { HospitalUnit, Bottleneck, AuditLog, DbHealthStatus, User, AuthSession, CategoryItem, DepartmentItem } from '../types';
+import { HospitalUnit, Bottleneck, AuditLog, DbHealthStatus, User, AuthSession, CategoryItem, DepartmentItem, UnitEmployee } from '../types';
 import { INITIAL_USERS, INITIAL_UNITS } from '../data/seedData';
 
 const API_BASE = '/api';
@@ -247,6 +247,9 @@ export const api = {
     role: string;
     unitId?: string;
     unit?: string;
+    unitName?: string;
+    zoneId?: string;
+    department?: string;
     empId?: string;
     designation?: string;
     appAccess?: 'both' | 'bottleneck' | 'fives';
@@ -262,7 +265,9 @@ export const api = {
       password: 'Sankara@123',
       role: userData.role as any,
       unitId: finalUnitId,
-      unitName: assignedUnit?.name,
+      unitName: userData.unitName || assignedUnit?.name,
+      zoneId: userData.zoneId,
+      department: userData.department,
       appAccess: userData.appAccess || 'both',
       designation: userData.designation || (userData.role === 'Unit Head' ? `${assignedUnit?.name || 'Unit'} Head` : userData.role),
       avatarInitials: userData.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'SK'
@@ -293,18 +298,24 @@ export const api = {
     role?: string;
     unitId?: string;
     unit?: string;
+    unitName?: string;
+    zoneId?: string;
+    department?: string;
     empId?: string;
     designation?: string;
     appAccess?: 'both' | 'bottleneck' | 'fives';
   }): Promise<User> => {
     const existing = (await api.getUsers()).find(u => u.id === id);
     const updatedUser: User = {
-      ...(existing || { id, name: updates.name || '', email: updates.email || '', role: (updates.role as any) || 'Unit Head' }),
+      ...(existing || { id, name: updates.name || '', email: updates.email || '', role: (updates.role as any) || 'Unit Head', avatarInitials: 'SK' }),
       ...(updates.name ? { name: updates.name } : {}),
       ...(updates.email || updates.orgEmail ? { email: (updates.email || updates.orgEmail)!.trim().toLowerCase() } : {}),
       ...(updates.empId !== undefined ? { empId: updates.empId } : {}),
       ...(updates.role ? { role: updates.role as any } : {}),
       ...(updates.unitId !== undefined ? { unitId: updates.unitId } : {}),
+      ...(updates.unitName !== undefined ? { unitName: updates.unitName } : {}),
+      ...(updates.zoneId !== undefined ? { zoneId: updates.zoneId } : {}),
+      ...(updates.department !== undefined ? { department: updates.department } : {}),
       ...(updates.designation !== undefined ? { designation: updates.designation } : {}),
       ...(updates.appAccess !== undefined ? { appAccess: updates.appAccess } : {})
     };
@@ -485,6 +496,10 @@ export const api = {
     afterPhotos?: string[];
     tasks?: { id: string; text: string; isCompleted: boolean }[];
     userRole?: string;
+    userName?: string;
+    raisedBy?: string;
+    raisedByRole?: string;
+    raisedDate?: string;
   }): Promise<Bottleneck> => {
     return fetchJson<Bottleneck>('/bottlenecks', {
       method: 'POST',
@@ -493,9 +508,17 @@ export const api = {
   },
 
   updateBottleneck: async (
-    id: string,
-    updates: Partial<Bottleneck> & { userRole?: string }
+    arg1: string,
+    arg2: any,
+    arg3?: any
   ): Promise<Bottleneck> => {
+    let id = arg1;
+    let updates = arg2;
+    if (typeof arg2 === 'string' && arg3) {
+      // Called as (unitId, bottleneckId, updates)
+      id = arg2;
+      updates = arg3;
+    }
     return fetchJson<Bottleneck>(`/bottlenecks/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
@@ -682,6 +705,89 @@ export const api = {
         method: 'DELETE'
       });
     } catch (_) {
+      return { success: true, deletedId: id };
+    }
+  },
+
+  // Unit Employee Master API
+  getUnitEmployees: async (unitId?: string, activeOnly: boolean = false): Promise<UnitEmployee[]> => {
+    try {
+      const params = new URLSearchParams();
+      if (unitId && unitId !== 'ALL') params.append('unitId', unitId);
+      if (activeOnly) params.append('activeOnly', 'true');
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      return await fetchJson<UnitEmployee[]>(`/unit-employees${qs}`);
+    } catch (_) {
+      const raw = localStorage.getItem('sankara_local_unit_employees_v1');
+      let list: UnitEmployee[] = raw ? JSON.parse(raw) : [
+        { id: 'emp-smg-01', name: 'Ranjitha', email: 'ranjitha.smg@sankaraeye.com', unitId: 'unit-shimoga', department: 'Patient Care', designation: 'Patient Care Manager', status: 'Active' },
+        { id: 'emp-smg-02', name: 'Rajesh Kumar', email: 'rajesh.smg@sankaraeye.com', unitId: 'unit-shimoga', department: 'Operations', designation: 'Operations Executive', status: 'Active' },
+        { id: 'emp-smg-03', name: 'Sunitha M', email: 'sunitha.smg@sankaraeye.com', unitId: 'unit-shimoga', department: 'Administration', designation: 'Administrative Officer', status: 'Active' },
+        { id: 'emp-ind-01', name: 'Amit Verma', email: 'amit.ind@sankaraeye.com', unitId: 'unit-indore', department: 'Patient Care', designation: 'Patient Care Executive', status: 'Active' },
+        { id: 'emp-ind-02', name: 'Priya Joshi', email: 'priya.ind@sankaraeye.com', unitId: 'unit-indore', department: 'Operations', designation: 'Quality Coordinator', status: 'Active' },
+        { id: 'emp-ind-03', name: 'Dr. Sachin Kale', email: 'sachin.ind@sankaraeye.com', unitId: 'unit-indore', department: 'Administration', designation: 'Hospital Administrator', status: 'Active' },
+        { id: 'emp-cbe-01', name: 'K. Vasanthi', email: 'vasanthi.cbe@sankaraeye.com', unitId: 'unit-coimbatore', department: 'Patient Care', designation: 'Patient Experience Supervisor', status: 'Active' },
+        { id: 'emp-cbe-02', name: 'R. Sundar', email: 'sundar.cbe@sankaraeye.com', unitId: 'unit-coimbatore', department: 'Operations', designation: 'Operations Lead', status: 'Active' }
+      ];
+      if (unitId && unitId !== 'ALL') {
+        list = list.filter(e => e.unitId === unitId);
+      }
+      if (activeOnly) {
+        list = list.filter(e => e.status === 'Active');
+      }
+      return list;
+    }
+  },
+
+  createUnitEmployee: async (data: Omit<UnitEmployee, 'id'>): Promise<UnitEmployee> => {
+    try {
+      return await fetchJson<UnitEmployee>('/unit-employees', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    } catch (_) {
+      const newEmp: UnitEmployee = {
+        ...data,
+        id: `emp-${Date.now()}`
+      };
+      const raw = localStorage.getItem('sankara_local_unit_employees_v1');
+      const list: UnitEmployee[] = raw ? JSON.parse(raw) : [];
+      list.push(newEmp);
+      localStorage.setItem('sankara_local_unit_employees_v1', JSON.stringify(list));
+      return newEmp;
+    }
+  },
+
+  updateUnitEmployee: async (id: string, updates: Partial<UnitEmployee>): Promise<UnitEmployee> => {
+    try {
+      return await fetchJson<UnitEmployee>(`/unit-employees/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+    } catch (_) {
+      const raw = localStorage.getItem('sankara_local_unit_employees_v1');
+      const list: UnitEmployee[] = raw ? JSON.parse(raw) : [];
+      const idx = list.findIndex(e => e.id === id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...updates };
+        localStorage.setItem('sankara_local_unit_employees_v1', JSON.stringify(list));
+        return list[idx];
+      }
+      return { id, ...updates } as UnitEmployee;
+    }
+  },
+
+  deleteUnitEmployee: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
+    try {
+      return await fetchJson<{ success: boolean; deletedId: string }>(`/unit-employees/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (_) {
+      const raw = localStorage.getItem('sankara_local_unit_employees_v1');
+      if (raw) {
+        const list = JSON.parse(raw).filter((e: any) => e.id !== id);
+        localStorage.setItem('sankara_local_unit_employees_v1', JSON.stringify(list));
+      }
       return { success: true, deletedId: id };
     }
   },

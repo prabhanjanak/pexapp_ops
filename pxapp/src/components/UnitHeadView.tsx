@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { HospitalUnit, Bottleneck, BottleneckStatus, BottleneckCategory, UnitHeadTab, User, STATUS_STAGES, STATUS_PERCENT_MAP } from '../types';
+import { HospitalUnit, Bottleneck, BottleneckStatus, BottleneckCategory, UnitHeadTab, User, UnitEmployee, STATUS_STAGES, STATUS_PERCENT_MAP } from '../types';
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import { CATEGORIES } from '../data/seedData';
 import { AddBottleneckModal } from './AddBottleneckModal';
@@ -46,7 +46,11 @@ import {
   ArrowLeft,
   ArrowUpDown,
   Edit3,
-  Trash2
+  Trash2,
+  History,
+  AlertTriangle,
+  UserCheck,
+  X
 } from 'lucide-react';
 
 interface UnitHeadViewProps {
@@ -122,6 +126,9 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     isOpen: false,
     bottleneck: null
   });
+
+  // History & Audit Log Modal state
+  const [historyBottleneck, setHistoryBottleneck] = useState<Bottleneck | null>(null);
 
   // Local active remarks tracking for fast typing before onBlur
   const [editingRemarks, setEditingRemarks] = useState<Record<string, string>>({});
@@ -244,19 +251,56 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     });
   };
 
-  // Confirm Assignment with Deadline from Modal
-  const handleConfirmAssignment = (targetDate: string, owner: string, remarks: string) => {
+  // Acknowledge bottleneck by Unit Head
+  const handleAcknowledge = (bottleneck: Bottleneck) => {
+    onUpdateBottleneck?.(currentUnit.id, bottleneck.id, {
+      status: 'Acknowledged',
+      percentComplete: bottleneck.percentComplete > 0 ? bottleneck.percentComplete : 25,
+      acknowledgedBy: currentUser.name,
+      acknowledgedAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  // Flag bottleneck as requiring MHQ resolution / intervention
+  const handleResolvedByMhq = (bottleneck: Bottleneck) => {
+    if (!window.confirm(`Flag "${bottleneck.title}" as requiring central MHQ Intervention / Resolution? This will be prioritized in the MHQ Operations Directorate.`)) {
+      return;
+    }
+    onUpdateBottleneck?.(currentUnit.id, bottleneck.id, {
+      status: 'Requires MHQ Intervention',
+      requiresMhqIntervention: true,
+      mhqInterventionBy: currentUser.name,
+      mhqInterventionAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  // Confirm Assignment with Deadline & Employee from Modal
+  const handleConfirmAssignment = (
+    targetDate: string,
+    owner: string,
+    remarks: string,
+    employee?: UnitEmployee
+  ) => {
     if (!assignModalState.bottleneck) return;
     const b = assignModalState.bottleneck;
 
     onUpdateBottleneck?.(currentUnit.id, b.id, {
-      status: 'In progress',
-      percentComplete: 70,
+      status: 'Assigned to Employee',
+      percentComplete: b.percentComplete > 0 ? b.percentComplete : 40,
       targetDate,
-      owner: owner || b.owner,
+      owner: (employee && employee.name) ? employee.name : (owner || b.owner),
       remarks: remarks || b.remarks,
+      assignedEmployeeId: employee?.id || b.assignedEmployeeId,
+      assignedEmployeeName: employee?.name || b.assignedEmployeeName,
+      assignedEmployeeDept: employee?.department || b.assignedEmployeeDept,
+      assignedEmployeeEmail: employee?.email || b.assignedEmployeeEmail,
+      assignedBy: currentUser.name,
+      assignedAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString().split('T')[0]
     });
+    setAssignModalState({ isOpen: false, bottleneck: null });
   };
 
   // Handle Remarks Blur Save
@@ -535,36 +579,112 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                 return (
                   <div
                     key={item.id}
-                    className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-300 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                    className={`bg-white border rounded-2xl p-5 shadow-xs transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
+                      item.requiresMhqIntervention
+                        ? 'border-purple-300 ring-2 ring-purple-100 hover:border-purple-400'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
                   >
                     {/* Left: Title, Category, Owner & Meta */}
-                    <div className="space-y-2 flex-1">
+                    <div className="space-y-2.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200">
                           {item.category}
                         </span>
+                        {item.department && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                            🏢 {item.department}
+                          </span>
+                        )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${impactBadge}`}>
                           {item.impactLevel || 'Medium'} Impact
                         </span>
-                        <span className="text-[11px] text-slate-400">
-                          Updated: {item.lastUpdated}
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${badge.badge}`}>
+                          {badge.label}
                         </span>
+                        {item.requiresMhqIntervention && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-purple-600" />
+                            <span>Requires MHQ Intervention</span>
+                          </span>
+                        )}
                         {item.targetDate && (
-                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                             🎯 Target: {item.targetDate}
                           </span>
                         )}
                       </div>
 
-                      <h4 className="text-sm font-black text-slate-900">
-                        {item.title}
-                      </h4>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900">
+                          {item.title}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 mt-1">
+                          {item.raisedBy && (
+                            <span>
+                              Raised by: <strong className="text-slate-700">{item.raisedBy}</strong>
+                              {item.raisedByRole ? ` (${item.raisedByRole})` : ''}
+                              {item.raisedDate ? ` on ${item.raisedDate}` : ''}
+                            </span>
+                          )}
+                          <span>•</span>
+                          <span>Last updated: <strong className="text-slate-700">{item.lastUpdated || 'Today'}</strong></span>
+                        </div>
+                      </div>
 
                       {item.notes && (
-                        <p className="text-xs text-slate-600 font-normal">
+                        <p className="text-xs text-slate-600 font-normal bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                           {item.notes}
                         </p>
                       )}
+
+                      {/* Acknowledgement and Assignment Indicators */}
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        {item.acknowledgedBy ? (
+                          <div className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>
+                              Acknowledged by <strong>{item.acknowledgedBy}</strong>
+                              {item.acknowledgedAt ? ` on ${new Date(item.acknowledgedAt).toLocaleDateString()}` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Pending Acknowledgement</span>
+                            {!viewOnly && (
+                              <button
+                                type="button"
+                                onClick={() => handleAcknowledge(item)}
+                                className="ml-1 px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] shadow-xs cursor-pointer transition-colors"
+                              >
+                                ✓ Acknowledge
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {item.assignedEmployeeName ? (
+                          <div className="text-[11px] font-semibold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 flex items-center gap-1.5">
+                            <UserCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            <span>
+                              Assigned to: <strong>{item.assignedEmployeeName}</strong>
+                              {item.assignedEmployeeDept ? ` (${item.assignedEmployeeDept})` : ''}
+                              {item.assignedEmployeeEmail ? ` • ${item.assignedEmployeeEmail}` : ''}
+                            </span>
+                          </div>
+                        ) : item.owner && item.owner !== 'Unit Head' ? (
+                          <div className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5">
+                            <UserIcon className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <span>Owner: <strong>{item.owner}</strong></span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5">
+                            <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>No Employee Assigned</span>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Action Checklist Tasks */}
                       <div className="pt-1">
@@ -577,14 +697,14 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                         />
                       </div>
 
-                      {/* Directives & Assignment Buttons */}
-                      <div className="flex items-center gap-3 pt-1 flex-wrap">
+                      {/* Directives, Assignment & MHQ Actions */}
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
                         <button
                           onClick={() => setActiveCommentBottleneck(item)}
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-xs font-bold text-slate-700 hover:text-orange-700 transition-colors cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-orange-500" />
-                          <span>Management Directives</span>
+                          <span>Directives</span>
                           {commentsCount > 0 && (
                             <span className="px-1.5 py-0.2 rounded-full bg-orange-600 text-white text-[10px] font-black">
                               {commentsCount}
@@ -594,12 +714,40 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
 
                         {!viewOnly && (
                           <>
+                            {/* Assign to Unit Employee Button */}
                             <button
                               type="button"
                               onClick={() => setAssignModalState({ isOpen: true, bottleneck: item })}
-                              className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold text-indigo-700 transition-colors cursor-pointer"
+                              title="Assign to a verified employee of this unit"
                             >
-                              <span>🎯 {item.targetDate ? `Due ${item.targetDate}` : 'Assign Deadline'}</span>
+                              <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>{item.assignedEmployeeName ? `Reassign (${item.assignedEmployeeName})` : 'Assign Employee'}</span>
+                            </button>
+
+                            {/* Resolved by MHQ Action Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleResolvedByMhq(item)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                item.requiresMhqIntervention
+                                  ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                                  : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200'
+                              }`}
+                              title="Indicate that this bottleneck requires resolution or intervention from central MHQ"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-purple-600" />
+                              <span>Resolved by MHQ</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setHistoryBottleneck(item)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                              title="View full audit trail and update history"
+                            >
+                              <History className="w-3.5 h-3.5 text-slate-500" />
+                              <span>History ({item.history?.length || 0})</span>
                             </button>
 
                             <button
@@ -820,6 +968,79 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
       )}
 
 
+
+      {/* Bottleneck History & Audit Trail Modal */}
+      {historyBottleneck && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl p-6 space-y-4 my-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Audit Trail & Update History</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{historyBottleneck.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setHistoryBottleneck(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+              {(!historyBottleneck.history || historyBottleneck.history.length === 0) ? (
+                <div className="text-center py-10 text-slate-400 text-xs font-semibold">
+                  No historical updates recorded for this bottleneck yet.
+                </div>
+              ) : (
+                historyBottleneck.history.map((h, idx) => (
+                  <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-slate-800 flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-orange-600" />
+                        {h.updatedBy || 'System'}
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {h.timestamp ? new Date(h.timestamp).toLocaleString() : ''}
+                      </span>
+                    </div>
+                    {h.field && (
+                      <p className="text-[11px] font-bold text-slate-600">
+                        Field: <span className="text-orange-700">{h.field}</span>
+                      </p>
+                    )}
+                    {(h.previousValue !== undefined || h.updatedValue !== undefined) && (
+                      <div className="flex items-center gap-2 text-[11px] font-medium bg-white p-2 rounded-xl border border-slate-200">
+                        <span className="text-slate-500 line-through">{String(h.previousValue || '(empty)')}</span>
+                        <ArrowRight className="w-3 h-3 text-slate-400" />
+                        <span className="text-emerald-700 font-bold">{String(h.updatedValue || '(empty)')}</span>
+                      </div>
+                    )}
+                    {h.remarks && (
+                      <p className="text-[11px] text-slate-600 italic">
+                        "{h.remarks}"
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setHistoryBottleneck(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Bottleneck Modal */}
       {editingBottleneck && (

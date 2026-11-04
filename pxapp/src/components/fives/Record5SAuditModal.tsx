@@ -131,13 +131,13 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
 
   // Checklist Calculations
   const scoredCount = Object.keys(scores).length;
-  const checklistTotalObtained = Object.values(scores).reduce((a, b) => a + b, 0);
+  const checklistTotalObtained = Object.values(scores).reduce<number>((a, b) => a + Number(b || 0), 0);
   const checklistMaxPossible = 36 * 3; // 108
   const checklistCompliancePct =
     scoredCount > 0 ? Math.round((checklistTotalObtained / (scoredCount * 3)) * 100) : 0;
 
   // Pillar Points Calculations
-  const pillarTotalObtained = Object.values(pillarPoints).reduce((a, b) => a + b, 0);
+  const pillarTotalObtained = Object.values(pillarPoints).reduce<number>((a, b) => a + Number(b || 0), 0);
   const pillarCompliancePct = Math.round((pillarTotalObtained / 108) * 100);
 
   const effectiveTotal = entryMode === 'checklist' ? checklistTotalObtained : pillarTotalObtained;
@@ -202,7 +202,8 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
     // If in checklist mode, auto-generate NCs for scores 0 or 1
     if (entryMode === 'checklist') {
       Object.entries(scores).forEach(([cpId, scoreVal]) => {
-        if (scoreVal <= 1) {
+        const numericScore = Number(scoreVal);
+        if (numericScore <= 1) {
           const cp = FIVE_S_CHECKLIST.find((c) => c.id === cpId);
           if (cp) {
             newNcs.push({
@@ -212,12 +213,15 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
               zone: selectedZoneName,
               department: selectedDeptName,
               checkpointId: cp.id,
+              checkpointNumber: cp.slNo,
+              section: cp.section,
+              area: cp.area,
               checkpointText: `${cp.area} — ${cp.point}`,
-              score: scoreVal,
+              score: numericScore,
               auditorComment: comments[cp.id] || 'Logged during 5S operational audit.',
               beforePhoto: beforePhotos[cp.id],
               raisedDate: auditDate,
-              status: 'Open'
+              status: 'Pending'
             });
           }
         }

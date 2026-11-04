@@ -188,12 +188,35 @@ export default function App() {
     );
 
     try {
-      await api.updateBottleneck(bottleneckId, {
+      const serverUpdated = await api.updateBottleneck(bottleneckId, {
         ...updates,
-        userRole: currentUser?.role || 'Unit Head'
+        userRole: currentUser?.role || 'Unit Head',
+        userName: currentUser?.name || ''
       });
-      if (updates.percentComplete === 100) {
-        addToast('Bottleneck resolved and moved to Completed archive!', 'success');
+
+      // Merge confirmed server response into application state
+      if (serverUpdated && serverUpdated.id) {
+        setUnits((prevUnits) =>
+          prevUnits.map((unit) => {
+            if (unit.id !== unitId) return unit;
+            return {
+              ...unit,
+              bottlenecks: unit.bottlenecks.map((b) => (b.id === bottleneckId ? serverUpdated : b))
+            };
+          })
+        );
+      }
+
+      if (updates.percentComplete === 100 || updates.status === 'Completed' || updates.status === 'Resolved by Unit' || updates.status === 'Resolved by MHQ') {
+        addToast('Bottleneck marked as resolved and verified in audit log!', 'success');
+      } else if (updates.status === 'Acknowledged') {
+        addToast('Bottleneck acknowledged successfully by Unit Head!', 'success');
+      } else if (updates.status === 'Assigned to Employee') {
+        addToast(`Assigned to ${updates.assignedEmployeeName || 'unit employee'} successfully!`, 'success');
+      } else if (updates.requiresMhqIntervention) {
+        addToast('Bottleneck flagged for MHQ Operations intervention!', 'info');
+      } else {
+        addToast('Bottleneck changes saved and reflected immediately!', 'success');
       }
     } catch (err: any) {
       console.error('Failed to sync bottleneck update:', err);
@@ -212,7 +235,11 @@ export default function App() {
     const tempItem: Bottleneck = {
       ...newBottleneck,
       id: tempId,
-      lastUpdated: today
+      lastUpdated: today,
+      raisedBy: currentUser?.name || 'MHQ Operations',
+      raisedByRole: currentUser?.role || 'Operations Team',
+      raisedDate: today,
+      status: newBottleneck.status || (currentUser?.role.includes('Operations') || currentUser?.role.includes('Admin') ? 'Raised by MHQ' : 'Pending Acknowledgement')
     };
 
     setUnits((prevUnits) =>
@@ -232,7 +259,7 @@ export default function App() {
         title: newBottleneck.title,
         category: newBottleneck.category,
         department: newBottleneck.department,
-        status: newBottleneck.status,
+        status: tempItem.status,
         percentComplete: newBottleneck.percentComplete,
         owner: newBottleneck.owner,
         impactLevel: newBottleneck.impactLevel,
@@ -242,7 +269,8 @@ export default function App() {
         beforePhotos: newBottleneck.beforePhotos,
         afterPhotos: newBottleneck.afterPhotos,
         tasks: newBottleneck.tasks,
-        userRole: currentUser?.role || 'Unit Head'
+        userRole: currentUser?.role || 'Operations Team',
+        userName: currentUser?.name || 'MHQ Operations'
       });
 
       setUnits((prevUnits) =>

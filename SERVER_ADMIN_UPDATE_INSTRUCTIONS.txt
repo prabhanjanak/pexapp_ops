@@ -1,42 +1,60 @@
 ================================================================================
-SANKARA EYE HOSPITAL - PROJECT PATIENT EXPERIENCE & 5S KAIZEN (2.1.0)
+SANKARA EYE HOSPITAL - PROJECT PATIENT EXPERIENCE & OPERATIONS GOVERNANCE (2.2.0)
 SERVER ADMINISTRATOR UPDATE & REDEPLOYMENT INSTRUCTIONS
 ================================================================================
 
 DATE: November 2026
-ENVIRONMENT: Production Docker Compose / Linux Server
+ENVIRONMENT: Production Docker Compose / Linux Server / Vercel Cloud
 TARGET SERVER: 192.168.1.244 (or Cloud VM)
 APPLICATION PORT: 8500 (mapped to internal container port 3000)
 DATABASE: PostgreSQL 16 (persistent docker volume 'postgres_data')
 
 --------------------------------------------------------------------------------
-OVERVIEW OF THIS UPDATE (v2.1.0):
+OVERVIEW OF THIS UPDATE (v2.2.0 - BOTTLENECK MODULE ENHANCEMENT):
 --------------------------------------------------------------------------------
-This release addresses critical WAN performance, network reliability, and UI updates:
-1. FIX WAN TIMEOUT CANCELLATION FOR REMOTE UNITS (Shimoga, Jaipur, etc.):
-   - Problem: Remote hospital clients aborted /api/units after 4.45s with 0 bytes over WAN.
-   - Solution: Client-side fetch AbortController timeout extended from 4.5s to 30.0s.
-   - Server Optimization: Built-in Gzip stream compression enabled on the Node.js
-     backend (compresses JSON payloads > 1KB down to ~8-12KB, 85% bandwidth reduction).
-2. REMOVED "14 Unit & Unit Heads" TAB:
-   - Sidebar cleaned for Super Admin & Operations Team; units are seamlessly managed
-     through the executive matrix and inspect modals.
-3. BOTTLENECK FILTERS:
-   - Added explicit "Not started" and "In progress" filters alongside "Active", "Completed",
-     and "All" with real-time badge counts.
-4. EVIDENCE CONTAINER (Executive Dashboard):
-   - Replaced bottom 3 static panels with an interactive Clinical & Operational
-     Evidence Approval Container featuring Before/After photo proof, lightbox, and approvals.
-5. MONTHLY STATS DATEWISE & MONTH FILTER:
-   - Added interactive Month picker and Start/End Date range filters to dynamically
-     filter bottlenecks according to months of input across all 14 hospital units.
-6. CATEGORIES & AUDIT LOGS:
-   - Dedicated "Categories & Depts" and "Audit Logs" real-time activity views.
+This release implements major enhancements to the Bottleneck Management Module
+and Central Operations Directorate communication workflows:
+
+1. FIX BOTTLENECK UPDATE & REFLECTION ISSUE:
+   - Root Cause: Missing database columns (department, acknowledged_by, assigned_to,
+     history JSONB) and state mutation dropping server responses caused updates in
+     Indore, Shivamogga, etc. to not persist or reflect across MHQ.
+   - Solution: Added full lifecycle columns to 'bottlenecks' table, automatic diff
+     computation on updates, persistent JSONB history audit log, and synchronized
+     frontend state update that immediately reflects on both Unit & MHQ dashboards.
+
+2. "RESOLVED BY MHQ" OPTION FOR UNIT HEADS:
+   - Added a dedicated "Resolved by MHQ" action button for Unit Heads.
+   - When local units require central MHQ intervention, clicking this action flags
+     the issue with status 'Requires MHQ Intervention' and alerts the MHQ Directorate.
+   - Captured in audit history with Unit Head name, timestamp, and visual indicators.
+   - MHQ Directorate dashboard features an instant filter and "Mark Resolved by MHQ" action.
+
+3. UNIT HEAD ACKNOWLEDGEMENT & EMPLOYEE ASSIGNMENT WORKFLOW:
+   - MHQ raises a bottleneck against a unit (e.g. Arsh Mishra raises for Shivamogga).
+   - Respective Unit Head (e.g. Gayatri Shantharam) reviews and clicks "Acknowledge".
+   - Once acknowledged, Unit Head can assign the bottleneck to a verified local unit
+     employee (e.g. Ranjitha, Patient Care Manager for Shivamogga) via dynamic dropdown.
+   - Captures assigned employee name, department, official email, assigned by, and timestamp.
+   - Both Unit Head and MHQ Dashboards clearly display the assignment and status.
+
+4. NEW FEATURE: UNIT EMPLOYEE MASTER UNDER SETTINGS:
+   - Navigation: Settings → Unit Scopes & Settings → Unit Employee Master.
+   - Accessible to IT Administrators, Super Admins, and Operations Directorate.
+   - Complete CRUD management: Add employee, edit details, activate / deactivate status,
+     reassign unit, associate department, and manage email.
+   - Scoped: Only Active employees of that specific unit appear in the Unit Head assignment dropdown.
+
+5. EXPANDED BOTTLENECK STATUS LIFECYCLE:
+   - Standardized lifecycle: Raised by MHQ -> Pending Acknowledgement -> Acknowledged ->
+     Assigned to Employee -> In Progress -> Requires MHQ Intervention ->
+     Resolved by Unit -> Resolved by MHQ -> Completed.
 
 DATABASE NOTE (IMPORTANT):
-- Your existing PostgreSQL database and records are 100% PRESERVED.
-- Automatic schema migration and seeding run safely on container boot.
-- NO manual SQL migration scripts are required.
+- Your existing PostgreSQL database and historical records are 100% PRESERVED.
+- Automatic schema migration automatically creates 'unit_employees' table and adds
+  new columns to 'bottlenecks' table on container boot.
+- NO manual SQL scripts are required. Safe and idempotent.
 
 ================================================================================
 NODE.JS VERSION REQUIREMENT & UPDATE GUIDE (NODE.JS 22 LTS)
@@ -161,11 +179,28 @@ HOW THE AUTOMATIC DATABASE UPDATE WORKS (FOR ADMIN AUDIT)
 ================================================================================
 When the 'app' container starts, the startup routine automatically performs:
 1. Database Connectivity Check with resilient retries.
-2. Safe Schema Migration:
-   - ALTER TABLE users ADD COLUMN IF NOT EXISTS emp_id VARCHAR(50);
-   - ALTER TABLE users ADD COLUMN IF NOT EXISTS app_access VARCHAR(30) DEFAULT 'both';
-   - ALTER TABLE users ADD COLUMN IF NOT EXISTS zone_id VARCHAR(50);
-   - ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(100);
+2. Safe Schema Migration (Automatic & Idempotent):
+   - CREATE TABLE IF NOT EXISTS unit_employees (id, name, email, unit_id, department, designation, status, created_at, updated_at);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS department VARCHAR(100);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS raised_by VARCHAR(120);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS raised_by_role VARCHAR(60);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS raised_date VARCHAR(30);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS acknowledged_by VARCHAR(120);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMP WITH TIME ZONE;
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_id VARCHAR(100);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_name VARCHAR(120);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_dept VARCHAR(100);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_email VARCHAR(120);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(120);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP WITH TIME ZONE;
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS requires_mhq_intervention BOOLEAN DEFAULT false;
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_intervention_by VARCHAR(120);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_intervention_at TIMESTAMP WITH TIME ZONE;
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS resolved_by VARCHAR(120);
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP WITH TIME ZONE;
+   - ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS history JSONB DEFAULT '[]'::jsonb;
+   - Pre-seeds verified Unit Heads for all 14 hospital units (e.g. Gayatri Shantharam for Shivamogga, Dr. Rituraj Sharma for Indore).
+   - Pre-seeds Unit Employees for Shivamogga, Indore, etc. into 'unit_employees'.
 3. User Upsert (ON CONFLICT DO UPDATE):
    - Adds default role accounts:
      * Zonal In-Charge:      zonal01@sankaraeye.com     (Password: Sankara@123)

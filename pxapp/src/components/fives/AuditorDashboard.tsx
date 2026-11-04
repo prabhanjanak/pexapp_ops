@@ -123,7 +123,7 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
 
   const totalQuestions = FIVE_S_CHECKLIST.length; // 36
   const scoredCount = Object.keys(scores).length;
-  const currentScoreSum = Object.values(scores).reduce((a, b) => a + b, 0);
+  const currentScoreSum = Object.values(scores).reduce<number>((a, b) => a + Number(b || 0), 0);
   const maxPossible = totalQuestions * 3; // 108
   const currentPct = scoredCount > 0 ? Math.round((currentScoreSum / (scoredCount * 3)) * 100) : 0;
 

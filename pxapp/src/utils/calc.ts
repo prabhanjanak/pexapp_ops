@@ -4,10 +4,10 @@ export function normalizeStatus(status: string, percentComplete?: number): Bottl
   if (percentComplete !== undefined && percentComplete >= 100) return 'Completed';
   if (!status) return 'Not Started';
   const s = status.trim().toLowerCase();
-  if (s.includes('complete') || s.includes('resolved') || s.includes('done')) {
+  if (s.includes('complete') || s.includes('resolved') || s.includes('closed') || s.includes('done')) {
     return 'Completed';
   }
-  if (s.includes('progress') || s.includes('assigned') || s.includes('verifying') || s.includes('working')) {
+  if (s.includes('progress') || s.includes('assigned') || s.includes('verifying') || s.includes('working') || s.includes('intervention')) {
     return 'In progress';
   }
   return 'Not Started';
@@ -105,6 +105,56 @@ export function calculateOrgStats(units: HospitalUnit[]): OrgStats {
 }
 
 export function getStatusBadgeStyle(status: string) {
+  const raw = (status || '').trim();
+  if (raw === 'Requires MHQ Intervention') {
+    return {
+      badge: 'bg-purple-100 text-purple-950 border-purple-400 font-black shadow-xs',
+      dot: 'bg-purple-600 animate-pulse',
+      bar: 'bg-purple-600',
+      label: 'Requires MHQ Intervention'
+    };
+  }
+  if (raw === 'Resolved by MHQ') {
+    return {
+      badge: 'bg-teal-50 text-teal-900 border-teal-300 font-black',
+      dot: 'bg-teal-600',
+      bar: 'bg-teal-600',
+      label: 'Resolved by MHQ'
+    };
+  }
+  if (raw === 'Resolved by Unit') {
+    return {
+      badge: 'bg-emerald-50 text-emerald-900 border-emerald-300 font-black',
+      dot: 'bg-emerald-600',
+      bar: 'bg-emerald-600',
+      label: 'Resolved by Unit'
+    };
+  }
+  if (raw === 'Acknowledged') {
+    return {
+      badge: 'bg-blue-50 text-blue-900 border-blue-300 font-extrabold',
+      dot: 'bg-blue-600',
+      bar: 'bg-blue-600',
+      label: 'Acknowledged'
+    };
+  }
+  if (raw === 'Assigned to Employee') {
+    return {
+      badge: 'bg-indigo-50 text-indigo-900 border-indigo-300 font-extrabold',
+      dot: 'bg-indigo-600',
+      bar: 'bg-indigo-600',
+      label: 'Assigned to Employee'
+    };
+  }
+  if (raw === 'Raised by MHQ' || raw === 'Pending Acknowledgement') {
+    return {
+      badge: 'bg-amber-100 text-amber-950 border-amber-400 font-black',
+      dot: 'bg-amber-600 animate-pulse',
+      bar: 'bg-amber-500',
+      label: raw
+    };
+  }
+
   const norm = normalizeStatus(status);
   switch (norm) {
     case 'Completed':

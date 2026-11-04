@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bottleneck, BottleneckCategory, BottleneckStatus, STATUS_PERCENT_MAP } from '../types';
+import { Bottleneck, BottleneckCategory, BottleneckStatus, STATUS_PERCENT_MAP, UnitEmployee } from '../types';
 import { CATEGORIES } from '../data/seedData';
 import { api } from '../services/api';
 import {
@@ -14,7 +14,11 @@ import {
   ListTodo,
   CheckCircle2,
   Check,
-  Plus
+  Plus,
+  History,
+  UserCheck,
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
 
 interface EditBottleneckModalProps {
@@ -56,6 +60,13 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const [unitEmployees, setUnitEmployees] = useState<UnitEmployee[]>([]);
+  const [assignedEmployeeId, setAssignedEmployeeId] = useState(bottleneck.assignedEmployeeId || '');
+  const [assignedEmployeeName, setAssignedEmployeeName] = useState(bottleneck.assignedEmployeeName || '');
+  const [assignedEmployeeDept, setAssignedEmployeeDept] = useState(bottleneck.assignedEmployeeDept || '');
+  const [assignedEmployeeEmail, setAssignedEmployeeEmail] = useState(bottleneck.assignedEmployeeEmail || '');
+  const [requiresMhqIntervention, setRequiresMhqIntervention] = useState(Boolean(bottleneck.requiresMhqIntervention));
+
   const beforeInputRef = useRef<HTMLInputElement>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +75,7 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
       setTitle(bottleneck.title || '');
       setCategory(bottleneck.category || 'OPD Wait Time');
       setDepartment(bottleneck.department || '');
-      setStatus(bottleneck.status === 'Pending' ? 'Not Started' : (bottleneck.status || 'Not Started'));
+      setStatus(bottleneck.status === 'Pending' ? 'Pending Acknowledgement' : (bottleneck.status || 'Not Started'));
       setPercentComplete(bottleneck.percentComplete || 0);
       setOwner(bottleneck.owner || '');
       setImpactLevel(bottleneck.impactLevel || 'Medium');
@@ -74,6 +85,11 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
       setBeforePhotos(bottleneck.beforePhotos || []);
       setAfterPhotos(bottleneck.afterPhotos || []);
       setTasks(bottleneck.tasks || []);
+      setAssignedEmployeeId(bottleneck.assignedEmployeeId || '');
+      setAssignedEmployeeName(bottleneck.assignedEmployeeName || '');
+      setAssignedEmployeeDept(bottleneck.assignedEmployeeDept || '');
+      setAssignedEmployeeEmail(bottleneck.assignedEmployeeEmail || '');
+      setRequiresMhqIntervention(Boolean(bottleneck.requiresMhqIntervention));
     }
   }, [bottleneck]);
 
@@ -86,8 +102,14 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
           }
         })
         .catch(() => {});
+
+      if (unitId) {
+        api.getUnitEmployees(unitId, true)
+          .then((emps) => setUnitEmployees(emps))
+          .catch(() => {});
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, unitId]);
 
   if (!isOpen) return null;
 
@@ -194,6 +216,11 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
       beforePhotos,
       afterPhotos,
       tasks,
+      assignedEmployeeId: assignedEmployeeId || undefined,
+      assignedEmployeeName: assignedEmployeeName || undefined,
+      assignedEmployeeDept: assignedEmployeeDept || undefined,
+      assignedEmployeeEmail: assignedEmployeeEmail || undefined,
+      requiresMhqIntervention,
       lastUpdated: new Date().toISOString().split('T')[0]
     });
 
@@ -349,9 +376,16 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
                 onChange={(e) => handleStatusChange(e.target.value as BottleneckStatus)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
+                <option value="Raised by MHQ">📢 Raised by MHQ</option>
+                <option value="Pending Acknowledgement">⏳ Pending Acknowledgement</option>
+                <option value="Acknowledged">👁️ Acknowledged</option>
+                <option value="Assigned to Employee">👤 Assigned to Employee</option>
+                <option value="In progress">⚡ In Progress</option>
+                <option value="Requires MHQ Intervention">🚨 Requires MHQ Intervention</option>
+                <option value="Resolved by Unit">🏥 Resolved by Unit</option>
+                <option value="Resolved by MHQ">🏢 Resolved by MHQ</option>
+                <option value="Completed">✅ Completed / Closed</option>
                 <option value="Not Started">🟡 Not Started</option>
-                <option value="In progress">🔵 In Progress</option>
-                <option value="Completed">🟢 Completed / Resolved</option>
               </select>
             </div>
 
@@ -366,6 +400,83 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
+          </div>
+
+          {/* Assigned Unit Employee (Unit Employee Master) */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <UserCheck className="w-4 h-4 text-orange-600" />
+                <span>Assign to Unit Employee</span>
+              </label>
+              <span className="text-[10px] text-slate-500 font-medium">Unit Employee Master</span>
+            </div>
+            <select
+              value={assignedEmployeeId}
+              onChange={(e) => {
+                const empId = e.target.value;
+                setAssignedEmployeeId(empId);
+                const emp = unitEmployees.find(u => u.id === empId);
+                if (emp) {
+                  setAssignedEmployeeName(emp.name);
+                  setAssignedEmployeeDept(emp.department);
+                  setAssignedEmployeeEmail(emp.email);
+                  if (status === 'Pending Acknowledgement' || status === 'Raised by MHQ' || status === 'Acknowledged' || status === 'Not Started') {
+                    setStatus('Assigned to Employee');
+                  }
+                } else {
+                  setAssignedEmployeeName('');
+                  setAssignedEmployeeDept('');
+                  setAssignedEmployeeEmail('');
+                }
+              }}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+            >
+              <option value="">-- Select Active Employee for {unitName || 'this Unit'} --</option>
+              {unitEmployees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name} — {emp.designation || emp.department} ({emp.department})
+                </option>
+              ))}
+            </select>
+            {assignedEmployeeName && (
+              <div className="text-[11px] text-emerald-800 font-semibold flex items-center gap-2 pt-0.5">
+                <span>✓ Assigned: <strong>{assignedEmployeeName}</strong> ({assignedEmployeeDept})</span>
+                {assignedEmployeeEmail && <span className="text-slate-500">• {assignedEmployeeEmail}</span>}
+              </div>
+            )}
+          </div>
+
+          {/* MHQ Intervention Action Flag */}
+          <div className="p-3.5 rounded-2xl border border-purple-200 bg-purple-50/70 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black text-purple-950 flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4 text-purple-600" />
+                <span>Requires MHQ Central Intervention</span>
+              </p>
+              <p className="text-[11px] text-purple-700 mt-0.5">
+                Flag this bottleneck if local unit resolution requires intervention from MHQ Operations Directorate.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !requiresMhqIntervention;
+                setRequiresMhqIntervention(next);
+                if (next) {
+                  setStatus('Requires MHQ Intervention');
+                } else if (status === 'Requires MHQ Intervention') {
+                  setStatus('In progress');
+                }
+              }}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                requiresMhqIntervention
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
+              }`}
+            >
+              {requiresMhqIntervention ? '✓ Flagged for MHQ' : 'Flag for MHQ'}
+            </button>
           </div>
 
           {/* Percentage Complete Slider */}
@@ -561,6 +672,37 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Update History Audit Trail */}
+          {bottleneck.history && bottleneck.history.length > 0 && (
+            <div className="pt-4 border-t border-slate-200">
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <History className="w-4 h-4 text-orange-600" />
+                  <span>Update History & Audit Trail ({bottleneck.history.length})</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Automatic Field Auditing</span>
+              </h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {bottleneck.history.slice().reverse().map((h, i) => (
+                  <div key={h.id || i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
+                      <span className="text-slate-800 font-black">{h.updatedBy} <span className="text-slate-500 font-semibold">({h.updatedRole || 'User'})</span></span>
+                      <span className="text-slate-400 font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {new Date(h.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-700">
+                      <span className="font-extrabold text-orange-800">{h.field || 'Field'}: </span>
+                      <span className="line-through text-slate-400 mr-1.5">{h.previousValue}</span>
+                      <span className="font-bold text-slate-900">→ {h.updatedValue}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Action Bar */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">

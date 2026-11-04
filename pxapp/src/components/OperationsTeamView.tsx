@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { HospitalUnit, OpsTeamTab, AuditLog, Bottleneck, User } from '../types';
+import { HospitalUnit, OpsTeamTab, AuditLog, Bottleneck, BottleneckStatus, User } from '../types';
 import { DashboardOverview } from './DashboardOverview';
 import { UnitsManagementView } from './UnitsManagementView';
 import { EvidenceApprovalGrid } from './EvidenceApprovalGrid';
@@ -34,7 +34,11 @@ import {
   ArrowUpDown,
   Plus,
   Edit3,
-  Trash2
+  Trash2,
+  Zap,
+  UserCheck,
+  X,
+  ArrowRight
 } from 'lucide-react';
 
 interface OperationsTeamViewProps {
@@ -79,6 +83,8 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   const [viewScope, setViewScope] = useState<'active' | 'not_started' | 'in_progress' | 'completed' | 'all'>(
     activeTab === 'completed' ? 'completed' : 'active'
   );
+  const [filterMhqInterventionOnly, setFilterMhqInterventionOnly] = useState(false);
+  const [historyBottleneck, setHistoryBottleneck] = useState<Bottleneck | null>(null);
 
   useEffect(() => {
     if (activeTab === 'completed') setViewScope('completed');
@@ -96,16 +102,20 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
   }, [activeTab]);
 
   // Counts for Scope Pills
-  const { totalCount, activeCount, notStartedCount, inProgressCount, completedCount } = useMemo(() => {
+  const { totalCount, activeCount, notStartedCount, inProgressCount, completedCount, mhqInterventionCount } = useMemo(() => {
     let total = 0;
     let active = 0;
     let notStarted = 0;
     let inProgress = 0;
     let completed = 0;
+    let mhqIntervention = 0;
     for (const u of units) {
       if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
       for (const b of u.bottlenecks) {
         total++;
+        if (b.requiresMhqIntervention || b.status === 'Requires MHQ Intervention') {
+          mhqIntervention++;
+        }
         const norm = normalizeStatus(b.status, b.percentComplete);
         if (norm === 'Completed') {
           completed++;
@@ -124,7 +134,8 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
       activeCount: active,
       notStartedCount: notStarted,
       inProgressCount: inProgress,
-      completedCount: completed
+      completedCount: completed,
+      mhqInterventionCount: mhqIntervention
     };
   }, [units, selectedUnitFilter]);
 
@@ -133,6 +144,10 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
     const list: { unit: HospitalUnit; bottleneck: Bottleneck }[] = [];
     for (const u of units) {
       for (const b of u.bottlenecks) {
+        if (filterMhqInterventionOnly && !b.requiresMhqIntervention && b.status !== 'Requires MHQ Intervention') {
+          continue;
+        }
+
         const norm = normalizeStatus(b.status, b.percentComplete);
         if (viewScope === 'active' && norm === 'Completed') continue;
         if (viewScope === 'not_started' && norm !== 'Not Started' && norm !== 'Pending') continue;
@@ -146,7 +161,9 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
           !b.title.toLowerCase().includes(q) &&
           !b.category.toLowerCase().includes(q) &&
           !u.name.toLowerCase().includes(q) &&
-          !b.owner.toLowerCase().includes(q)
+          !b.owner.toLowerCase().includes(q) &&
+          !(b.department && b.department.toLowerCase().includes(q)) &&
+          !(b.assignedEmployeeName && b.assignedEmployeeName.toLowerCase().includes(q))
         ) {
           continue;
         }
@@ -161,7 +178,20 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
       const imp: Record<string, number> = { High: 3, Medium: 2, Low: 1 };
       return (imp[b.bottleneck.impactLevel || 'Medium'] || 2) - (imp[a.bottleneck.impactLevel || 'Medium'] || 2);
     });
-  }, [units, viewScope, selectedUnitFilter, searchQuery, sortBy]);
+  }, [units, viewScope, selectedUnitFilter, searchQuery, sortBy, filterMhqInterventionOnly]);
+
+  const handleResolveByMhq = (unitId: string, bottleneck: Bottleneck) => {
+    if (!window.confirm(`Mark "${bottleneck.title}" as Resolved by MHQ Operations Team?`)) return;
+    onUpdateBottleneck?.(unitId, bottleneck.id, {
+      status: 'Resolved by MHQ',
+      percentComplete: 100,
+      resolvedBy: currentUser.name,
+      resolvedAt: new Date().toISOString(),
+      requiresMhqIntervention: false,
+      remarks: (bottleneck.remarks ? bottleneck.remarks + ' | ' : '') + `Resolved by MHQ Central Operations (${currentUser.name})`,
+      lastUpdated: new Date().toISOString().split('T')[0]
+    });
+  };
 
   const handleStatusChange = (unitId: string, bottleneck: Bottleneck, targetStatus: BottleneckStatus) => {
     let newPercent = 0;
@@ -344,16 +374,36 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                   type="button"
                   onClick={() => setViewScope('all')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                    viewScope === 'all'
+                    viewScope === 'all' && !filterMhqInterventionOnly
                       ? 'bg-slate-800 text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
                   <span>📋 All Items</span>
                   <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                    viewScope === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'
+                    viewScope === 'all' && !filterMhqInterventionOnly ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'
                   }`}>
                     {totalCount}
+                  </span>
+                </button>
+
+                {/* Filter for MHQ Intervention Required */}
+                <button
+                  type="button"
+                  onClick={() => setFilterMhqInterventionOnly(!filterMhqInterventionOnly)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    filterMhqInterventionOnly
+                      ? 'bg-purple-700 text-white shadow-sm ring-2 ring-purple-300'
+                      : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200'
+                  }`}
+                  title="Filter bottlenecks flagged by Unit Heads for central MHQ Intervention"
+                >
+                  <Zap className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Requires MHQ Intervention</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                    filterMhqInterventionOnly ? 'bg-purple-900 text-white' : 'bg-purple-200 text-purple-900'
+                  }`}>
+                    {mhqInterventionCount}
                   </span>
                 </button>
               </div>
@@ -429,9 +479,13 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                 return (
                   <div
                     key={bottleneck.id}
-                    className="bg-white border border-slate-200 hover:border-orange-200 rounded-2xl p-5 shadow-xs transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                    className={`bg-white border rounded-2xl p-5 shadow-xs transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
+                      bottleneck.requiresMhqIntervention || bottleneck.status === 'Requires MHQ Intervention'
+                        ? 'border-purple-300 ring-2 ring-purple-100 hover:border-purple-400'
+                        : 'border-slate-200 hover:border-orange-200'
+                    }`}
                   >
-                    <div className="space-y-2 flex-1">
+                    <div className="space-y-2.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white">
                           {unit.name}
@@ -439,11 +493,25 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200">
                           {bottleneck.category}
                         </span>
+                        {bottleneck.department && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                            🏢 {bottleneck.department}
+                          </span>
+                        )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${impactBadge}`}>
                           {bottleneck.impactLevel || 'Medium'} Impact
                         </span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${badge.badge}`}>
+                          {badge.label}
+                        </span>
+                        {(bottleneck.requiresMhqIntervention || bottleneck.status === 'Requires MHQ Intervention') && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1 animate-pulse">
+                            <Zap className="w-3 h-3 text-purple-600" />
+                            <span>Requires MHQ Intervention</span>
+                          </span>
+                        )}
                         {bottleneck.targetDate && (
-                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                             🎯 Deadline: {bottleneck.targetDate}
                           </span>
                         )}
@@ -454,8 +522,61 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                         )}
                       </div>
 
-                      <h4 className="text-sm font-black text-slate-900">{bottleneck.title}</h4>
-                      {bottleneck.notes && <p className="text-xs text-slate-600">{bottleneck.notes}</p>}
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900">{bottleneck.title}</h4>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 mt-1">
+                          {bottleneck.raisedBy && (
+                            <span>
+                              Raised by: <strong className="text-slate-700">{bottleneck.raisedBy}</strong>
+                              {bottleneck.raisedByRole ? ` (${bottleneck.raisedByRole})` : ''}
+                              {bottleneck.raisedDate ? ` on ${bottleneck.raisedDate}` : ''}
+                            </span>
+                          )}
+                          <span>•</span>
+                          <span>Unit Head: <strong className="text-slate-700">{unit.contactHead || 'Medical Director'}</strong></span>
+                          <span>•</span>
+                          <span>Last updated: <strong className="text-slate-700">{bottleneck.lastUpdated || 'Today'}</strong></span>
+                        </div>
+                      </div>
+
+                      {bottleneck.notes && (
+                        <p className="text-xs text-slate-600 font-normal bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          {bottleneck.notes}
+                        </p>
+                      )}
+
+                      {/* Acknowledgement and Assignment Indicators */}
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        {bottleneck.acknowledgedBy ? (
+                          <div className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>
+                              Acknowledged by <strong>{bottleneck.acknowledgedBy}</strong>
+                              {bottleneck.acknowledgedAt ? ` on ${new Date(bottleneck.acknowledgedAt).toLocaleDateString()}` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Pending Unit Head Acknowledgement</span>
+                          </div>
+                        )}
+
+                        {bottleneck.assignedEmployeeName ? (
+                          <div className="text-[11px] font-semibold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 flex items-center gap-1.5">
+                            <UserCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            <span>
+                              Assigned to: <strong>{bottleneck.assignedEmployeeName}</strong>
+                              {bottleneck.assignedEmployeeDept ? ` (${bottleneck.assignedEmployeeDept})` : ''}
+                              {bottleneck.assignedEmployeeEmail ? ` • ${bottleneck.assignedEmployeeEmail}` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5">
+                            <span>Owner: <strong>{bottleneck.owner || 'Unit Team'}</strong> (No Employee Assigned)</span>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Action Checklist Tasks */}
                       <div className="pt-1">
@@ -468,13 +589,13 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                         />
                       </div>
 
-                      <div className="flex items-center gap-3 pt-1 flex-wrap">
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
                         <button
                           onClick={() => setActiveCommentBottleneck({ unitId: unit.id, bottleneck })}
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-xs font-bold text-slate-700 hover:text-orange-700 transition-colors cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-orange-500" />
-                          <span>Management Directives</span>
+                          <span>Directives</span>
                           {commentsCount > 0 && (
                             <span className="px-1.5 py-0.2 rounded-full bg-orange-600 text-white text-[10px] font-black">
                               {commentsCount}
@@ -488,6 +609,29 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                         >
                           <span>Inspect Unit Workspace</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* MHQ Resolution Button if Flagged */}
+                        {(bottleneck.requiresMhqIntervention || bottleneck.status === 'Requires MHQ Intervention') && (
+                          <button
+                            type="button"
+                            onClick={() => handleResolveByMhq(unit.id, bottleneck)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                            title="Resolve this bottleneck centrally from MHQ Operations"
+                          >
+                            <Zap className="w-3.5 h-3.5 text-purple-200" />
+                            <span>Mark Resolved by MHQ</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setHistoryBottleneck(bottleneck)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+                          title="View audit trail and update history"
+                        >
+                          <History className="w-3.5 h-3.5 text-slate-500" />
+                          <span>History ({bottleneck.history?.length || 0})</span>
                         </button>
 
                         <button
@@ -664,6 +808,79 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
       )}
 
 
+
+      {/* History & Audit Trail Modal */}
+      {historyBottleneck && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl p-6 space-y-4 my-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Audit Trail & Update History</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{historyBottleneck.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setHistoryBottleneck(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+              {(!historyBottleneck.history || historyBottleneck.history.length === 0) ? (
+                <div className="text-center py-10 text-slate-400 text-xs font-semibold">
+                  No historical updates recorded for this bottleneck yet.
+                </div>
+              ) : (
+                historyBottleneck.history.map((h, idx) => (
+                  <div key={idx} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-slate-800 flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-orange-600" />
+                        {h.updatedBy || 'System'}
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {h.timestamp ? new Date(h.timestamp).toLocaleString() : ''}
+                      </span>
+                    </div>
+                    {h.field && (
+                      <p className="text-[11px] font-bold text-slate-600">
+                        Field: <span className="text-orange-700">{h.field}</span>
+                      </p>
+                    )}
+                    {(h.previousValue !== undefined || h.updatedValue !== undefined) && (
+                      <div className="flex items-center gap-2 text-[11px] font-medium bg-white p-2 rounded-xl border border-slate-200">
+                        <span className="text-slate-500 line-through">{String(h.previousValue || '(empty)')}</span>
+                        <ArrowRight className="w-3 h-3 text-slate-400" />
+                        <span className="text-emerald-700 font-bold">{String(h.updatedValue || '(empty)')}</span>
+                      </div>
+                    )}
+                    {h.remarks && (
+                      <p className="text-[11px] text-slate-600 italic">
+                        "{h.remarks}"
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setHistoryBottleneck(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Bottleneck Modal */}
       {editingBottleneckData && (

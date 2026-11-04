@@ -340,6 +340,272 @@ export const SANKARA_INITIAL_USERS = [
     app_access: 'fives',
     designation: 'Certified 5S Auditor • Quality Excellence',
     avatar_initials: 'GR'
+  },
+  // Canonical Unit Heads for all 14 Hospital Units
+  {
+    id: 'user-head-shimoga',
+    name: 'Ms. Gayatri Shantharam',
+    email: 'head.shimoga@sankaraeye.com',
+    emp_id: 'UH-SMG01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-shimoga',
+    app_access: 'both',
+    designation: 'Unit Head • Shivamogga Hospital',
+    avatar_initials: 'GS'
+  },
+  {
+    id: 'user-head-indore',
+    name: 'Dr. Rituraj Sharma',
+    email: 'head.indore@sankaraeye.com',
+    emp_id: 'UH-IND01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-indore',
+    app_access: 'both',
+    designation: 'Unit Head • Indore Hospital',
+    avatar_initials: 'RS'
+  },
+  {
+    id: 'user-head-coimbatore',
+    name: 'Ms. Binitha Harish',
+    email: 'head.coimbatore@sankaraeye.com',
+    emp_id: 'UH-CBE01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-coimbatore',
+    app_access: 'both',
+    designation: 'Unit Head • Coimbatore Hospital',
+    avatar_initials: 'BH'
+  },
+  {
+    id: 'user-head-cbc',
+    name: 'Ms. Kanmani S',
+    email: 'head.cbccity@sankaraeye.com',
+    emp_id: 'UH-CBC01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-coimbatore-city',
+    app_access: 'both',
+    designation: 'Unit Head • RS Puram City Hospital',
+    avatar_initials: 'KS'
+  },
+  {
+    id: 'user-head-bangalore',
+    name: 'Lt. Col. S. Guruprasad (Retd.)',
+    email: 'head.bangalore@sankaraeye.com',
+    emp_id: 'UH-BLR01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-bangalore',
+    app_access: 'both',
+    designation: 'Unit Head • Bengaluru Hospital',
+    avatar_initials: 'SG'
+  },
+  {
+    id: 'user-head-guntur',
+    name: 'Ms. Tripura / Ms. Madhavi Machavarapu',
+    email: 'head.guntur@sankaraeye.com',
+    emp_id: 'UH-GNT01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-guntur',
+    app_access: 'both',
+    designation: 'Unit Head • Guntur Hospital',
+    avatar_initials: 'TG'
+  },
+  {
+    id: 'user-head-anand',
+    name: 'Col. Sudeepkumar D. Mehta (Retd.)',
+    email: 'head.anand@sankaraeye.com',
+    emp_id: 'UH-AND01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-anand',
+    app_access: 'both',
+    designation: 'Unit Head • Anand Hospital',
+    avatar_initials: 'SM'
+  },
+  {
+    id: 'user-head-kanpur',
+    name: 'Dr. Rahul Singh',
+    email: 'head.kanpur@sankaraeye.com',
+    emp_id: 'UH-KNP01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-kanpur',
+    app_access: 'both',
+    designation: 'Unit Head • Kanpur Hospital',
+    avatar_initials: 'RS'
+  },
+  {
+    id: 'user-head-jaipur',
+    name: 'Dr. Nishant Jain',
+    email: 'head.jaipur@sankaraeye.com',
+    emp_id: 'UH-JPR01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-jaipur',
+    app_access: 'both',
+    designation: 'Unit Head • Jaipur Hospital',
+    avatar_initials: 'NJ'
+  },
+  {
+    id: 'user-head-ludhiana',
+    name: 'Dr. Manoj Gupta',
+    email: 'head.ludhiana@sankaraeye.com',
+    emp_id: 'UH-LDH01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-ludhiana',
+    app_access: 'both',
+    designation: 'Unit Head • Ludhiana Hospital',
+    avatar_initials: 'MG'
+  },
+  {
+    id: 'user-head-panvel',
+    name: 'Dr. Rajesh Kapse',
+    email: 'head.panvel@sankaraeye.com',
+    emp_id: 'UH-PNV01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-panvel',
+    app_access: 'both',
+    designation: 'Unit Head • Panvel Hospital',
+    avatar_initials: 'RK'
+  },
+  {
+    id: 'user-head-hyderabad',
+    name: 'Mr. Gannamraju Viswamohan',
+    email: 'head.hyderabad@sankaraeye.com',
+    emp_id: 'UH-HYD01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-hyderabad',
+    app_access: 'both',
+    designation: 'Unit Head • Hyderabad Hospital',
+    avatar_initials: 'GV'
+  },
+  {
+    id: 'user-head-varanasi',
+    name: 'Lt. Col. (Dr.) Bharat Singh',
+    email: 'head.varanasi@sankaraeye.com',
+    emp_id: 'UH-VNS01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-varanasi',
+    app_access: 'both',
+    designation: 'Unit Head • Varanasi Hospital',
+    avatar_initials: 'BS'
+  },
+  {
+    id: 'user-head-krishnankoil',
+    name: 'Mr. Aswathaman R',
+    email: 'head.krishnankoil@sankaraeye.com',
+    emp_id: 'UH-KKVL01',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-krishnankoil',
+    app_access: 'both',
+    designation: 'Unit Head • Krishnankoil Hospital',
+    avatar_initials: 'AR'
+  }
+];
+
+export const SANKARA_INITIAL_UNIT_EMPLOYEES = [
+  // Shivamogga (SMG)
+  {
+    id: 'emp-smg-01',
+    name: 'Ranjitha',
+    email: 'ranjitha.smg@sankaraeye.com',
+    unit_id: 'unit-shimoga',
+    department: 'Patient Care',
+    designation: 'Patient Care Manager',
+    status: 'Active'
+  },
+  {
+    id: 'emp-smg-02',
+    name: 'Rajesh Kumar',
+    email: 'rajesh.smg@sankaraeye.com',
+    unit_id: 'unit-shimoga',
+    department: 'Operations',
+    designation: 'Operations Executive',
+    status: 'Active'
+  },
+  {
+    id: 'emp-smg-03',
+    name: 'Sunitha M',
+    email: 'sunitha.smg@sankaraeye.com',
+    unit_id: 'unit-shimoga',
+    department: 'Administration',
+    designation: 'Administrative Officer',
+    status: 'Active'
+  },
+  // Indore (IND)
+  {
+    id: 'emp-ind-01',
+    name: 'Amit Verma',
+    email: 'amit.ind@sankaraeye.com',
+    unit_id: 'unit-indore',
+    department: 'Patient Care',
+    designation: 'Patient Care Executive',
+    status: 'Active'
+  },
+  {
+    id: 'emp-ind-02',
+    name: 'Priya Joshi',
+    email: 'priya.ind@sankaraeye.com',
+    unit_id: 'unit-indore',
+    department: 'Operations',
+    designation: 'Quality Coordinator',
+    status: 'Active'
+  },
+  {
+    id: 'emp-ind-03',
+    name: 'Dr. Sachin Kale',
+    email: 'sachin.ind@sankaraeye.com',
+    unit_id: 'unit-indore',
+    department: 'Administration',
+    designation: 'Hospital Administrator',
+    status: 'Active'
+  },
+  // Coimbatore (CBE)
+  {
+    id: 'emp-cbe-01',
+    name: 'K. Vasanthi',
+    email: 'vasanthi.cbe@sankaraeye.com',
+    unit_id: 'unit-coimbatore',
+    department: 'Patient Care',
+    designation: 'Patient Experience Supervisor',
+    status: 'Active'
+  },
+  {
+    id: 'emp-cbe-02',
+    name: 'R. Sundar',
+    email: 'sundar.cbe@sankaraeye.com',
+    unit_id: 'unit-coimbatore',
+    department: 'Operations',
+    designation: 'Operations Lead',
+    status: 'Active'
+  },
+  // Bangalore (BLR)
+  {
+    id: 'emp-blr-01',
+    name: 'Ananya Hegde',
+    email: 'ananya.blr@sankaraeye.com',
+    unit_id: 'unit-bangalore',
+    department: 'Patient Care',
+    designation: 'Patient Relations Officer',
+    status: 'Active'
+  },
+  {
+    id: 'emp-blr-02',
+    name: 'Pradeep Gowda',
+    email: 'pradeep.blr@sankaraeye.com',
+    unit_id: 'unit-bangalore',
+    department: 'Operations',
+    designation: 'Floor Operations Lead',
+    status: 'Active'
   }
 ];
 
@@ -523,6 +789,44 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       );
     `);
 
+    // Unit Employees Master Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS unit_employees (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        unit_id VARCHAR(64) NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+        department VARCHAR(100) NOT NULL,
+        designation VARCHAR(150),
+        status VARCHAR(20) NOT NULL DEFAULT 'Active',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_unit_employees_unit ON unit_employees(unit_id);
+    `);
+
+    // Ensure all modern bottleneck lifecycle columns exist
+    await client.query(`
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS department VARCHAR(100);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS raised_by VARCHAR(150);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS raised_by_role VARCHAR(50);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS raised_date VARCHAR(50);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS acknowledged_by VARCHAR(150);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS acknowledged_at VARCHAR(50);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_id VARCHAR(64);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_name VARCHAR(150);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_dept VARCHAR(100);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_employee_email VARCHAR(255);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(150);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS assigned_at VARCHAR(50);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS requires_mhq_intervention BOOLEAN DEFAULT FALSE;
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_intervention_by VARCHAR(150);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_intervention_at VARCHAR(50);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS resolved_by VARCHAR(150);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS resolved_at VARCHAR(50);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS history JSONB DEFAULT '[]'::jsonb;
+    `);
+
     // Seed default departments
     const defaultDepts = [
       { id: 'dept-opd', name: 'Outpatient (OPD)', code: 'OPD', head_contact: 'Dr. Head OPD' },
@@ -616,6 +920,22 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
 
     // Clean up legacy demo users from old domain (@sankara.com)
     await client.query(`DELETE FROM users WHERE email LIKE '%@sankara.com'`);
+
+    // Seed default unit employees
+    for (const emp of SANKARA_INITIAL_UNIT_EMPLOYEES) {
+      await client.query(
+        `INSERT INTO unit_employees (id, name, email, unit_id, department, designation, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           email = EXCLUDED.email,
+           unit_id = EXCLUDED.unit_id,
+           department = EXCLUDED.department,
+           designation = EXCLUDED.designation,
+           status = EXCLUDED.status`,
+        [emp.id, emp.name, emp.email, emp.unit_id, emp.department, emp.designation, emp.status]
+      );
+    }
 
   } catch (err: any) {
     await client.query('ROLLBACK');

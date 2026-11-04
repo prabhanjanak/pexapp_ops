@@ -88,7 +88,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
   // Overall statistics across all 14 units
   const totalUnitsCount = unitList.length;
   const totalDeptsCount = unitList.reduce(
-    (acc, u) => acc + Object.values(u.zones).reduce((dAcc, dList) => dAcc + dList.length, 0),
+    (acc, u) => acc + Object.values(u.zones || {}).reduce<number>((dAcc, dList) => dAcc + ((dList as string[])?.length || 0), 0),
     0
   );
   const totalNcsCount = ncs.length;

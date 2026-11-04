@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { HospitalUnit, SuperAdminTab, User, Bottleneck, DbHealthStatus, UserRole, AuditLog } from '../types';
+import { HospitalUnit, SuperAdminTab, User, Bottleneck, BottleneckStatus, DbHealthStatus, UserRole, AuditLog } from '../types';
 import { DashboardOverview } from './DashboardOverview';
 import { UnitsManagementView } from './UnitsManagementView';
 import { UnitHeadView } from './UnitHeadView';
@@ -42,7 +42,8 @@ import {
   Tag,
   History,
   RefreshCw,
-  Clock
+  Clock,
+  Zap
 } from 'lucide-react';
 
 interface SuperAdminViewProps {
@@ -477,7 +478,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                     key={bottleneck.id}
                     className="bg-white border border-slate-200 hover:border-orange-200 rounded-2xl p-5 shadow-xs transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
                   >
-                    <div className="space-y-2 flex-1">
+                    <div className="space-y-2.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white">
                           {unit.name}
@@ -485,11 +486,25 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200">
                           {bottleneck.category}
                         </span>
+                        {bottleneck.department && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                            🏢 {bottleneck.department}
+                          </span>
+                        )}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${impactBadge}`}>
                           {bottleneck.impactLevel || 'Medium'} Impact
                         </span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${badge.badge}`}>
+                          {badge.label}
+                        </span>
+                        {(bottleneck.requiresMhqIntervention || bottleneck.status === 'Requires MHQ Intervention') && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1 animate-pulse">
+                            <Zap className="w-3 h-3 text-purple-600" />
+                            <span>Requires MHQ Intervention</span>
+                          </span>
+                        )}
                         {bottleneck.targetDate && (
-                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                             🎯 Deadline: {bottleneck.targetDate}
                           </span>
                         )}
@@ -500,8 +515,61 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                         )}
                       </div>
 
-                      <h4 className="text-sm font-black text-slate-900">{bottleneck.title}</h4>
-                      {bottleneck.notes && <p className="text-xs text-slate-600">{bottleneck.notes}</p>}
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900">{bottleneck.title}</h4>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 mt-1">
+                          {bottleneck.raisedBy && (
+                            <span>
+                              Raised by: <strong className="text-slate-700">{bottleneck.raisedBy}</strong>
+                              {bottleneck.raisedByRole ? ` (${bottleneck.raisedByRole})` : ''}
+                              {bottleneck.raisedDate ? ` on ${bottleneck.raisedDate}` : ''}
+                            </span>
+                          )}
+                          <span>•</span>
+                          <span>Unit Head: <strong className="text-slate-700">{unit.contactHead || 'Medical Director'}</strong></span>
+                          <span>•</span>
+                          <span>Last updated: <strong className="text-slate-700">{bottleneck.lastUpdated || 'Today'}</strong></span>
+                        </div>
+                      </div>
+
+                      {bottleneck.notes && (
+                        <p className="text-xs text-slate-600 font-normal bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          {bottleneck.notes}
+                        </p>
+                      )}
+
+                      {/* Acknowledgement and Assignment Indicators */}
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        {bottleneck.acknowledgedBy ? (
+                          <div className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>
+                              Acknowledged by <strong>{bottleneck.acknowledgedBy}</strong>
+                              {bottleneck.acknowledgedAt ? ` on ${new Date(bottleneck.acknowledgedAt).toLocaleDateString()}` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Pending Unit Head Acknowledgement</span>
+                          </div>
+                        )}
+
+                        {bottleneck.assignedEmployeeName ? (
+                          <div className="text-[11px] font-semibold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 flex items-center gap-1.5">
+                            <UserCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            <span>
+                              Assigned to: <strong>{bottleneck.assignedEmployeeName}</strong>
+                              {bottleneck.assignedEmployeeDept ? ` (${bottleneck.assignedEmployeeDept})` : ''}
+                              {bottleneck.assignedEmployeeEmail ? ` • ${bottleneck.assignedEmployeeEmail}` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5">
+                            <span>Owner: <strong>{bottleneck.owner || 'Unit Team'}</strong> (No Employee Assigned)</span>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Action Checklist Tasks */}
                       <div className="pt-1">

@@ -1,19 +1,65 @@
 export type BottleneckStatus = 
-  | 'Not Started' 
-  | 'In progress' 
-  | 'Completed';
+  | 'Raised by MHQ'
+  | 'Pending Acknowledgement'
+  | 'Acknowledged'
+  | 'Assigned to Employee'
+  | 'In progress'
+  | 'Resolved by Unit'
+  | 'Requires MHQ Intervention'
+  | 'Resolved by MHQ'
+  | 'Completed'
+  | 'Closed'
+  | 'Not Started'
+  | 'Pending';
 
 export const STATUS_STAGES: BottleneckStatus[] = [
-  'Not Started',
+  'Raised by MHQ',
+  'Pending Acknowledgement',
+  'Acknowledged',
+  'Assigned to Employee',
   'In progress',
+  'Requires MHQ Intervention',
+  'Resolved by Unit',
+  'Resolved by MHQ',
   'Completed'
 ];
 
-export const STATUS_PERCENT_MAP: Record<BottleneckStatus, number> = {
+export const STATUS_PERCENT_MAP: Record<string, number> = {
+  'Raised by MHQ': 10,
+  'Pending Acknowledgement': 15,
+  'Acknowledged': 25,
+  'Assigned to Employee': 40,
+  'In progress': 60,
+  'Requires MHQ Intervention': 50,
+  'Resolved by Unit': 90,
+  'Resolved by MHQ': 100,
+  'Completed': 100,
+  'Closed': 100,
   'Not Started': 0,
-  'In progress': 50,
-  'Completed': 100
+  'Pending': 20
 };
+
+export interface UnitEmployee {
+  id: string;
+  name: string;
+  email: string;
+  unitId: string;
+  department: string;
+  designation?: string;
+  status: 'Active' | 'Inactive';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BottleneckHistoryItem {
+  id: string;
+  updatedBy: string;
+  updatedRole?: string;
+  field?: string;
+  previousValue: string;
+  updatedValue: string;
+  timestamp: string;
+}
 
 export type BottleneckCategory = 
   | 'OPD Wait Time'
@@ -72,6 +118,23 @@ export interface Bottleneck {
   afterPhotos?: string[];
   comments?: BottleneckComment[];
   tasks?: BottleneckTask[];
+  raisedBy?: string;
+  raisedByRole?: string;
+  raisedDate?: string;
+  acknowledgedBy?: string;
+  acknowledgedAt?: string;
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  assignedEmployeeDept?: string;
+  assignedEmployeeEmail?: string;
+  assignedBy?: string;
+  assignedAt?: string;
+  requiresMhqIntervention?: boolean;
+  mhqInterventionBy?: string;
+  mhqInterventionAt?: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  history?: BottleneckHistoryItem[];
 }
 
 export interface HospitalUnit {
@@ -127,6 +190,7 @@ export interface User {
   name: string;
   email: string;
   empId?: string;
+  password?: string;
   role: UserRole;
   unitId?: string; // for Unit Head, Zonal, Dept, Auditor
   unitName?: string;

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { HospitalUnit, User, Bottleneck } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { HospitalUnit, User, Bottleneck, UnitEmployee } from '../types';
 import { api } from '../services/api';
 import { AddBottleneckModal } from './AddBottleneckModal';
 import {
@@ -21,7 +21,11 @@ import {
   ArrowRight,
   X,
   Plus,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Trash2,
+  Users,
+  Check,
+  Briefcase
 } from 'lucide-react';
 
 const REAL_HOSPITAL_PHOTO_PRESETS = [
@@ -75,6 +79,126 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
   const [headPassword, setHeadPassword] = useState('');
   const [bedCapacity, setBedCapacity] = useState<number>(100);
   const [establishedYear, setEstablishedYear] = useState<number>(2010);
+
+  // Module View Mode: Unit Leadership & Facility Specs vs Unit Employee Master
+  const [mainTab, setMainTab] = useState<'specs' | 'employees'>('specs');
+
+  // Employee Master States
+  const [employees, setEmployees] = useState<UnitEmployee[]>([]);
+  const [employeeLoading, setEmployeeLoading] = useState(false);
+  const [selectedEmployeeUnitId, setSelectedEmployeeUnitId] = useState<string>(units[0]?.id || 'ALL');
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<UnitEmployee | null>(null);
+
+  // Employee Form State
+  const [empName, setEmpName] = useState('');
+  const [empEmail, setEmpEmail] = useState('');
+  const [empUnitId, setEmpUnitId] = useState(units[0]?.id || '');
+  const [empDepartment, setEmpDepartment] = useState('Patient Care');
+  const [empDesignation, setEmpDesignation] = useState('');
+  const [empStatus, setEmpStatus] = useState<'Active' | 'Inactive'>('Active');
+  const [isSavingEmployee, setIsSavingEmployee] = useState(false);
+
+  const loadEmployees = async (unitId?: string) => {
+    setEmployeeLoading(true);
+    try {
+      const data = await api.getUnitEmployees(unitId && unitId !== 'ALL' ? unitId : undefined);
+      setEmployees(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setEmployeeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mainTab === 'employees') {
+      loadEmployees(selectedEmployeeUnitId);
+    }
+  }, [mainTab, selectedEmployeeUnitId]);
+
+  const handleOpenAddEmployee = () => {
+    setEditingEmployee(null);
+    setEmpName('');
+    setEmpEmail('');
+    setEmpUnitId(selectedEmployeeUnitId !== 'ALL' ? selectedEmployeeUnitId : (units[0]?.id || ''));
+    setEmpDepartment('Patient Care');
+    setEmpDesignation('');
+    setEmpStatus('Active');
+    setIsEmployeeModalOpen(true);
+  };
+
+  const handleOpenEditEmployee = (emp: UnitEmployee) => {
+    setEditingEmployee(emp);
+    setEmpName(emp.name);
+    setEmpEmail(emp.email);
+    setEmpUnitId(emp.unitId);
+    setEmpDepartment(emp.department);
+    setEmpDesignation(emp.designation || '');
+    setEmpStatus(emp.status);
+    setIsEmployeeModalOpen(true);
+  };
+
+  const handleSaveEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!empName.trim() || !empEmail.trim() || !empUnitId) {
+      showToast('error', 'Please fill in Name, Email, and Unit.');
+      return;
+    }
+    setIsSavingEmployee(true);
+    try {
+      if (editingEmployee) {
+        await api.updateUnitEmployee(editingEmployee.id, {
+          name: empName.trim(),
+          email: empEmail.trim().toLowerCase(),
+          unitId: empUnitId,
+          department: empDepartment.trim(),
+          designation: empDesignation.trim(),
+          status: empStatus
+        });
+        showToast('success', `Employee ${empName} updated successfully.`);
+      } else {
+        await api.createUnitEmployee({
+          name: empName.trim(),
+          email: empEmail.trim().toLowerCase(),
+          unitId: empUnitId,
+          department: empDepartment.trim(),
+          designation: empDesignation.trim(),
+          status: empStatus
+        });
+        showToast('success', `Employee ${empName} created successfully.`);
+      }
+      setIsEmployeeModalOpen(false);
+      loadEmployees(selectedEmployeeUnitId);
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to save employee.');
+    } finally {
+      setIsSavingEmployee(false);
+    }
+  };
+
+  const handleToggleEmployeeStatus = async (emp: UnitEmployee) => {
+    const nextStatus = emp.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      await api.updateUnitEmployee(emp.id, { status: nextStatus });
+      showToast('success', `Status for ${emp.name} updated to ${nextStatus}.`);
+      loadEmployees(selectedEmployeeUnitId);
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to update employee status.');
+    }
+  };
+
+  const handleDeleteEmployee = async (emp: UnitEmployee) => {
+    if (!window.confirm(`Are you sure you want to delete employee "${emp.name}"?`)) return;
+    try {
+      await api.deleteUnitEmployee(emp.id);
+      showToast('success', `Employee ${emp.name} removed.`);
+      loadEmployees(selectedEmployeeUnitId);
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to delete employee.');
+    }
+  };
 
   // Load staff users to link unit head emails accurately
   React.useEffect(() => {
@@ -191,6 +315,21 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
   const cmoCount = units.filter((u) => u.cmo && u.cmo.trim()).length;
   const headCount = units.filter((u) => (u.unitHead || u.contactHead) && (u.unitHead || u.contactHead)!.trim()).length;
 
+  const filteredEmployees = useMemo(() => {
+    let list = employees;
+    if (employeeSearchQuery.trim()) {
+      const q = employeeSearchQuery.toLowerCase();
+      list = list.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.email.toLowerCase().includes(q) ||
+          e.department.toLowerCase().includes(q) ||
+          (e.designation && e.designation.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [employees, employeeSearchQuery]);
+
   return (
     <div className="space-y-6">
       
@@ -248,6 +387,42 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
         </div>
       </div>
 
+      {/* Module View Mode Switcher: Unit Leadership & Facility Specs vs Unit Employee Master */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          type="button"
+          onClick={() => setMainTab('specs')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+            mainTab === 'specs'
+              ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-600/20'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Unit Leadership & Facility Specs</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('employees')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+            mainTab === 'employees'
+              ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-600/20'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Unit Employee Master</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+            mainTab === 'employees' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
+          }`}>
+            {employees.length}
+          </span>
+        </button>
+      </div>
+
+      {mainTab === 'specs' && (
+      <>
       {/* Search & Actions Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="relative w-full sm:w-96">
@@ -439,6 +614,154 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
           );
         })}
       </div>
+      </>
+      )}
+
+      {mainTab === 'employees' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Employee Master Toolbar */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
+              {/* Unit Selector */}
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-orange-600 shrink-0" />
+                <select
+                  value={selectedEmployeeUnitId}
+                  onChange={(e) => setSelectedEmployeeUnitId(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                >
+                  <option value="ALL">All Hospital Units (Network)</option>
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Employee Search */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search employee name, email, department, designation..."
+                  value={employeeSearchQuery}
+                  onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddEmployee}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-black shadow-md shadow-orange-600/20 flex items-center gap-2 cursor-pointer transition-all self-start md:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Employee</span>
+            </button>
+          </div>
+
+          {/* Employees Table */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+            {employeeLoading ? (
+              <div className="p-12 text-center text-xs font-semibold text-slate-400">
+                Loading unit employees...
+              </div>
+            ) : filteredEmployees.length === 0 ? (
+              <div className="p-12 text-center space-y-2">
+                <Users className="w-10 h-10 text-slate-300 mx-auto" />
+                <h4 className="text-sm font-black text-slate-800">No Employees Found</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  No active or inactive staff registered for this unit scope yet. Click "Add New Employee" to register staff members.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/80 border-b border-slate-200 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Employee</th>
+                      <th className="py-3 px-4">Email ID</th>
+                      <th className="py-3 px-4">Hospital Unit</th>
+                      <th className="py-3 px-4">Department & Designation</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredEmployees.map((emp) => {
+                      const unit = units.find((u) => u.id === emp.unitId);
+                      return (
+                        <tr key={emp.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-800 font-black text-xs flex items-center justify-center shrink-0">
+                                {emp.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-bold text-slate-900 block">{emp.name}</span>
+                                {emp.designation && (
+                                  <span className="text-[11px] text-slate-400 block">{emp.designation}</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
+                            {emp.email}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-slate-700">
+                            {unit ? `${unit.name} (${unit.city})` : emp.unitId}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-[11px] font-bold inline-block">
+                              🏢 {emp.department}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleEmployeeStatus(emp)}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                emp.status === 'Active'
+                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                              }`}
+                              title="Click to toggle status (Active / Inactive)"
+                            >
+                              {emp.status === 'Active' ? '● Active' : '○ Inactive'}
+                            </button>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditEmployee(emp)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                                title="Edit employee details"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEmployee(emp)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Delete employee"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Assign / Edit Leadership & Unit Details Modal */}
       {selectedUnitForHead && (
@@ -757,6 +1080,162 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
             setSelectedUnitForAddBottleneck(null);
           }}
         />
+      )}
+
+      {/* Add / Edit Unit Employee Modal */}
+      {isEmployeeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+            <div className="p-5 bg-gradient-to-r from-orange-600 to-amber-600 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black">
+                  {editingEmployee ? 'Edit Unit Employee' : 'Add New Unit Employee'}
+                </h3>
+                <p className="text-xs text-orange-100">
+                  Configure employee details under Unit Employee Master
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEmployeeModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEmployee} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                  Employee Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ranjitha"
+                  value={empName}
+                  onChange={(e) => setEmpName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                  Email ID *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. ranjitha.pcm@sankaraeye.com"
+                  value={empEmail}
+                  onChange={(e) => setEmpEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                  Assigned Unit *
+                </label>
+                <select
+                  value={empUnitId}
+                  onChange={(e) => setEmpUnitId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                >
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Department *
+                  </label>
+                  <select
+                    value={empDepartment}
+                    onChange={(e) => setEmpDepartment(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                  >
+                    <option value="Patient Care">Patient Care</option>
+                    <option value="Operations">Operations</option>
+                    <option value="Quality Governance">Quality Governance</option>
+                    <option value="Biomedical">Biomedical</option>
+                    <option value="Pharmacy">Pharmacy</option>
+                    <option value="Administration">Administration</option>
+                    <option value="IT">IT</option>
+                    <option value="Nursing">Nursing</option>
+                    <option value="Housekeeping">Housekeeping</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Front Office">Front Office</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Designation
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Patient Care Manager"
+                    value={empDesignation}
+                    onChange={(e) => setEmpDesignation(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                  Employee Status
+                </label>
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                    <input
+                      type="radio"
+                      name="empStatus"
+                      checked={empStatus === 'Active'}
+                      onChange={() => setEmpStatus('Active')}
+                      className="text-orange-600 focus:ring-orange-500"
+                    />
+                    <span>Active (Available for Assignment)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-500">
+                    <input
+                      type="radio"
+                      name="empStatus"
+                      checked={empStatus === 'Inactive'}
+                      onChange={() => setEmpStatus('Inactive')}
+                      className="text-orange-600 focus:ring-orange-500"
+                    />
+                    <span>Inactive</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEmployeeModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEmployee}
+                  className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black shadow-md shadow-orange-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>{isSavingEmployee ? 'Saving...' : editingEmployee ? 'Save Changes' : 'Create Employee'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>

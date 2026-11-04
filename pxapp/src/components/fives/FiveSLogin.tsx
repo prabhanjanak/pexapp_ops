@@ -9,7 +9,8 @@ import {
   Building2,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react';
 
 interface FiveSLoginProps {

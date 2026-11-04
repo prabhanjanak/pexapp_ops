@@ -25,16 +25,24 @@ function formatBottleneck(row: any) {
     else if (Array.isArray(row.tasks)) tasks = row.tasks;
   } catch (_) { }
 
-  // Normalize status if legacy
-  let status = row.status;
-  if (status === 'Acknowledge' || status === 'Not Started') status = 'Pending';
-  if (status === 'Assigned work' || status === 'In Progress') status = 'In progress';
+  let history: any[] = [];
+  try {
+    if (typeof row.history === 'string') history = JSON.parse(row.history);
+    else if (Array.isArray(row.history)) history = row.history;
+  } catch (_) { }
+
+  // Normalize status if legacy, while preserving rich lifecycle statuses
+  let status = row.status || 'Not Started';
+  if (status === 'Acknowledge') status = 'Acknowledged';
+  if (status === 'Assigned work') status = 'Assigned to Employee';
+  if (status === 'Pending') status = 'Pending Acknowledgement';
 
   return {
     id: row.id,
     unitId: row.unit_id,
     title: row.title,
     category: row.category,
+    department: row.department || '',
     status,
     percentComplete: Number(row.percent_complete) || 0,
     owner: row.owner,
@@ -46,7 +54,24 @@ function formatBottleneck(row: any) {
     beforePhotos,
     afterPhotos,
     comments,
-    tasks
+    tasks,
+    raisedBy: row.raised_by || '',
+    raisedByRole: row.raised_by_role || '',
+    raisedDate: row.raised_date || row.created_at || '',
+    acknowledgedBy: row.acknowledged_by || '',
+    acknowledgedAt: row.acknowledged_at || '',
+    assignedEmployeeId: row.assigned_employee_id || '',
+    assignedEmployeeName: row.assigned_employee_name || '',
+    assignedEmployeeDept: row.assigned_employee_dept || '',
+    assignedEmployeeEmail: row.assigned_employee_email || '',
+    assignedBy: row.assigned_by || '',
+    assignedAt: row.assigned_at || '',
+    requiresMhqIntervention: Boolean(row.requires_mhq_intervention),
+    mhqInterventionBy: row.mhq_intervention_by || '',
+    mhqInterventionAt: row.mhq_intervention_at || '',
+    resolvedBy: row.resolved_by || '',
+    resolvedAt: row.resolved_at || '',
+    history
   };
 }
 
@@ -792,7 +817,8 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     unitId,
     title,
     category,
-    status = 'Pending',
+    department = '',
+    status,
     percentComplete = 0,
     owner = 'Unit PX Team',
     impactLevel = 'Medium',
@@ -802,7 +828,8 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     beforePhotos = [],
     afterPhotos = [],
     tasks = [],
-    userRole = 'Unit Head'
+    userRole = 'Operations Team',
+    userName = ''
   } = req.body;
 
   if (!unitId || !title || !category) {
@@ -815,19 +842,36 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
 
     const newId = `${unitId}-${Date.now()}`;
     const today = new Date().toISOString().split('T')[0];
+    const initialStatus = status || (userRole.includes('Operations') || userRole.includes('Admin') ? 'Raised by MHQ' : 'Pending Acknowledgement');
+    const raisedByName = userName || (userRole.includes('Operations') ? 'MHQ Operations Team' : userRole);
+
+    const initialHistory = [{
+      id: `hist-${Date.now()}`,
+      updatedBy: raisedByName,
+      updatedRole: userRole,
+      field: 'Creation',
+      previousValue: 'None',
+      updatedValue: `Bottleneck Created (${initialStatus})`,
+      timestamp: new Date().toISOString()
+    }];
 
     const insertRes = await client.query(
-      `INSERT INTO bottlenecks (id, unit_id, title, category, status, percent_complete, owner, last_updated, impact_level, target_date, notes, remarks, before_photos, after_photos, tasks)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      `INSERT INTO bottlenecks (
+         id, unit_id, title, category, department, status, percent_complete, owner,
+         last_updated, impact_level, target_date, notes, remarks, before_photos, after_photos,
+         tasks, raised_by, raised_by_role, raised_date, history
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
        RETURNING *`,
       [
         newId,
         unitId,
-        title,
-        category,
-        status,
+        title.trim(),
+        category.trim(),
+        department ? department.trim() : '',
+        initialStatus,
         percentComplete,
-        owner,
+        owner.trim(),
         today,
         impactLevel,
         targetDate,
@@ -835,7 +879,11 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
         remarks,
         JSON.stringify(beforePhotos || []),
         JSON.stringify(afterPhotos || []),
-        JSON.stringify(tasks || [])
+        JSON.stringify(tasks || []),
+        raisedByName,
+        userRole,
+        today,
+        JSON.stringify(initialHistory)
       ]
     );
 
@@ -844,7 +892,20 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     await client.query(
       `INSERT INTO audit_logs (unit_id, bottleneck_id, action, details, user_role)
        VALUES ($1, $2, 'CREATE_BOTTLENECK', $3, $4)`,
-      [unitId, newId, JSON.stringify({ title, category, status, percentComplete, owner, remarks, tasksCount: (tasks || []).length, beforeCount: (beforePhotos || []).length }), userRole]
+      [
+        unitId,
+        newId,
+        JSON.stringify({
+          title,
+          category,
+          department,
+          status: initialStatus,
+          percentComplete,
+          owner,
+          raisedBy: raisedByName
+        }),
+        userRole
+      ]
     );
 
     await client.query('COMMIT');
@@ -863,6 +924,7 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
   const {
     title,
     category,
+    department,
     status,
     percentComplete,
     owner,
@@ -873,7 +935,21 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     beforePhotos,
     afterPhotos,
     tasks,
-    userRole = 'Unit Head'
+    userRole = 'Unit Head',
+    userName = '',
+    acknowledgedBy,
+    acknowledgedAt,
+    assignedEmployeeId,
+    assignedEmployeeName,
+    assignedEmployeeDept,
+    assignedEmployeeEmail,
+    assignedBy,
+    assignedAt,
+    requiresMhqIntervention,
+    mhqInterventionBy,
+    mhqInterventionAt,
+    resolvedBy,
+    resolvedAt
   } = req.body;
 
   const client = await pool.connect();
@@ -888,9 +964,11 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
 
     const current = existingRes.rows[0];
     const today = new Date().toISOString().split('T')[0];
+    const updaterName = userName || userRole || 'User';
 
     const updatedTitle = title !== undefined ? title : current.title;
     const updatedCategory = category !== undefined ? category : current.category;
+    const updatedDepartment = department !== undefined ? department : current.department;
     const updatedStatus = status !== undefined ? status : current.status;
     const updatedPercent = percentComplete !== undefined ? Number(percentComplete) : current.percent_complete;
     const updatedOwner = owner !== undefined ? owner : current.owner;
@@ -908,16 +986,122 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
       ? (typeof tasks === 'string' ? tasks : JSON.stringify(tasks))
       : current.tasks;
 
+    const updatedAckBy = acknowledgedBy !== undefined ? acknowledgedBy : current.acknowledged_by;
+    const updatedAckAt = acknowledgedAt !== undefined ? acknowledgedAt : current.acknowledged_at;
+    const updatedEmpId = assignedEmployeeId !== undefined ? assignedEmployeeId : current.assigned_employee_id;
+    const updatedEmpName = assignedEmployeeName !== undefined ? assignedEmployeeName : current.assigned_employee_name;
+    const updatedEmpDept = assignedEmployeeDept !== undefined ? assignedEmployeeDept : current.assigned_employee_dept;
+    const updatedEmpEmail = assignedEmployeeEmail !== undefined ? assignedEmployeeEmail : current.assigned_employee_email;
+    const updatedAssignedBy = assignedBy !== undefined ? assignedBy : current.assigned_by;
+    const updatedAssignedAt = assignedAt !== undefined ? assignedAt : current.assigned_at;
+    const updatedMhqReq = requiresMhqIntervention !== undefined ? Boolean(requiresMhqIntervention) : Boolean(current.requires_mhq_intervention);
+    const updatedMhqBy = mhqInterventionBy !== undefined ? mhqInterventionBy : current.mhq_intervention_by;
+    const updatedMhqAt = mhqInterventionAt !== undefined ? mhqInterventionAt : current.mhq_intervention_at;
+    const updatedResolvedBy = resolvedBy !== undefined ? resolvedBy : current.resolved_by;
+    const updatedResolvedAt = resolvedAt !== undefined ? resolvedAt : current.resolved_at;
+
+    // Track Audit History Items
+    let currentHistory: any[] = [];
+    try {
+      if (typeof current.history === 'string') currentHistory = JSON.parse(current.history);
+      else if (Array.isArray(current.history)) currentHistory = current.history;
+    } catch (_) {}
+
+    const newHistoryItems: any[] = [];
+    const nowIso = new Date().toISOString();
+
+    if (updatedStatus && updatedStatus !== current.status) {
+      newHistoryItems.push({
+        id: `hist-${Date.now()}-status`,
+        updatedBy: updaterName,
+        updatedRole: userRole,
+        field: 'Status',
+        previousValue: current.status || 'Not Started',
+        updatedValue: updatedStatus,
+        timestamp: nowIso
+      });
+    }
+
+    if (updatedPercent !== undefined && Number(updatedPercent) !== Number(current.percent_complete)) {
+      newHistoryItems.push({
+        id: `hist-${Date.now()}-pct`,
+        updatedBy: updaterName,
+        updatedRole: userRole,
+        field: 'Progress',
+        previousValue: `${current.percent_complete || 0}%`,
+        updatedValue: `${updatedPercent}%`,
+        timestamp: nowIso
+      });
+    }
+
+    if (updatedEmpName && updatedEmpName !== current.assigned_employee_name) {
+      newHistoryItems.push({
+        id: `hist-${Date.now()}-emp`,
+        updatedBy: updaterName,
+        updatedRole: userRole,
+        field: 'Assigned Employee',
+        previousValue: current.assigned_employee_name || 'Unassigned',
+        updatedValue: `${updatedEmpName}${updatedEmpDept ? ` (${updatedEmpDept})` : ''}`,
+        timestamp: nowIso
+      });
+    }
+
+    if (updatedAckBy && updatedAckBy !== current.acknowledged_by) {
+      newHistoryItems.push({
+        id: `hist-${Date.now()}-ack`,
+        updatedBy: updaterName,
+        updatedRole: userRole,
+        field: 'Acknowledgement',
+        previousValue: 'Pending Acknowledgement',
+        updatedValue: `Acknowledged by ${updatedAckBy}`,
+        timestamp: nowIso
+      });
+    }
+
+    if (updatedMhqReq !== Boolean(current.requires_mhq_intervention)) {
+      newHistoryItems.push({
+        id: `hist-${Date.now()}-mhq`,
+        updatedBy: updaterName,
+        updatedRole: userRole,
+        field: 'MHQ Intervention',
+        previousValue: current.requires_mhq_intervention ? 'Required' : 'Not Required',
+        updatedValue: updatedMhqReq ? 'Flagged for MHQ Intervention' : 'Cleared / Resolved by MHQ',
+        timestamp: nowIso
+      });
+    }
+
+    if (remarks !== undefined && remarks !== current.remarks) {
+      newHistoryItems.push({
+        id: `hist-${Date.now()}-remarks`,
+        updatedBy: updaterName,
+        updatedRole: userRole,
+        field: 'Remarks',
+        previousValue: current.remarks || 'None',
+        updatedValue: remarks || 'None',
+        timestamp: nowIso
+      });
+    }
+
+    const updatedHistory = [...currentHistory, ...newHistoryItems];
+
     const updateRes = await client.query(
       `UPDATE bottlenecks
-       SET title = $1, category = $2, status = $3, percent_complete = $4, owner = $5,
-           impact_level = $6, target_date = $7, notes = $8, remarks = $9, before_photos = $10,
-           after_photos = $11, tasks = $12, last_updated = $13, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $14
+       SET title = $1, category = $2, department = $3, status = $4, percent_complete = $5,
+           owner = $6, impact_level = $7, target_date = $8, notes = $9, remarks = $10,
+           before_photos = $11, after_photos = $12, tasks = $13,
+           acknowledged_by = $14, acknowledged_at = $15,
+           assigned_employee_id = $16, assigned_employee_name = $17, assigned_employee_dept = $18, assigned_employee_email = $19,
+           assigned_by = $20, assigned_at = $21,
+           requires_mhq_intervention = $22, mhq_intervention_by = $23, mhq_intervention_at = $24,
+           resolved_by = $25, resolved_at = $26,
+           history = $27,
+           last_updated = $28, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $29
        RETURNING *`,
       [
         updatedTitle,
         updatedCategory,
+        updatedDepartment,
         updatedStatus,
         updatedPercent,
         updatedOwner,
@@ -928,6 +1112,20 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
         updatedBeforePhotos,
         updatedAfterPhotos,
         updatedTasks || '[]',
+        updatedAckBy,
+        updatedAckAt,
+        updatedEmpId,
+        updatedEmpName,
+        updatedEmpDept,
+        updatedEmpEmail,
+        updatedAssignedBy,
+        updatedAssignedAt,
+        updatedMhqReq,
+        updatedMhqBy,
+        updatedMhqAt,
+        updatedResolvedBy,
+        updatedResolvedAt,
+        JSON.stringify(updatedHistory),
         today,
         id
       ]
@@ -942,9 +1140,8 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
         JSON.stringify({
           oldStatus: current.status,
           newStatus: updatedStatus,
-          remarksUpdated: remarks !== undefined,
-          tasksUpdated: tasks !== undefined,
-          photosUpdated: beforePhotos !== undefined || afterPhotos !== undefined
+          updatedBy: updaterName,
+          changesCount: newHistoryItems.length
         }),
         userRole
       ]
@@ -957,6 +1154,118 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   } finally {
     client.release();
+  }
+});
+
+// 10B. Unit Employee Master CRUD Endpoints
+router.get('/unit-employees', async (req: Request, res: Response) => {
+  const { unitId, activeOnly } = req.query;
+  try {
+    let query = 'SELECT * FROM unit_employees WHERE 1=1';
+    const params: any[] = [];
+    if (unitId && unitId !== 'ALL') {
+      params.push(unitId);
+      query += ` AND unit_id = $${params.length}`;
+    }
+    if (activeOnly === 'true') {
+      query += ` AND status = 'Active'`;
+    }
+    query += ' ORDER BY name ASC';
+    const result = await pool.query(query, params);
+    return res.json(result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      unitId: row.unit_id,
+      department: row.department,
+      designation: row.designation,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    })));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/unit-employees', async (req: Request, res: Response) => {
+  const { name, email, unitId, department, designation = '', status = 'Active' } = req.body;
+  if (!name || !email || !unitId || !department) {
+    return res.status(400).json({ error: 'name, email, unitId, and department are required' });
+  }
+  try {
+    const id = `emp-${unitId.replace('unit-', '')}-${Date.now().toString(36)}`;
+    const insertRes = await pool.query(
+      `INSERT INTO unit_employees (id, name, email, unit_id, department, designation, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [id, name.trim(), email.trim().toLowerCase(), unitId, department.trim(), designation.trim(), status]
+    );
+    const row = insertRes.rows[0];
+    return res.status(201).json({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      unitId: row.unit_id,
+      department: row.department,
+      designation: row.designation,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/unit-employees/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, email, unitId, department, designation, status } = req.body;
+  try {
+    const existing = await pool.query('SELECT * FROM unit_employees WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+    const curr = existing.rows[0];
+    const updateRes = await pool.query(
+      `UPDATE unit_employees
+       SET name = $1, email = $2, unit_id = $3, department = $4, designation = $5, status = $6, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING *`,
+      [
+        name !== undefined ? name.trim() : curr.name,
+        email !== undefined ? email.trim().toLowerCase() : curr.email,
+        unitId !== undefined ? unitId : curr.unit_id,
+        department !== undefined ? department.trim() : curr.department,
+        designation !== undefined ? designation.trim() : curr.designation,
+        status !== undefined ? status : curr.status,
+        id
+      ]
+    );
+    const row = updateRes.rows[0];
+    return res.json({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      unitId: row.unit_id,
+      department: row.department,
+      designation: row.designation,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/unit-employees/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM unit_employees WHERE id = $1', [id]);
+    return res.json({ success: true, deletedId: id });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
