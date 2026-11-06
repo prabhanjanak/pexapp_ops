@@ -66,6 +66,23 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
   const [assignedEmployeeDept, setAssignedEmployeeDept] = useState(bottleneck.assignedEmployeeDept || '');
   const [assignedEmployeeEmail, setAssignedEmployeeEmail] = useState(bottleneck.assignedEmployeeEmail || '');
   const [requiresMhqIntervention, setRequiresMhqIntervention] = useState(Boolean(bottleneck.requiresMhqIntervention));
+  const [mhqDepartment, setMhqDepartment] = useState(bottleneck.mhqDepartment || 'Central Operations Directorate (MHQ)');
+  const [mhqInterventionNotes, setMhqInterventionNotes] = useState(bottleneck.mhqInterventionNotes || '');
+  const [availableDepartments, setAvailableDepartments] = useState<string[]>([
+    'Central Operations Directorate (MHQ)',
+    'Biomedical Engineering',
+    'Procurement & Supply Chain',
+    'IT & Digital Infrastructure',
+    'Quality Assurance & Audit',
+    'Outpatient (OPD)',
+    'Inpatient & Daycare',
+    'Operating Theatre (OT)',
+    'Diagnostic & Laboratory',
+    'Pharmacy & Dispensary',
+    'Billing & TPA Insurance',
+    'Patient Counselling',
+    'Facility & Housekeeping'
+  ]);
 
   const beforeInputRef = useRef<HTMLInputElement>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +107,8 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
       setAssignedEmployeeDept(bottleneck.assignedEmployeeDept || '');
       setAssignedEmployeeEmail(bottleneck.assignedEmployeeEmail || '');
       setRequiresMhqIntervention(Boolean(bottleneck.requiresMhqIntervention));
+      setMhqDepartment(bottleneck.mhqDepartment || 'Central Operations Directorate (MHQ)');
+      setMhqInterventionNotes(bottleneck.mhqInterventionNotes || '');
     }
   }, [bottleneck]);
 
@@ -99,6 +118,14 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
         .then((cats) => {
           if (cats && cats.length > 0) {
             setAvailableCategories(cats.map(c => c.name));
+          }
+        })
+        .catch(() => {});
+
+      api.getDepartments()
+        .then((depts) => {
+          if (depts && depts.length > 0) {
+            setAvailableDepartments((prev) => Array.from(new Set([...prev, ...depts.map(d => d.name).filter(Boolean)])));
           }
         })
         .catch(() => {});
@@ -221,6 +248,8 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
       assignedEmployeeDept: assignedEmployeeDept || undefined,
       assignedEmployeeEmail: assignedEmployeeEmail || undefined,
       requiresMhqIntervention,
+      mhqDepartment: requiresMhqIntervention ? mhqDepartment : undefined,
+      mhqInterventionNotes: requiresMhqIntervention ? mhqInterventionNotes : undefined,
       lastUpdated: new Date().toISOString().split('T')[0]
     });
 
@@ -447,36 +476,73 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
             )}
           </div>
 
-          {/* MHQ Intervention Action Flag */}
-          <div className="p-3.5 rounded-2xl border border-purple-200 bg-purple-50/70 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-black text-purple-950 flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-purple-600" />
-                <span>Requires MHQ Central Intervention</span>
-              </p>
-              <p className="text-[11px] text-purple-700 mt-0.5">
-                Flag this bottleneck if local unit resolution requires intervention from MHQ Operations Directorate.
-              </p>
+          {/* MHQ Intervention Action Flag & Department Routing */}
+          <div className="p-3.5 rounded-2xl border border-purple-200 bg-purple-50/70 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-purple-950 flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-purple-600" />
+                  <span>Requires MHQ Central Intervention</span>
+                </p>
+                <p className="text-[11px] text-purple-700 mt-0.5">
+                  Flag this bottleneck if local unit resolution requires intervention from MHQ Operations Directorate.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !requiresMhqIntervention;
+                  setRequiresMhqIntervention(next);
+                  if (next) {
+                    setStatus('Requires MHQ Intervention');
+                  } else if (status === 'Requires MHQ Intervention') {
+                    setStatus('In progress');
+                  }
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                  requiresMhqIntervention
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
+                }`}
+              >
+                {requiresMhqIntervention ? '✓ Flagged for MHQ' : 'Flag for MHQ'}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !requiresMhqIntervention;
-                setRequiresMhqIntervention(next);
-                if (next) {
-                  setStatus('Requires MHQ Intervention');
-                } else if (status === 'Requires MHQ Intervention') {
-                  setStatus('In progress');
-                }
-              }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
-                requiresMhqIntervention
-                  ? 'bg-purple-600 text-white shadow-xs'
-                  : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
-              }`}
-            >
-              {requiresMhqIntervention ? '✓ Flagged for MHQ' : 'Flag for MHQ'}
-            </button>
+
+            {requiresMhqIntervention && (
+              <div className="pt-2 border-t border-purple-200/80 space-y-2.5 animate-in fade-in duration-150">
+                <div>
+                  <label className="block text-xs font-bold text-purple-950 mb-1">
+                    MHQ Central Department to Intervene *
+                  </label>
+                  <select
+                    value={mhqDepartment}
+                    onChange={(e) => setMhqDepartment(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-semibold bg-white border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  >
+                    <option value="" disabled>-- Select one MHQ Department --</option>
+                    {availableDepartments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-purple-950 mb-1">
+                    MHQ Intervention Notes / Requirement
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={mhqInterventionNotes}
+                    onChange={(e) => setMhqInterventionNotes(e.target.value)}
+                    placeholder="Specify what action or support is needed from MHQ..."
+                    className="w-full px-3 py-2 text-xs bg-white border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Percentage Complete Slider */}

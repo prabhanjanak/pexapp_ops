@@ -662,7 +662,10 @@ export const api = {
         { id: 'dept-counselling', name: 'Patient Counselling', code: 'COUNS', headContact: 'PX Head' },
         { id: 'dept-facility', name: 'Facility & Housekeeping', code: 'FAC', headContact: 'Facility Manager' },
         { id: 'dept-quality', name: 'Quality Assurance & Audit', code: 'QA', headContact: 'Quality Lead' },
-        { id: 'dept-it', name: 'IT & Digital Infrastructure', code: 'IT', headContact: 'IT Ops Lead' }
+        { id: 'dept-it', name: 'IT & Digital Infrastructure', code: 'IT', headContact: 'IT Ops Lead' },
+        { id: 'dept-biomedical', name: 'Biomedical Engineering', code: 'BME', headContact: 'Chief Bio-Medical Engineer' },
+        { id: 'dept-procurement', name: 'Procurement & Supply Chain', code: 'PROC', headContact: 'Central Supply Chain' },
+        { id: 'dept-ops', name: 'Central Operations Directorate (MHQ)', code: 'MHQ-OPS', headContact: 'MHQ Operations Team' }
       ];
     }
   },

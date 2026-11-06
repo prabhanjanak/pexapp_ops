@@ -510,6 +510,11 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                             <span>Requires MHQ Intervention</span>
                           </span>
                         )}
+                        {bottleneck.mhqDepartment && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white border border-purple-700 shadow-2xs">
+                            MHQ Dept: {bottleneck.mhqDepartment}
+                          </span>
+                        )}
                         {bottleneck.targetDate && (
                           <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                             🎯 Deadline: {bottleneck.targetDate}
@@ -577,6 +582,34 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
                           </div>
                         )}
                       </div>
+
+                      {/* MHQ Intervention Detailed Box */}
+                      {(bottleneck.requiresMhqIntervention || bottleneck.status === 'Requires MHQ Intervention') && (
+                        <div className="w-full text-xs font-semibold text-purple-900 bg-purple-50/90 p-3 rounded-2xl border border-purple-200 flex flex-col gap-1.5 shadow-2xs">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="flex items-center gap-1.5 font-bold text-purple-950">
+                              <Zap className="w-4 h-4 text-purple-600 shrink-0" />
+                              <span>Central MHQ Intervention Required</span>
+                            </span>
+                            {bottleneck.mhqDepartment && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-900 font-black text-[11px] border border-purple-300">
+                                Responsible Dept: {bottleneck.mhqDepartment}
+                              </span>
+                            )}
+                          </div>
+                          {bottleneck.mhqInterventionNotes && (
+                            <p className="text-[11px] text-purple-800 font-normal pl-5">
+                              <strong>Unit Request / Requirement:</strong> {bottleneck.mhqInterventionNotes}
+                            </p>
+                          )}
+                          <div className="text-[10px] text-purple-600 pl-5 flex items-center gap-2">
+                            <span>
+                              Flagged by <strong>{bottleneck.mhqInterventionBy || 'Unit Head'}</strong>
+                              {bottleneck.mhqInterventionAt ? ` on ${new Date(bottleneck.mhqInterventionAt).toLocaleDateString()}` : ''}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Action Checklist Tasks */}
                       <div className="pt-1">

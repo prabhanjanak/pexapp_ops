@@ -23,11 +23,16 @@ and Central Operations Directorate communication workflows:
      computation on updates, persistent JSONB history audit log, and synchronized
      frontend state update that immediately reflects on both Unit & MHQ dashboards.
 
-2. "RESOLVED BY MHQ" OPTION FOR UNIT HEADS:
+2. "RESOLVED BY MHQ" OPTION WITH DEPARTMENT ROUTING FOR UNIT HEADS:
    - Added a dedicated "Resolved by MHQ" action button for Unit Heads.
-   - When local units require central MHQ intervention, clicking this action flags
-     the issue with status 'Requires MHQ Intervention' and alerts the MHQ Directorate.
-   - Captured in audit history with Unit Head name, timestamp, and visual indicators.
+   - When local units require central MHQ intervention, clicking this action opens an
+     interactive modal with a Department Selection Dropdown (Biomedical Engineering,
+     Procurement & Supply Chain, IT, Central Operations, QA, etc.).
+   - Unit Head selects the responsible MHQ central department and enters intervention notes.
+   - Flags the bottleneck with status 'Requires MHQ Intervention', assigns the department,
+     and records who requested it and when.
+   - Captured in audit history with Unit Head name, selected department, and timestamp.
+   - Both Unit and MHQ Dashboards display the assigned MHQ Department badge and requirements.
    - MHQ Directorate dashboard features an instant filter and "Mark Resolved by MHQ" action.
 
 3. UNIT HEAD ACKNOWLEDGEMENT & EMPLOYEE ASSIGNMENT WORKFLOW:

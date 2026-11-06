@@ -69,6 +69,8 @@ function formatBottleneck(row: any) {
     requiresMhqIntervention: Boolean(row.requires_mhq_intervention),
     mhqInterventionBy: row.mhq_intervention_by || '',
     mhqInterventionAt: row.mhq_intervention_at || '',
+    mhqDepartment: row.mhq_department || '',
+    mhqInterventionNotes: row.mhq_intervention_notes || '',
     resolvedBy: row.resolved_by || '',
     resolvedAt: row.resolved_at || '',
     history
@@ -948,6 +950,8 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     requiresMhqIntervention,
     mhqInterventionBy,
     mhqInterventionAt,
+    mhqDepartment,
+    mhqInterventionNotes,
     resolvedBy,
     resolvedAt
   } = req.body;
@@ -997,6 +1001,8 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     const updatedMhqReq = requiresMhqIntervention !== undefined ? Boolean(requiresMhqIntervention) : Boolean(current.requires_mhq_intervention);
     const updatedMhqBy = mhqInterventionBy !== undefined ? mhqInterventionBy : current.mhq_intervention_by;
     const updatedMhqAt = mhqInterventionAt !== undefined ? mhqInterventionAt : current.mhq_intervention_at;
+    const updatedMhqDept = mhqDepartment !== undefined ? mhqDepartment : current.mhq_department;
+    const updatedMhqNotes = mhqInterventionNotes !== undefined ? mhqInterventionNotes : current.mhq_intervention_notes;
     const updatedResolvedBy = resolvedBy !== undefined ? resolvedBy : current.resolved_by;
     const updatedResolvedAt = resolvedAt !== undefined ? resolvedAt : current.resolved_at;
 
@@ -1058,6 +1064,18 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
       });
     }
 
+    if (updatedMhqDept && updatedMhqDept !== current.mhq_department) {
+      newHistoryItems.push({
+        id: `hist-${Date.now()}-mhqdept`,
+        updatedBy: updaterName,
+        updatedRole: userRole,
+        field: 'MHQ Department',
+        previousValue: current.mhq_department || 'None',
+        updatedValue: updatedMhqDept,
+        timestamp: nowIso
+      });
+    }
+
     if (updatedMhqReq !== Boolean(current.requires_mhq_intervention)) {
       newHistoryItems.push({
         id: `hist-${Date.now()}-mhq`,
@@ -1065,7 +1083,7 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
         updatedRole: userRole,
         field: 'MHQ Intervention',
         previousValue: current.requires_mhq_intervention ? 'Required' : 'Not Required',
-        updatedValue: updatedMhqReq ? 'Flagged for MHQ Intervention' : 'Cleared / Resolved by MHQ',
+        updatedValue: updatedMhqReq ? `Flagged for MHQ Intervention (${updatedMhqDept || 'Department Pending'})` : 'Cleared / Resolved by MHQ',
         timestamp: nowIso
       });
     }
@@ -1095,8 +1113,11 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
            requires_mhq_intervention = $22, mhq_intervention_by = $23, mhq_intervention_at = $24,
            resolved_by = $25, resolved_at = $26,
            history = $27,
-           last_updated = $28, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $29
+           last_updated = $28,
+           mhq_department = $29,
+           mhq_intervention_notes = $30,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $31
        RETURNING *`,
       [
         updatedTitle,
@@ -1127,6 +1148,8 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
         updatedResolvedAt,
         JSON.stringify(updatedHistory),
         today,
+        updatedMhqDept,
+        updatedMhqNotes,
         id
       ]
     );

@@ -822,6 +822,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS requires_mhq_intervention BOOLEAN DEFAULT FALSE;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_intervention_by VARCHAR(150);
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_intervention_at VARCHAR(50);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_department VARCHAR(100);
+      ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS mhq_intervention_notes TEXT;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS resolved_by VARCHAR(150);
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS resolved_at VARCHAR(50);
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS history JSONB DEFAULT '[]'::jsonb;
@@ -838,7 +840,10 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       { id: 'dept-counselling', name: 'Patient Counselling', code: 'COUNS', head_contact: 'PX Head' },
       { id: 'dept-facility', name: 'Facility & Housekeeping', code: 'FAC', head_contact: 'Facility Manager' },
       { id: 'dept-quality', name: 'Quality Assurance & Audit', code: 'QA', head_contact: 'Quality Lead' },
-      { id: 'dept-it', name: 'IT & Digital Infrastructure', code: 'IT', head_contact: 'IT Ops Lead' }
+      { id: 'dept-it', name: 'IT & Digital Infrastructure', code: 'IT', head_contact: 'IT Ops Lead' },
+      { id: 'dept-biomedical', name: 'Biomedical Engineering', code: 'BME', head_contact: 'Chief Bio-Medical Engineer' },
+      { id: 'dept-procurement', name: 'Procurement & Supply Chain', code: 'PROC', head_contact: 'Central Supply Chain' },
+      { id: 'dept-ops', name: 'Central Operations Directorate (MHQ)', code: 'MHQ-OPS', head_contact: 'Arsh Mishra' }
     ];
 
     for (const d of defaultDepts) {

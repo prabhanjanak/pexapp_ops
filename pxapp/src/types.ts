@@ -132,6 +132,8 @@ export interface Bottleneck {
   requiresMhqIntervention?: boolean;
   mhqInterventionBy?: string;
   mhqInterventionAt?: string;
+  mhqDepartment?: string;
+  mhqInterventionNotes?: string;
   resolvedBy?: string;
   resolvedAt?: string;
   history?: BottleneckHistoryItem[];

@@ -9,6 +9,7 @@ import { ImageLightboxModal } from './ImageLightboxModal';
 import { AssignDeadlineModal } from './AssignDeadlineModal';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
+import { MhqInterventionModal } from './MhqInterventionModal';
 import {
   Building2,
   Plus,
@@ -120,6 +121,15 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
 
   // Assign Deadline Modal state
   const [assignModalState, setAssignModalState] = useState<{
+    isOpen: boolean;
+    bottleneck: Bottleneck | null;
+  }>({
+    isOpen: false,
+    bottleneck: null
+  });
+
+  // MHQ Department Intervention Modal state
+  const [mhqModalState, setMhqModalState] = useState<{
     isOpen: boolean;
     bottleneck: Bottleneck | null;
   }>({
@@ -262,16 +272,36 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     });
   };
 
-  // Flag bottleneck as requiring MHQ resolution / intervention
+  // Flag bottleneck as requiring MHQ resolution / intervention via Department Modal
   const handleResolvedByMhq = (bottleneck: Bottleneck) => {
-    if (!window.confirm(`Flag "${bottleneck.title}" as requiring central MHQ Intervention / Resolution? This will be prioritized in the MHQ Operations Directorate.`)) {
-      return;
-    }
-    onUpdateBottleneck?.(currentUnit.id, bottleneck.id, {
+    setMhqModalState({
+      isOpen: true,
+      bottleneck
+    });
+  };
+
+  const handleConfirmMhqIntervention = (mhqDept: string, mhqNotes: string) => {
+    if (!mhqModalState.bottleneck) return;
+    const b = mhqModalState.bottleneck;
+    onUpdateBottleneck?.(currentUnit.id, b.id, {
       status: 'Requires MHQ Intervention',
       requiresMhqIntervention: true,
+      mhqDepartment: mhqDept,
+      mhqInterventionNotes: mhqNotes,
       mhqInterventionBy: currentUser.name,
       mhqInterventionAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleClearMhqFlag = () => {
+    if (!mhqModalState.bottleneck) return;
+    const b = mhqModalState.bottleneck;
+    onUpdateBottleneck?.(currentUnit.id, b.id, {
+      status: 'In progress',
+      requiresMhqIntervention: false,
+      mhqDepartment: '',
+      mhqInterventionNotes: '',
       lastUpdated: new Date().toISOString().split('T')[0]
     });
   };
@@ -664,6 +694,34 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                           </div>
                         )}
 
+                        {/* MHQ Intervention Display Banner */}
+                        {item.requiresMhqIntervention && (
+                          <div className="w-full text-xs font-semibold text-purple-900 bg-purple-50/90 p-3 rounded-2xl border border-purple-200 flex flex-col gap-1.5 shadow-2xs">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="flex items-center gap-1.5 font-bold text-purple-950">
+                                <Zap className="w-4 h-4 text-purple-600 shrink-0" />
+                                <span>Resolved by MHQ — Flagged for Central Intervention</span>
+                              </span>
+                              {item.mhqDepartment && (
+                                <span className="px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-900 font-black text-[11px] border border-purple-300">
+                                  MHQ Dept: {item.mhqDepartment}
+                                </span>
+                              )}
+                            </div>
+                            {item.mhqInterventionNotes && (
+                              <p className="text-[11px] text-purple-800 font-normal pl-5">
+                                <strong>Requirement:</strong> {item.mhqInterventionNotes}
+                              </p>
+                            )}
+                            <div className="text-[10px] text-purple-600 pl-5 flex items-center gap-2">
+                              <span>
+                                Flagged by <strong>{item.mhqInterventionBy || 'Unit Head'}</strong>
+                                {item.mhqInterventionAt ? ` on ${new Date(item.mhqInterventionAt).toLocaleDateString()}` : ''}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
                         {item.assignedEmployeeName ? (
                           <div className="text-[11px] font-semibold text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 flex items-center gap-1.5">
                             <UserCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
@@ -731,13 +789,13 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                               onClick={() => handleResolvedByMhq(item)}
                               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                 item.requiresMhqIntervention
-                                  ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                                  ? 'bg-purple-600 text-white shadow-xs hover:bg-purple-700'
                                   : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200'
                               }`}
-                              title="Indicate that this bottleneck requires resolution or intervention from central MHQ"
+                              title="Route or indicate that this bottleneck requires resolution or intervention from central MHQ"
                             >
-                              <Zap className="w-3.5 h-3.5 text-purple-600" />
-                              <span>Resolved by MHQ</span>
+                              <Zap className={`w-3.5 h-3.5 ${item.requiresMhqIntervention ? 'text-amber-300' : 'text-purple-600'}`} />
+                              <span>{item.requiresMhqIntervention ? (item.mhqDepartment ? `MHQ: ${item.mhqDepartment}` : 'Resolved by MHQ') : 'Resolved by MHQ'}</span>
                             </button>
 
                             <button
@@ -1040,6 +1098,18 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* MHQ Intervention / Resolved by MHQ Modal */}
+      {mhqModalState.isOpen && mhqModalState.bottleneck && (
+        <MhqInterventionModal
+          isOpen={true}
+          onClose={() => setMhqModalState({ isOpen: false, bottleneck: null })}
+          bottleneck={mhqModalState.bottleneck}
+          unitName={currentUnit.name}
+          onConfirm={handleConfirmMhqIntervention}
+          onClearFlag={handleClearMhqFlag}
+        />
       )}
 
       {/* Edit Bottleneck Modal */}
