@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { pool, SANKARA_INITIAL_UNITS, SANKARA_INITIAL_USERS } from './db.js';
+import { pool, SANKARA_INITIAL_UNITS, SANKARA_INITIAL_USERS, SANKARA_INITIAL_UNIT_EMPLOYEES } from './db.js';
 
 export const router = Router();
 
@@ -1207,7 +1207,24 @@ router.get('/unit-employees', async (req: Request, res: Response) => {
       updatedAt: row.updated_at
     })));
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    let list = SANKARA_INITIAL_UNIT_EMPLOYEES.map(emp => ({
+      id: emp.id,
+      name: emp.name,
+      email: emp.email,
+      unitId: emp.unit_id,
+      department: emp.department,
+      designation: emp.designation,
+      status: emp.status,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+    if (unitId && unitId !== 'ALL') {
+      list = list.filter(e => e.unitId === unitId);
+    }
+    if (activeOnly === 'true') {
+      list = list.filter(e => e.status === 'Active');
+    }
+    return res.json(list);
   }
 });
 
