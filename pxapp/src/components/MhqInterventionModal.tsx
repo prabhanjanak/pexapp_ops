@@ -238,3 +238,4 @@ export const MhqInterventionModal: React.FC<MhqInterventionModalProps> = ({
     </div>
   );
 };
+

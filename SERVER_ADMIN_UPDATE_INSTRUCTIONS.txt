@@ -35,13 +35,19 @@ and Central Operations Directorate communication workflows:
    - Both Unit and MHQ Dashboards display the assigned MHQ Department badge and requirements.
    - MHQ Directorate dashboard features an instant filter and "Mark Resolved by MHQ" action.
 
-3. UNIT HEAD ACKNOWLEDGEMENT & EMPLOYEE ASSIGNMENT WORKFLOW:
-   - MHQ raises a bottleneck against a unit (e.g. Arsh Mishra raises for Shivamogga).
-   - Respective Unit Head (e.g. Gayatri Shantharam) reviews and clicks "Acknowledge".
-   - Once acknowledged, Unit Head can assign the bottleneck to a verified local unit
-     employee (e.g. Ranjitha, Patient Care Manager for Shivamogga) via dynamic dropdown.
+3. UNIT HEAD ACKNOWLEDGEMENT & DEPARTMENT-LINKED EMPLOYEE ASSIGNMENT WORKFLOW:
+   - When MHQ raises a bottleneck against a unit (e.g. Arsh Mishra raises for Shivamogga):
+   - Respective Unit Head (e.g. Gayatri Shantharam) clicks "Acknowledge" or "Assign Employee".
+   - The interactive Accept / Assignment Modal allows:
+     * Selecting the responsible Department (e.g. Facility & Maintenance, Patient Care, Operations, etc.).
+     * Selecting the corresponding in-charge employee who comes under that department
+       (e.g. selecting Facility & Maintenance highlights and links Mr. Kumaraswamy, Facility Manager).
+     * Option to immediately begin resolution (Status: "In progress" with 25% progress)
+       or keep queued as "Acknowledged".
+     * Assigning target deadline date with 1-click presets (+7d, +14d, +30d).
+     * Adding action plan / instructions for the assignee.
    - Captures assigned employee name, department, official email, assigned by, and timestamp.
-   - Both Unit Head and MHQ Dashboards clearly display the assignment and status.
+   - Both Unit Head and MHQ Dashboards clearly display the assignment, department, and status.
 
 4. NEW FEATURE: UNIT EMPLOYEE MASTER UNDER SETTINGS:
    - Navigation: Settings → Unit Scopes & Settings → Unit Employee Master.

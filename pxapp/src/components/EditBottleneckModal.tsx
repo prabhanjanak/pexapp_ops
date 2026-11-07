@@ -353,13 +353,34 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Department / Specific Area
               </label>
-              <input
-                type="text"
+              <select
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                placeholder="e.g., OPD Wing B, Pharmacy, Lab"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
+                onChange={(e) => {
+                  const newDept = e.target.value;
+                  setDepartment(newDept);
+                  if (newDept && !assignedEmployeeId) {
+                    const match = unitEmployees.find(u =>
+                      u.department.toLowerCase().includes(newDept.toLowerCase()) ||
+                      newDept.toLowerCase().includes(u.department.toLowerCase())
+                    );
+                    if (match) {
+                      setAssignedEmployeeId(match.id);
+                      setAssignedEmployeeName(match.name);
+                      setAssignedEmployeeDept(match.department);
+                      setAssignedEmployeeEmail(match.email);
+                      setOwner(`${match.name} (${match.designation || match.department})`);
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+              >
+                <option value="">-- Select Department --</option>
+                {availableDepartments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -450,6 +471,8 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
                   setAssignedEmployeeName(emp.name);
                   setAssignedEmployeeDept(emp.department);
                   setAssignedEmployeeEmail(emp.email);
+                  setDepartment(emp.department);
+                  setOwner(`${emp.name} (${emp.designation || emp.department})`);
                   if (status === 'Pending Acknowledgement' || status === 'Raised by MHQ' || status === 'Acknowledged' || status === 'Not Started') {
                     setStatus('Assigned to Employee');
                   }

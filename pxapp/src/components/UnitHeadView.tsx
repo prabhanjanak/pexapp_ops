@@ -119,13 +119,15 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     type: 'before'
   });
 
-  // Assign Deadline Modal state
+  // Assign Deadline & Department/Employee Modal state
   const [assignModalState, setAssignModalState] = useState<{
     isOpen: boolean;
     bottleneck: Bottleneck | null;
+    isAcceptMode?: boolean;
   }>({
     isOpen: false,
-    bottleneck: null
+    bottleneck: null,
+    isAcceptMode: false
   });
 
   // MHQ Department Intervention Modal state
@@ -261,14 +263,12 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     });
   };
 
-  // Acknowledge bottleneck by Unit Head
+  // Acknowledge / Accept bottleneck by Unit Head (Opens modal with Department & Employee Assignment)
   const handleAcknowledge = (bottleneck: Bottleneck) => {
-    onUpdateBottleneck?.(currentUnit.id, bottleneck.id, {
-      status: 'Acknowledged',
-      percentComplete: bottleneck.percentComplete > 0 ? bottleneck.percentComplete : 25,
-      acknowledgedBy: currentUser.name,
-      acknowledgedAt: new Date().toISOString(),
-      lastUpdated: new Date().toISOString().split('T')[0]
+    setAssignModalState({
+      isOpen: true,
+      bottleneck,
+      isAcceptMode: true
     });
   };
 
@@ -306,31 +306,53 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     });
   };
 
-  // Confirm Assignment with Deadline & Employee from Modal
+  // Confirm Assignment with Deadline, Department & Employee from Modal
   const handleConfirmAssignment = (
     targetDate: string,
     owner: string,
     remarks: string,
-    employee?: UnitEmployee
+    employee?: { id: string; name: string; dept: string; email: string },
+    department?: string,
+    isAccepted?: boolean,
+    markAsStarted?: boolean
   ) => {
     if (!assignModalState.bottleneck) return;
     const b = assignModalState.bottleneck;
 
+    let targetStatus: BottleneckStatus = b.status;
+    let initialPercent = b.percentComplete;
+
+    if (markAsStarted) {
+      targetStatus = 'In progress';
+      if (initialPercent < 25) initialPercent = 25;
+    } else if (employee) {
+      targetStatus = 'Assigned to Employee';
+      if (initialPercent < 25) initialPercent = 25;
+    } else if (isAccepted) {
+      targetStatus = 'Acknowledged';
+      if (initialPercent < 25) initialPercent = 25;
+    }
+
+    const resolvedDept = department || employee?.dept || b.department;
+
     onUpdateBottleneck?.(currentUnit.id, b.id, {
-      status: 'Assigned to Employee',
-      percentComplete: b.percentComplete > 0 ? b.percentComplete : 40,
-      targetDate,
-      owner: (employee && employee.name) ? employee.name : (owner || b.owner),
+      status: targetStatus,
+      percentComplete: initialPercent,
+      targetDate: targetDate || b.targetDate,
+      department: resolvedDept,
+      owner: (employee && employee.name) ? `${employee.name} (${employee.dept || 'Unit Lead'})` : (owner || b.owner),
       remarks: remarks || b.remarks,
       assignedEmployeeId: employee?.id || b.assignedEmployeeId,
       assignedEmployeeName: employee?.name || b.assignedEmployeeName,
-      assignedEmployeeDept: employee?.department || b.assignedEmployeeDept,
+      assignedEmployeeDept: employee?.dept || resolvedDept || b.assignedEmployeeDept,
       assignedEmployeeEmail: employee?.email || b.assignedEmployeeEmail,
-      assignedBy: currentUser.name,
-      assignedAt: new Date().toISOString(),
+      assignedBy: employee ? currentUser.name : b.assignedBy,
+      assignedAt: employee ? new Date().toISOString() : b.assignedAt,
+      acknowledgedBy: isAccepted ? currentUser.name : (b.acknowledgedBy || currentUser.name),
+      acknowledgedAt: isAccepted ? new Date().toISOString() : (b.acknowledgedAt || new Date().toISOString()),
       lastUpdated: new Date().toISOString().split('T')[0]
     });
-    setAssignModalState({ isOpen: false, bottleneck: null });
+    setAssignModalState({ isOpen: false, bottleneck: null, isAcceptMode: false });
   };
 
   // Handle Remarks Blur Save
@@ -775,7 +797,7 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
                             {/* Assign to Unit Employee Button */}
                             <button
                               type="button"
-                              onClick={() => setAssignModalState({ isOpen: true, bottleneck: item })}
+                              onClick={() => setAssignModalState({ isOpen: true, bottleneck: item, isAcceptMode: false })}
                               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold text-indigo-700 transition-colors cursor-pointer"
                               title="Assign to a verified employee of this unit"
                             >
@@ -995,8 +1017,12 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
       {assignModalState.isOpen && (
         <AssignDeadlineModal
           isOpen={assignModalState.isOpen}
-          onClose={() => setAssignModalState({ isOpen: false, bottleneck: null })}
+          onClose={() => setAssignModalState({ isOpen: false, bottleneck: null, isAcceptMode: false })}
           bottleneck={assignModalState.bottleneck}
+          unitId={currentUnit.id}
+          unitName={currentUnit.name}
+          isAcceptMode={assignModalState.isAcceptMode}
+          currentUser={currentUser}
           onConfirm={handleConfirmAssignment}
         />
       )}

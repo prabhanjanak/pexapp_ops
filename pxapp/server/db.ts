@@ -541,6 +541,15 @@ export const SANKARA_INITIAL_UNIT_EMPLOYEES = [
     designation: 'Administrative Officer',
     status: 'Active'
   },
+  {
+    id: 'emp-smg-04',
+    name: 'Mr. Kumaraswamy',
+    email: 'kumaraswamy.smg@sankaraeye.com',
+    unit_id: 'unit-shimoga',
+    department: 'Facility & Maintenance',
+    designation: 'Facility Manager',
+    status: 'Active'
+  },
   // Indore (IND)
   {
     id: 'emp-ind-01',
@@ -567,6 +576,15 @@ export const SANKARA_INITIAL_UNIT_EMPLOYEES = [
     unit_id: 'unit-indore',
     department: 'Administration',
     designation: 'Hospital Administrator',
+    status: 'Active'
+  },
+  {
+    id: 'emp-ind-04',
+    name: 'Rameshwar Patidar',
+    email: 'rameshwar.ind@sankaraeye.com',
+    unit_id: 'unit-indore',
+    department: 'Facility & Maintenance',
+    designation: 'Facility & Maintenance Supervisor',
     status: 'Active'
   },
   // Coimbatore (CBE)
@@ -838,7 +856,8 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       { id: 'dept-pharmacy', name: 'Pharmacy & Dispensary', code: 'PHARM', head_contact: 'Chief Pharmacist' },
       { id: 'dept-billing', name: 'Billing & TPA Insurance', code: 'BILL', head_contact: 'Finance Lead' },
       { id: 'dept-counselling', name: 'Patient Counselling', code: 'COUNS', head_contact: 'PX Head' },
-      { id: 'dept-facility', name: 'Facility & Housekeeping', code: 'FAC', head_contact: 'Facility Manager' },
+      { id: 'dept-facility', name: 'Facility & Maintenance', code: 'FAC', head_contact: 'Facility Manager' },
+      { id: 'dept-housekeeping', name: 'Housekeeping & Sanitation', code: 'HK', head_contact: 'Housekeeping Lead' },
       { id: 'dept-quality', name: 'Quality Assurance & Audit', code: 'QA', head_contact: 'Quality Lead' },
       { id: 'dept-it', name: 'IT & Digital Infrastructure', code: 'IT', head_contact: 'IT Ops Lead' },
       { id: 'dept-biomedical', name: 'Biomedical Engineering', code: 'BME', head_contact: 'Chief Bio-Medical Engineer' },
