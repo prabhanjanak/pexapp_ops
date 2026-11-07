@@ -1237,8 +1237,38 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'unitId, title, and category are required' });
   }
 
-  const client = await pool.connect();
+  // Instant in-memory handling for Vercel preview without database
+  if (isVercelEnvironment && !process.env.DATABASE_URL) {
+    const today = new Date().toISOString().split('T')[0];
+    const newMock = {
+      id: `${unitId}-${Date.now()}`,
+      unit_id: unitId,
+      title: title.trim(),
+      category,
+      department,
+      status: status || (userRole.includes('Operations') || userRole.includes('Admin') ? 'Raised by MHQ' : 'Pending Acknowledgement'),
+      percent_complete: Number(percentComplete) || 0,
+      owner,
+      last_updated: today,
+      impact_level: impactLevel,
+      target_date: targetDate,
+      notes,
+      remarks,
+      before_photos: beforePhotos,
+      after_photos: afterPhotos,
+      tasks,
+      raised_by: userName || (userRole.includes('Operations') ? 'MHQ Operations Team' : userRole),
+      raised_by_role: userRole,
+      raised_date: today,
+      history: []
+    };
+    VERCEL_DEMO_BOTTLENECKS.unshift(newMock);
+    return res.status(201).json(formatBottleneck(newMock));
+  }
+
+  let client: any = null;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     const newId = `${unitId}-${Date.now()}`;
@@ -1386,8 +1416,50 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     resolvedAt
   } = req.body;
 
-  const client = await pool.connect();
+  // Instant in-memory handling for Vercel preview without database
+  if (isVercelEnvironment && !process.env.DATABASE_URL) {
+    const today = new Date().toISOString().split('T')[0];
+    const foundIdx = VERCEL_DEMO_BOTTLENECKS.findIndex(b => b.id === id);
+    if (foundIdx >= 0) {
+      const current = VERCEL_DEMO_BOTTLENECKS[foundIdx];
+      const updated = {
+        ...current,
+        title: title !== undefined ? title : current.title,
+        category: category !== undefined ? category : current.category,
+        department: department !== undefined ? department : current.department,
+        status: status !== undefined ? status : current.status,
+        percent_complete: percentComplete !== undefined ? Number(percentComplete) : current.percent_complete,
+        owner: owner !== undefined ? owner : current.owner,
+        impact_level: impactLevel !== undefined ? impactLevel : current.impact_level,
+        target_date: targetDate !== undefined ? targetDate : current.target_date,
+        notes: notes !== undefined ? notes : current.notes,
+        remarks: remarks !== undefined ? remarks : current.remarks,
+        acknowledged_by: acknowledgedBy !== undefined ? acknowledgedBy : current.acknowledged_by,
+        acknowledged_at: acknowledgedAt !== undefined ? acknowledgedAt : current.acknowledged_at,
+        assigned_employee_id: assignedEmployeeId !== undefined ? assignedEmployeeId : current.assigned_employee_id,
+        assigned_employee_name: assignedEmployeeName !== undefined ? assignedEmployeeName : current.assigned_employee_name,
+        assigned_employee_dept: assignedEmployeeDept !== undefined ? assignedEmployeeDept : current.assigned_employee_dept,
+        assigned_employee_email: assignedEmployeeEmail !== undefined ? assignedEmployeeEmail : current.assigned_employee_email,
+        assigned_by: assignedBy !== undefined ? assignedBy : current.assigned_by,
+        assigned_at: assignedAt !== undefined ? assignedAt : current.assigned_at,
+        requires_mhq_intervention: requiresMhqIntervention !== undefined ? requiresMhqIntervention : current.requires_mhq_intervention,
+        mhq_intervention_by: mhqInterventionBy !== undefined ? mhqInterventionBy : current.mhq_intervention_by,
+        mhq_intervention_at: mhqInterventionAt !== undefined ? mhqInterventionAt : current.mhq_intervention_at,
+        mhq_department: mhqDepartment !== undefined ? mhqDepartment : current.mhq_department,
+        mhq_intervention_notes: mhqInterventionNotes !== undefined ? mhqInterventionNotes : current.mhq_intervention_notes,
+        resolved_by: resolvedBy !== undefined ? resolvedBy : current.resolved_by,
+        resolved_at: resolvedAt !== undefined ? resolvedAt : current.resolved_at,
+        last_updated: today
+      };
+      VERCEL_DEMO_BOTTLENECKS[foundIdx] = updated;
+      return res.json(formatBottleneck(updated));
+    }
+    return res.json(formatBottleneck({ id, ...req.body, last_updated: today }));
+  }
+
+  let client: any = null;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     const existingRes = await client.query('SELECT * FROM bottlenecks WHERE id = $1', [id]);
@@ -1786,9 +1858,18 @@ router.delete('/unit-employees/:id', async (req: Request, res: Response) => {
 router.delete('/bottlenecks/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const userRole = (req.query.userRole as string) || 'Unit Head';
-  let client;
   let deletedUnitId: string | undefined;
 
+  if (isVercelEnvironment && !process.env.DATABASE_URL) {
+    const idx = VERCEL_DEMO_BOTTLENECKS.findIndex(b => b.id === id);
+    if (idx >= 0) {
+      deletedUnitId = VERCEL_DEMO_BOTTLENECKS[idx].unit_id;
+      VERCEL_DEMO_BOTTLENECKS.splice(idx, 1);
+    }
+    return res.json({ success: true, deletedId: id, unitId: deletedUnitId });
+  }
+
+  let client: any = null;
   try {
     client = await pool.connect();
     await client.query('BEGIN');
@@ -2006,8 +2087,26 @@ router.post('/bottlenecks/:id/comments', async (req: Request, res: Response) => 
     return res.status(400).json({ error: 'Comment message is required' });
   }
 
-  const client = await pool.connect();
+  if (isVercelEnvironment && !process.env.DATABASE_URL) {
+    const found = VERCEL_DEMO_BOTTLENECKS.find(b => b.id === id);
+    const newComment = {
+      id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      authorName: authorName || 'Central Operations',
+      authorRole: authorRole || 'Operations Team',
+      authorEmail: authorEmail || '',
+      message: message.trim(),
+      createdAt: new Date().toISOString()
+    };
+    if (found) {
+      found.comments = [...(found.comments || []), newComment];
+      return res.status(201).json(formatBottleneck(found));
+    }
+    return res.status(201).json(formatBottleneck({ id, comments: [newComment] }));
+  }
+
+  let client: any = null;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     const checkRes = await client.query('SELECT * FROM bottlenecks WHERE id = $1', [id]);
