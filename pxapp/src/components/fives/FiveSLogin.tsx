@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiveSUser } from './types';
 import { FIVE_S_DEFAULT_USERS } from './seedData';
+import { normalizeLoginIdentifier } from '../../utils/authUtils';
 import {
   Lock,
   Mail,
@@ -44,12 +45,21 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
 
     setTimeout(() => {
       setIsLoading(false);
+      const normalized = normalizeLoginIdentifier(cleanId);
       let matched = FIVE_S_DEFAULT_USERS.find(
         (u) =>
           u.email.toLowerCase() === cleanId ||
+          u.email.toLowerCase() === normalized ||
           u.username.toLowerCase() === cleanId ||
-          u.id.toLowerCase() === cleanId
+          u.username.toLowerCase() === normalized ||
+          u.id.toLowerCase() === cleanId ||
+          u.id.toLowerCase() === normalized
       );
+
+      // Support direct unithead role mapping in 5S if matching CBE or other unit head
+      if (!matched && (cleanId.includes('unithead') || normalized.includes('head.'))) {
+        matched = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'unithead');
+      }
 
       if (!matched) {
         setError('Invalid credentials. Please verify your Email ID and Password.');

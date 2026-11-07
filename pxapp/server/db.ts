@@ -379,6 +379,30 @@ export const SANKARA_INITIAL_USERS = [
     avatar_initials: 'BH'
   },
   {
+    id: 'user-head-cbe-alias',
+    name: 'Ms. Binitha Harish',
+    email: 'cbe.unithead@sankaraeye.com',
+    emp_id: 'UH-CBE02',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-coimbatore',
+    app_access: 'both',
+    designation: 'Unit Head • Coimbatore Hospital',
+    avatar_initials: 'BH'
+  },
+  {
+    id: 'user-head-unithead-cbe-alias',
+    name: 'Ms. Binitha Harish',
+    email: 'unithead.cbe@sankaraeye.com',
+    emp_id: 'UH-CBE03',
+    password: 'Sankara@123',
+    role: 'Unit Head',
+    unit_id: 'unit-coimbatore',
+    app_access: 'both',
+    designation: 'Unit Head • Coimbatore Hospital',
+    avatar_initials: 'BH'
+  },
+  {
     id: 'user-head-cbc',
     name: 'Ms. Kanmani S',
     email: 'head.cbccity@sankaraeye.com',

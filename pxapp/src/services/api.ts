@@ -1,5 +1,6 @@
 import { HospitalUnit, Bottleneck, AuditLog, DbHealthStatus, User, AuthSession, CategoryItem, DepartmentItem, UnitEmployee } from '../types';
 import { INITIAL_USERS, INITIAL_UNITS } from '../data/seedData';
+import { normalizeLoginIdentifier } from '../utils/authUtils';
 
 const API_BASE = '/api';
 
@@ -126,18 +127,19 @@ export const api = {
     localStorage.removeItem('sankara_5s_user');
     sessionStorage.clear();
 
-    const cleanKey = identifier.trim().toLowerCase();
+    const rawKey = identifier.trim().toLowerCase();
+    const cleanKey = normalizeLoginIdentifier(rawKey);
     const allKnownUsers = [...getLocalUsersList(), ...(INITIAL_USERS as User[])];
     const localMatch = allKnownUsers.find(
       (u) =>
-        (u.email && u.email.toLowerCase() === cleanKey) ||
-        (u.empId && u.empId.toLowerCase() === cleanKey)
+        (u.email && (u.email.toLowerCase() === rawKey || u.email.toLowerCase() === cleanKey)) ||
+        (u.empId && (u.empId.toLowerCase() === rawKey || u.empId.toLowerCase() === cleanKey))
     );
 
     try {
       const data = await fetchJson<AuthSession>('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ identifier, email: identifier, empId: identifier, password })
+        body: JSON.stringify({ identifier, email: cleanKey, empId: identifier, password })
       });
       if (data && data.token && data.user) {
         localStorage.setItem('sankara_auth_token', data.token);
@@ -145,7 +147,7 @@ export const api = {
         return data;
       }
     } catch (err: any) {
-      if (err.message && (err.message.includes('Invalid password') || err.message.includes('User account not found'))) {
+      if (err.message && err.message.includes('Invalid password')) {
         throw err;
       }
       // If server does not have the user or backend DB is disconnected/unreachable on cloud edge, verify locally
