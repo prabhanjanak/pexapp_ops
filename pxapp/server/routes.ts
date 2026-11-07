@@ -3,6 +3,200 @@ import { pool, SANKARA_INITIAL_UNITS, SANKARA_INITIAL_USERS, SANKARA_INITIAL_UNI
 
 export const router = Router();
 
+export const isVercelEnvironment = Boolean(
+  process.env.VERCEL || 
+  process.env.VERCEL_ENV || 
+  process.env.NEXT_PUBLIC_VERCEL_ENV
+);
+
+// Realistic demo bottlenecks strictly for Vercel preview/testing environment only.
+// On the on-premise Sankara server (IP 244), isVercelEnvironment is false and production PostgreSQL data is untouched.
+export const VERCEL_DEMO_BOTTLENECKS: any[] = [
+  // 1. Shivamogga Unit - Raised by MHQ (Arsh Mishra), awaiting Gayatri Mam to acknowledge & assign
+  {
+    id: 'bn-smg-01',
+    unit_id: 'unit-shimoga',
+    title: 'Air conditioning and ventilation malfunction in OT recovery bay',
+    category: 'Facility & Maintenance',
+    department: 'Facility & Maintenance',
+    status: 'Pending Acknowledgement',
+    percent_complete: 0,
+    owner: 'Ms. Gayatri Shantharam',
+    last_updated: '2026-11-07',
+    impact_level: 'High',
+    target_date: '2026-11-20',
+    notes: 'Raised by MHQ Operations Team. Temperature in postoperative holding area fluctuates above permissible range during afternoon hours.',
+    remarks: 'Local unit facility manager inspection required.',
+    raised_by: 'Arsh Mishra',
+    raised_by_role: 'Operations Team',
+    raised_date: '2026-11-06',
+    comments: [],
+    tasks: [
+      { id: 'task-1', text: 'Inspect AHU cooling coil and refrigerant pressure', isCompleted: false },
+      { id: 'task-2', text: 'Obtain vendor quotation if compressor overhaul required', isCompleted: false }
+    ],
+    history: [
+      {
+        id: 'hist-1',
+        updatedBy: 'Arsh Mishra',
+        updatedRole: 'Operations Team',
+        field: 'Status',
+        previousValue: 'None',
+        updatedValue: 'Pending Acknowledgement',
+        timestamp: '2026-11-06T10:30:00Z'
+      }
+    ]
+  },
+  // 2. Shivamogga Unit - In Progress & Assigned to Ranjitha (Patient Care)
+  {
+    id: 'bn-smg-02',
+    unit_id: 'unit-shimoga',
+    title: 'Patient counselling documentation turnaround delay during pre-surgical workup',
+    category: 'Counselling Wait Time',
+    department: 'Patient Care',
+    status: 'In progress',
+    percent_complete: 45,
+    owner: 'Ms. Gayatri Shantharam',
+    last_updated: '2026-11-07',
+    impact_level: 'Medium',
+    target_date: '2026-11-18',
+    notes: 'Average counselling queue exceeds 25 minutes for Ayushman Bharat and CMCHIS scheme patients.',
+    remarks: 'Dedicated documentation helper assigned.',
+    raised_by: 'Arsh Mishra',
+    raised_by_role: 'Operations Team',
+    raised_date: '2026-11-04',
+    acknowledged_by: 'Ms. Gayatri Shantharam',
+    acknowledged_at: '2026-11-04 14:00',
+    assigned_employee_id: 'emp-smg-01',
+    assigned_employee_name: 'Ranjitha',
+    assigned_employee_dept: 'Patient Care',
+    assigned_employee_email: 'ranjitha.smg@sankaraeye.com',
+    assigned_by: 'Ms. Gayatri Shantharam',
+    assigned_at: '2026-11-04 14:30',
+    comments: [
+      {
+        id: 'comm-1',
+        authorName: 'Ranjitha',
+        authorRole: 'Unit Employee',
+        authorEmail: 'ranjitha.smg@sankaraeye.com',
+        message: 'Patient workflow restructured with 2 dedicated counselling desks.',
+        createdAt: '2026-11-05T09:15:00Z'
+      }
+    ],
+    tasks: [],
+    history: []
+  },
+  // 3. Indore Unit - Raised by MHQ, ready for Dr. Rituraj Sharma to review / update
+  {
+    id: 'bn-ind-01',
+    unit_id: 'unit-indore',
+    title: 'Morning OPD registration token display queue congestion',
+    category: 'Registration Delays',
+    department: 'Outpatient (OPD)',
+    status: 'Pending Acknowledgement',
+    percent_complete: 15,
+    owner: 'Dr. Rituraj Sharma',
+    last_updated: '2026-11-07',
+    impact_level: 'High',
+    target_date: '2026-11-19',
+    notes: 'Raised by MHQ Operations Team during central queue analysis. Peak token issuance wait time at 09:30 AM reaches 22 minutes.',
+    remarks: 'Token display hardware and queue token dispenser synchronization check needed.',
+    raised_by: 'Arsh Mishra',
+    raised_by_role: 'Operations Team',
+    raised_date: '2026-11-05',
+    comments: [],
+    tasks: [],
+    history: []
+  },
+  // 4. Coimbatore Unit - Dilation and Buzzer Alert System
+  {
+    id: 'bn-cbe-01',
+    unit_id: 'unit-coimbatore',
+    title: 'Dilation & buzzer pager alert system coverage constraint during peak OPD days',
+    category: 'Dilation & Buzzer Alert System',
+    department: 'Outpatient (OPD)',
+    status: 'In progress',
+    percent_complete: 35,
+    owner: 'Ms. Binitha Harish',
+    last_updated: '2026-11-07',
+    impact_level: 'Medium',
+    target_date: '2026-11-22',
+    notes: 'Raised by MHQ Operations Team. Additional buzzer pagers required to cover high patient inflow on Tuesdays and Thursdays.',
+    remarks: 'Requisition submitted for 25 additional pagers.',
+    raised_by: 'Arsh Mishra',
+    raised_by_role: 'Operations Team',
+    raised_date: '2026-11-04',
+    acknowledged_by: 'Ms. Binitha Harish',
+    acknowledged_at: '2026-11-04 11:30',
+    assigned_employee_id: 'emp-cbe-01',
+    assigned_employee_name: 'Mr. Kumaraswamy',
+    assigned_employee_dept: 'Facility & Maintenance',
+    assigned_employee_email: 'kumaraswamy.cbe@sankaraeye.com',
+    assigned_by: 'Ms. Binitha Harish',
+    assigned_at: '2026-11-04 12:00',
+    comments: [],
+    tasks: [],
+    history: []
+  },
+  // 5. Coimbatore Unit - Requires MHQ Intervention (Central Resolution)
+  {
+    id: 'bn-cbe-02',
+    unit_id: 'unit-coimbatore',
+    title: 'Central TPA insurance tariff renewal and state scheme empanelment documentation',
+    category: 'Billing & Insurance Clearance',
+    department: 'Billing & TPA Insurance',
+    status: 'Requires MHQ Resolution',
+    percent_complete: 60,
+    owner: 'Ms. Binitha Harish',
+    last_updated: '2026-11-07',
+    impact_level: 'High',
+    target_date: '2026-11-25',
+    notes: 'Local insurance desk requires central legal MOU and tariff revision authorization from MHQ Central Operations.',
+    remarks: 'Flagged by Unit Head for central MHQ action.',
+    raised_by: 'Ms. Binitha Harish',
+    raised_by_role: 'Unit Head',
+    raised_date: '2026-11-03',
+    requires_mhq_intervention: true,
+    mhq_department: 'Billing & TPA Insurance',
+    mhq_intervention_by: 'Ms. Binitha Harish',
+    mhq_intervention_at: '2026-11-05 15:45',
+    mhq_intervention_notes: 'Central insurance team needs to sign revised rate schedule with Star Health and CMCHIS.',
+    comments: [],
+    tasks: [],
+    history: []
+  },
+  // 6. Bengaluru Unit - Diagnostic Lab Sync
+  {
+    id: 'bn-blr-01',
+    unit_id: 'unit-bangalore',
+    title: 'Pre-operative pathology blood investigation auto-sync to EMR',
+    category: 'Lab Turnaround',
+    department: 'Diagnostic & Laboratory',
+    status: 'In progress',
+    percent_complete: 70,
+    owner: 'Lt. Col. S. Guruprasad (Retd.)',
+    last_updated: '2026-11-07',
+    impact_level: 'Medium',
+    target_date: '2026-11-16',
+    notes: 'Lab analyzer interface bridge requires bidirectional HL7 integration with EMR.',
+    remarks: 'Local IT configuring interface driver.',
+    raised_by: 'Arsh Mishra',
+    raised_by_role: 'Operations Team',
+    raised_date: '2026-11-02',
+    acknowledged_by: 'Lt. Col. S. Guruprasad (Retd.)',
+    acknowledged_at: '2026-11-02 10:00',
+    assigned_employee_id: 'emp-blr-01',
+    assigned_employee_name: 'Anitha Rao',
+    assigned_employee_dept: 'Diagnostic & Laboratory',
+    assigned_employee_email: 'anitha.blr@sankaraeye.com',
+    assigned_by: 'Lt. Col. S. Guruprasad (Retd.)',
+    assigned_at: '2026-11-02 11:15',
+    comments: [],
+    tasks: [],
+    history: []
+  }
+];
+
 function formatBottleneck(row: any) {
   let beforePhotos: string[] = [];
   let afterPhotos: string[] = [];
@@ -148,7 +342,7 @@ router.get('/health', async (req: Request, res: Response) => {
       database: 'PostgreSQL (Cloud Edge / Local Storage)',
       latencyMs: Date.now() - startTime,
       unitsCount: SANKARA_INITIAL_UNITS.length,
-      bottlenecksCount: 0,
+      bottlenecksCount: isVercelEnvironment ? VERCEL_DEMO_BOTTLENECKS.length : 0,
       auditLogsCount: 0,
       usersCount: SANKARA_INITIAL_USERS.length,
       timestamp: new Date().toISOString()
@@ -709,6 +903,16 @@ router.get('/units', async (req: Request, res: Response) => {
       bMap.get(b.unit_id)!.push(b);
     }
 
+    // Only inject dummy bottlenecks on Vercel preview if postgres bottlenecks table is empty
+    if (isVercelEnvironment && bottlenecksRes.rows.length === 0) {
+      for (const b of VERCEL_DEMO_BOTTLENECKS) {
+        if (!bMap.has(b.unit_id)) {
+          bMap.set(b.unit_id, []);
+        }
+        bMap.get(b.unit_id)!.push(b);
+      }
+    }
+
     const units = unitsRes.rows.map((u) => {
       const bList = bMap.get(u.id) || [];
       return formatUnit(u, bList);
@@ -717,7 +921,12 @@ router.get('/units', async (req: Request, res: Response) => {
     return res.json(units);
   } catch (error: any) {
     console.warn('[PostgreSQL Units Query Notice]', error.message);
-    return res.json(SANKARA_INITIAL_UNITS.map(u => formatUnit(u, (u as any).bottlenecks || [])));
+    return res.json(SANKARA_INITIAL_UNITS.map(u => {
+      const demoList = isVercelEnvironment ? VERCEL_DEMO_BOTTLENECKS.filter(b => b.unit_id === u.id) : [];
+      const memList = (u as any).bottlenecks || [];
+      const bList = demoList.length > 0 ? demoList : memList;
+      return formatUnit(u, bList);
+    }));
   }
 });
 
@@ -731,7 +940,11 @@ router.get('/units/:id', async (req: Request, res: Response) => {
         'SELECT * FROM bottlenecks WHERE unit_id = $1 ORDER BY created_at DESC',
         [id]
       );
-      return res.json(formatUnit(unitRes.rows[0], bottlenecksRes.rows));
+      let bList = bottlenecksRes.rows;
+      if (isVercelEnvironment && bList.length === 0) {
+        bList = VERCEL_DEMO_BOTTLENECKS.filter(b => b.unit_id === id);
+      }
+      return res.json(formatUnit(unitRes.rows[0], bList));
     }
   } catch (error: any) {
     console.warn('[PostgreSQL Single Unit Query Notice]', error.message);
@@ -739,7 +952,9 @@ router.get('/units/:id', async (req: Request, res: Response) => {
 
   const memUnit = SANKARA_INITIAL_UNITS.find(u => u.id === id);
   if (memUnit) {
-    return res.json(formatUnit(memUnit, (memUnit as any).bottlenecks || []));
+    const demoList = isVercelEnvironment ? VERCEL_DEMO_BOTTLENECKS.filter(b => b.unit_id === id) : [];
+    const bList = demoList.length > 0 ? demoList : ((memUnit as any).bottlenecks || []);
+    return res.json(formatUnit(memUnit, bList));
   }
   return res.status(404).json({ error: `Unit ${id} not found` });
 });
@@ -1097,10 +1312,41 @@ router.post('/bottlenecks', async (req: Request, res: Response) => {
     await client.query('COMMIT');
     res.status(201).json(formatBottleneck(insertRes.rows[0]));
   } catch (error: any) {
-    await client.query('ROLLBACK');
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) { }
+    }
+    if (isVercelEnvironment) {
+      const today = new Date().toISOString().split('T')[0];
+      const newMock = {
+        id: `${unitId}-${Date.now()}`,
+        unit_id: unitId,
+        title: title.trim(),
+        category,
+        department,
+        status: status || (userRole.includes('Operations') || userRole.includes('Admin') ? 'Raised by MHQ' : 'Pending Acknowledgement'),
+        percent_complete: Number(percentComplete) || 0,
+        owner,
+        last_updated: today,
+        impact_level: impactLevel,
+        target_date: targetDate,
+        notes,
+        remarks,
+        before_photos: beforePhotos,
+        after_photos: afterPhotos,
+        tasks,
+        raised_by: userName || (userRole.includes('Operations') ? 'MHQ Operations Team' : userRole),
+        raised_by_role: userRole,
+        raised_date: today,
+        history: []
+      };
+      VERCEL_DEMO_BOTTLENECKS.unshift(newMock);
+      return res.status(201).json(formatBottleneck(newMock));
+    }
     res.status(500).json({ error: error.message });
   } finally {
-    client.release();
+    if (client) {
+      try { client.release(); } catch (_) { }
+    }
   }
 });
 
@@ -1357,10 +1603,53 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     await client.query('COMMIT');
     res.json(formatBottleneck(updateRes.rows[0]));
   } catch (error: any) {
-    await client.query('ROLLBACK');
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) { }
+    }
+    if (isVercelEnvironment) {
+      const today = new Date().toISOString().split('T')[0];
+      const foundIdx = VERCEL_DEMO_BOTTLENECKS.findIndex(b => b.id === id);
+      if (foundIdx >= 0) {
+        const current = VERCEL_DEMO_BOTTLENECKS[foundIdx];
+        const updated = {
+          ...current,
+          title: title !== undefined ? title : current.title,
+          category: category !== undefined ? category : current.category,
+          department: department !== undefined ? department : current.department,
+          status: status !== undefined ? status : current.status,
+          percent_complete: percentComplete !== undefined ? Number(percentComplete) : current.percent_complete,
+          owner: owner !== undefined ? owner : current.owner,
+          impact_level: impactLevel !== undefined ? impactLevel : current.impact_level,
+          target_date: targetDate !== undefined ? targetDate : current.target_date,
+          notes: notes !== undefined ? notes : current.notes,
+          remarks: remarks !== undefined ? remarks : current.remarks,
+          acknowledged_by: acknowledgedBy !== undefined ? acknowledgedBy : current.acknowledged_by,
+          acknowledged_at: acknowledgedAt !== undefined ? acknowledgedAt : current.acknowledged_at,
+          assigned_employee_id: assignedEmployeeId !== undefined ? assignedEmployeeId : current.assigned_employee_id,
+          assigned_employee_name: assignedEmployeeName !== undefined ? assignedEmployeeName : current.assigned_employee_name,
+          assigned_employee_dept: assignedEmployeeDept !== undefined ? assignedEmployeeDept : current.assigned_employee_dept,
+          assigned_employee_email: assignedEmployeeEmail !== undefined ? assignedEmployeeEmail : current.assigned_employee_email,
+          assigned_by: assignedBy !== undefined ? assignedBy : current.assigned_by,
+          assigned_at: assignedAt !== undefined ? assignedAt : current.assigned_at,
+          requires_mhq_intervention: requiresMhqIntervention !== undefined ? requiresMhqIntervention : current.requires_mhq_intervention,
+          mhq_intervention_by: mhqInterventionBy !== undefined ? mhqInterventionBy : current.mhq_intervention_by,
+          mhq_intervention_at: mhqInterventionAt !== undefined ? mhqInterventionAt : current.mhq_intervention_at,
+          mhq_department: mhqDepartment !== undefined ? mhqDepartment : current.mhq_department,
+          mhq_intervention_notes: mhqInterventionNotes !== undefined ? mhqInterventionNotes : current.mhq_intervention_notes,
+          resolved_by: resolvedBy !== undefined ? resolvedBy : current.resolved_by,
+          resolved_at: resolvedAt !== undefined ? resolvedAt : current.resolved_at,
+          last_updated: today
+        };
+        VERCEL_DEMO_BOTTLENECKS[foundIdx] = updated;
+        return res.json(formatBottleneck(updated));
+      }
+      return res.json(formatBottleneck({ id, ...req.body, last_updated: today }));
+    }
     res.status(500).json({ error: error.message });
   } finally {
-    client.release();
+    if (client) {
+      try { client.release(); } catch (_) { }
+    }
   }
 });
 
@@ -1529,9 +1818,18 @@ router.delete('/bottlenecks/:id', async (req: Request, res: Response) => {
     if (client) {
       try { await client.query('ROLLBACK'); } catch (_) { }
     }
+    if (isVercelEnvironment) {
+      const idx = VERCEL_DEMO_BOTTLENECKS.findIndex(b => b.id === id);
+      if (idx >= 0) {
+        deletedUnitId = VERCEL_DEMO_BOTTLENECKS[idx].unit_id;
+        VERCEL_DEMO_BOTTLENECKS.splice(idx, 1);
+      }
+    }
     console.warn('[PostgreSQL Offline Delete Bottleneck]', error.message);
   } finally {
-    if (client) client.release();
+    if (client) {
+      try { client.release(); } catch (_) { }
+    }
   }
 
   res.json({ success: true, deletedId: id, unitId: deletedUnitId });
@@ -1753,10 +2051,30 @@ router.post('/bottlenecks/:id/comments', async (req: Request, res: Response) => 
     await client.query('COMMIT');
     res.status(201).json(formatBottleneck(updateRes.rows[0]));
   } catch (error: any) {
-    await client.query('ROLLBACK');
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) { }
+    }
+    if (isVercelEnvironment) {
+      const found = VERCEL_DEMO_BOTTLENECKS.find(b => b.id === id);
+      const newComment = {
+        id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        authorName: authorName || 'Central Operations',
+        authorRole: authorRole || 'Operations Team',
+        authorEmail: authorEmail || '',
+        message: message.trim(),
+        createdAt: new Date().toISOString()
+      };
+      if (found) {
+        found.comments = [...(found.comments || []), newComment];
+        return res.status(201).json(formatBottleneck(found));
+      }
+      return res.status(201).json(formatBottleneck({ id, comments: [newComment] }));
+    }
     res.status(500).json({ error: error.message });
   } finally {
-    client.release();
+    if (client) {
+      try { client.release(); } catch (_) { }
+    }
   }
 });
 

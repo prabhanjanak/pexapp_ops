@@ -138,3 +138,4 @@ export function normalizeLoginIdentifier(input: string): string {
 
   return clean;
 }
+

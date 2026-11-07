@@ -799,8 +799,6 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS after_photos JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS tasks JSONB DEFAULT '[]'::jsonb;
-      UPDATE bottlenecks SET status = 'Not Started' WHERE status = 'Pending' OR status = 'Acknowledge';
-      UPDATE bottlenecks SET status = 'In progress' WHERE status = 'Assigned work' OR status = 'In Progress';
       UPDATE units SET code = 'CBE', image_url = '/units/coimbatore.jpg' WHERE id = 'unit-coimbatore';
       UPDATE units SET code = 'CBC', image_url = '/units/coimbatore-rs-puram.jpg' WHERE id = 'unit-coimbatore-city';
       UPDATE units SET code = 'GNT', image_url = '/units/guntur.jpg' WHERE id = 'unit-guntur';
