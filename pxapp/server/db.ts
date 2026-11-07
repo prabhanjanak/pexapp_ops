@@ -927,16 +927,13 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
         `INSERT INTO users (id, name, email, emp_id, password, role, unit_id, zone_id, department, designation, avatar_initials, app_access)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (email) DO UPDATE SET
-           id = EXCLUDED.id,
-           name = EXCLUDED.name,
-           emp_id = EXCLUDED.emp_id,
-           password = EXCLUDED.password,
-           role = EXCLUDED.role,
-           unit_id = EXCLUDED.unit_id,
-           zone_id = EXCLUDED.zone_id,
-           department = EXCLUDED.department,
-           designation = EXCLUDED.designation,
-           avatar_initials = EXCLUDED.avatar_initials,
+           name = COALESCE(users.name, EXCLUDED.name),
+           emp_id = COALESCE(users.emp_id, EXCLUDED.emp_id),
+           unit_id = COALESCE(users.unit_id, EXCLUDED.unit_id),
+           zone_id = COALESCE(users.zone_id, EXCLUDED.zone_id),
+           department = COALESCE(users.department, EXCLUDED.department),
+           designation = COALESCE(users.designation, EXCLUDED.designation),
+           avatar_initials = COALESCE(users.avatar_initials, EXCLUDED.avatar_initials),
            app_access = COALESCE(users.app_access, EXCLUDED.app_access)`,
         [u.id, u.name, u.email, u.emp_id, u.password, u.role, u.unit_id, (u as any).zone_id || null, (u as any).department || null, u.designation, u.avatar_initials, (u as any).app_access || 'both']
       );

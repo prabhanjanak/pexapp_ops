@@ -189,7 +189,14 @@ export const StaffDirectoryView: React.FC<StaffDirectoryViewProps> = ({
           : formRole
       });
 
-      setUsersList(prev => prev.map(u => (u.id === updated.id ? updated : u)));
+      setUsersList(prev => prev.map(u => (u.id === updated.id || u.id === editingUser.id || (u.email && updated.email && u.email.toLowerCase() === updated.email.toLowerCase()) ? updated : u)));
+
+      // If updating currently logged in user, immediately update stored session
+      if (currentUser && (currentUser.id === updated.id || currentUser.id === editingUser.id || (currentUser.email && updated.email && currentUser.email.toLowerCase() === updated.email.toLowerCase()))) {
+        const merged = { ...currentUser, ...updated };
+        localStorage.setItem('sankara_auth_user', JSON.stringify(merged));
+      }
+
       setEditingUser(null);
       setShowAddModal(false);
       resetForm();

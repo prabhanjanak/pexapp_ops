@@ -130,25 +130,24 @@ export const api = {
     const allKnownUsers = [...getLocalUsersList(), ...(INITIAL_USERS as User[])];
     const localMatch = allKnownUsers.find(
       (u) =>
-        u.email?.toLowerCase() === cleanKey ||
-        (u.empId && u.empId.toLowerCase() === cleanKey) ||
-        (cleanKey.includes('saurabh') && u.email?.toLowerCase().includes('saurabh')) ||
-        (cleanKey.includes('sudarshan') && u.email?.toLowerCase().includes('sudarshan')) ||
-        (cleanKey.includes('prabhanjan') && u.email?.toLowerCase().includes('prabhanjan')) ||
-        (cleanKey.includes('auditor') && (u.role === 'Auditor' || u.email?.toLowerCase().includes('auditor')))
-    ) || (cleanKey.includes('010177') ? (INITIAL_USERS.find((u) => u.empId === '010177') || INITIAL_USERS[1]) : null);
+        (u.email && u.email.toLowerCase() === cleanKey) ||
+        (u.empId && u.empId.toLowerCase() === cleanKey)
+    );
 
     try {
       const data = await fetchJson<AuthSession>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ identifier, email: identifier, empId: identifier, password })
       });
-      if (data && data.token) {
+      if (data && data.token && data.user) {
         localStorage.setItem('sankara_auth_token', data.token);
         localStorage.setItem('sankara_auth_user', JSON.stringify(data.user));
         return data;
       }
     } catch (err: any) {
+      if (err.message && (err.message.includes('Invalid password') || err.message.includes('User account not found'))) {
+        throw err;
+      }
       // If server does not have the user or backend DB is disconnected/unreachable on cloud edge, verify locally
       if (localMatch) {
         const expectedPassword = (localMatch as any).password || 'Sankara@123';
@@ -227,14 +226,19 @@ export const api = {
     const localUsers = getLocalUsersList();
     const deletedList = getDeletedUserIds();
     const userMap = new Map<string, User>();
-    for (const u of serverUsers) {
-      if (!deletedList.includes(u.id) && !deletedList.includes(u.email?.toLowerCase())) {
-        userMap.set(u.id, u);
-      }
-    }
+    // First populate from localUsers
     for (const u of localUsers) {
       if (!deletedList.includes(u.id) && !deletedList.includes(u.email?.toLowerCase())) {
-        userMap.set(u.id, u);
+        const key = u.email ? u.email.toLowerCase() : u.id;
+        userMap.set(key, u);
+      }
+    }
+    // Then serverUsers override localUsers (server is source of truth!)
+    for (const u of serverUsers) {
+      if (!deletedList.includes(u.id) && !deletedList.includes(u.email?.toLowerCase())) {
+        const key = u.email ? u.email.toLowerCase() : u.id;
+        const existing = userMap.get(key);
+        userMap.set(key, { ...(existing || {}), ...u });
       }
     }
     return Array.from(userMap.values());
@@ -305,11 +309,13 @@ export const api = {
     designation?: string;
     appAccess?: 'both' | 'bottleneck' | 'fives';
   }): Promise<User> => {
-    const existing = (await api.getUsers()).find(u => u.id === id);
+    const users = await api.getUsers();
+    const cleanEmail = (updates.email || updates.orgEmail || '').trim().toLowerCase();
+    const existing = users.find(u => u.id === id || (cleanEmail && u.email?.toLowerCase() === cleanEmail));
     const updatedUser: User = {
       ...(existing || { id, name: updates.name || '', email: updates.email || '', role: (updates.role as any) || 'Unit Head', avatarInitials: 'SK' }),
       ...(updates.name ? { name: updates.name } : {}),
-      ...(updates.email || updates.orgEmail ? { email: (updates.email || updates.orgEmail)!.trim().toLowerCase() } : {}),
+      ...(updates.email || updates.orgEmail ? { email: cleanEmail } : {}),
       ...(updates.empId !== undefined ? { empId: updates.empId } : {}),
       ...(updates.role ? { role: updates.role as any } : {}),
       ...(updates.unitId !== undefined ? { unitId: updates.unitId } : {}),
@@ -326,8 +332,11 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(updates)
       });
-      saveLocalUserRecord(res);
-      return res;
+      if (res && res.id) {
+        saveLocalUserRecord(res);
+        return res;
+      }
+      return updatedUser;
     } catch (err) {
       console.warn('Updated user stored locally');
       return updatedUser;

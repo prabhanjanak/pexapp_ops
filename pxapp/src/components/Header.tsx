@@ -122,6 +122,17 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Sync Data</span>
           </button>
 
+          {/* Sign Out */}
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Sign out of application"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 transition-colors border border-rose-200 cursor-pointer text-xs font-bold"
+          >
+            <LogOut className="w-3.5 h-3.5 text-rose-600" />
+            <span className="hidden sm:inline">Sign Out</span>
+          </button>
+
         </div>
 
       </div>

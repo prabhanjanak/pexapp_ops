@@ -189,7 +189,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
         u.email.toLowerCase() === loginKey.toLowerCase() ||
         u.emp_id === loginKey ||
         (u.emp_id && u.emp_id.toLowerCase() === loginKey.toLowerCase())
-    ) || (loginKey.includes('010177') ? SANKARA_INITIAL_USERS[0] : null);
+    );
 
     if (found) {
       const assignedUnit = found.unit_id ? SANKARA_INITIAL_UNITS.find((un) => un.id === found.unit_id) : null;
@@ -264,18 +264,31 @@ router.get('/auth/me', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid token structure' });
     }
 
-    const userRes = await pool.query(`
-      SELECT u.*, un.name AS unit_name
-      FROM users u
-      LEFT JOIN units un ON u.unit_id = un.id
-      WHERE u.id = $1 OR LOWER(u.email) = LOWER($1)
-    `, [userId]);
+    let user: any = null;
+    try {
+      const userRes = await pool.query(`
+        SELECT u.*, un.name AS unit_name
+        FROM users u
+        LEFT JOIN units un ON u.unit_id = un.id
+        WHERE u.id = $1 OR LOWER(u.email) = LOWER($1)
+      `, [userId]);
 
-    if (userRes.rows.length === 0) {
+      if (userRes.rows.length > 0) {
+        user = userRes.rows[0];
+      }
+    } catch (dbErr: any) {
+      console.warn('[PostgreSQL /auth/me Offline]', dbErr.message);
+    }
+
+    if (!user) {
+      user = SANKARA_INITIAL_USERS.find(u => u.id === userId || u.email.toLowerCase() === userId.toLowerCase());
+    }
+
+    if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(formatUser(userRes.rows[0]));
+    res.json(formatUser(user));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -419,8 +432,8 @@ router.put('/users/:id', async (req: Request, res: Response) => {
   const finalZoneId = zoneId !== undefined ? zoneId : (zone_id !== undefined ? zone_id : undefined);
   const finalDepartment = department !== undefined ? department : undefined;
 
-  // Update in-memory user
-  let memUser = SANKARA_INITIAL_USERS.find(u => u.id === id);
+  // Update in-memory user fallback
+  let memUser = SANKARA_INITIAL_USERS.find(u => u.id === id || (userEmail && u.email.toLowerCase() === userEmail));
   if (memUser) {
     if (userName) memUser.name = userName;
     if (userEmail) memUser.email = userEmail;
@@ -434,7 +447,7 @@ router.put('/users/:id', async (req: Request, res: Response) => {
   }
 
   try {
-    const checkRes = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const checkRes = await pool.query('SELECT * FROM users WHERE id = $1 OR LOWER(email) = LOWER($2)', [id, userEmail || id]);
     if (checkRes.rows.length > 0) {
       const current = checkRes.rows[0];
       const newName = userName || current.name;
@@ -453,14 +466,43 @@ router.put('/users/:id', async (req: Request, res: Response) => {
         SET name = $1, email = $2, emp_id = $3, role = $4, unit_id = $5, zone_id = $6, department = $7, designation = $8, avatar_initials = $9, app_access = $10
         WHERE id = $11
         RETURNING *
-      `, [newName, newEmail, newEmpId, newRole, newUnitId || null, newZoneId || null, newDepartment || null, newDesignation, initials, newAppAccess, id]);
+      `, [newName, newEmail, newEmpId, newRole, newUnitId || null, newZoneId || null, newDepartment || null, newDesignation, initials, newAppAccess, current.id]);
 
       await pool.query(`
         INSERT INTO audit_logs (user_role, action, details)
         VALUES ($1, $2, $3)
-      `, ['Super Admin', 'USER_UPDATED', JSON.stringify({ userId: id, name: newName, email: newEmail, role: newRole, zoneId: newZoneId, department: newDepartment, appAccess: newAppAccess })]);
+      `, ['Super Admin', 'USER_UPDATED', JSON.stringify({ userId: current.id, name: newName, email: newEmail, role: newRole, zoneId: newZoneId, department: newDepartment, appAccess: newAppAccess })]);
 
       return res.json(formatUser(updateRes.rows[0]));
+    } else {
+      const newName = userName || memUser?.name || 'User';
+      const newEmail = userEmail || memUser?.email || '';
+      const newRole = role || memUser?.role || 'Unit Head';
+      const newEmpId = employeeId !== undefined ? employeeId : memUser?.emp_id;
+      const newUnitId = finalUnitId !== undefined ? finalUnitId : memUser?.unit_id;
+      const newZoneId = finalZoneId !== undefined ? finalZoneId : (memUser as any)?.zone_id;
+      const newDepartment = finalDepartment !== undefined ? finalDepartment : (memUser as any)?.department;
+      const newDesignation = designation !== undefined ? designation : memUser?.designation;
+      const newAppAccess = appAccess !== undefined ? appAccess : (app_access !== undefined ? app_access : ((memUser as any)?.app_access || 'both'));
+      const initials = newName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'SK';
+
+      const insertRes = await pool.query(`
+        INSERT INTO users (id, name, email, emp_id, password, role, unit_id, zone_id, department, designation, avatar_initials, app_access)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (email) DO UPDATE SET
+          name = EXCLUDED.name,
+          emp_id = EXCLUDED.emp_id,
+          role = EXCLUDED.role,
+          unit_id = EXCLUDED.unit_id,
+          zone_id = EXCLUDED.zone_id,
+          department = EXCLUDED.department,
+          designation = EXCLUDED.designation,
+          avatar_initials = EXCLUDED.avatar_initials,
+          app_access = EXCLUDED.app_access
+        RETURNING *
+      `, [id, newName, newEmail, newEmpId, memUser?.password || 'Sankara@123', newRole, newUnitId || null, newZoneId || null, newDepartment || null, newDesignation, initials, newAppAccess]);
+
+      return res.json(formatUser(insertRes.rows[0]));
     }
   } catch (error: any) {
     console.warn('[PostgreSQL Offline Update User]', error.message);

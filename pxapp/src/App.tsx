@@ -454,6 +454,7 @@ export default function App() {
       <FiveSInProgressView
         currentUser={currentUser}
         onBack={() => setPortalView('portal')}
+        onLogout={handleLogout}
       />
     );
   }

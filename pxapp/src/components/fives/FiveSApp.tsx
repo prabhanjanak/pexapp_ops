@@ -15,6 +15,7 @@ import { User } from '../../types';
 interface FiveSAppProps {
   currentUser?: User | null;
   onBackToPortal?: () => void;
+  onLogout?: () => void;
 }
 
 const UNIT_MAP: Record<string, string> = {
@@ -141,7 +142,7 @@ function mapPortalUserToFiveSUser(portalUser: User | null | undefined): FiveSUse
   return FIVE_S_DEFAULT_USERS[0];
 }
 
-export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onBackToPortal }) => {
+export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onBackToPortal, onLogout }) => {
   // 5S Authenticated User State (portalUser strictly overrides stale local storage)
   const [fivesUser, setFivesUser] = useState<FiveSUser | null>(() => {
     if (portalUser) return mapPortalUserToFiveSUser(portalUser);
@@ -224,6 +225,11 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
     setFivesUser(null);
     setActiveScreen('dashboard');
     localStorage.removeItem('sankara_5s_auth_user');
+    localStorage.removeItem('sankara_5s_token');
+    localStorage.removeItem('sankara_5s_user');
+    if (onLogout) {
+      onLogout();
+    }
   };
 
   // Switch Role (for demonstration testing)

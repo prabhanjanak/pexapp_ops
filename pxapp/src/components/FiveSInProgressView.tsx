@@ -84,15 +84,17 @@ class FiveSErrorBoundary extends Component<Props, State> {
 interface FiveSInProgressViewProps {
   currentUser: User;
   onBack: () => void;
+  onLogout?: () => void;
 }
 
 export const FiveSInProgressView: React.FC<FiveSInProgressViewProps> = ({
   currentUser,
-  onBack
+  onBack,
+  onLogout
 }) => {
   return (
     <FiveSErrorBoundary onBack={onBack}>
-      <FiveSApp currentUser={currentUser} onBackToPortal={onBack} />
+      <FiveSApp currentUser={currentUser} onBackToPortal={onBack} onLogout={onLogout} />
     </FiveSErrorBoundary>
   );
 };

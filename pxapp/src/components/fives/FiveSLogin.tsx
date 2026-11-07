@@ -51,15 +51,9 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
           u.id.toLowerCase() === cleanId
       );
 
-      // Support direct login for Saurabh Rai, Sudarshan, and Prabhanjan as Super Admin
       if (!matched) {
-        if (cleanId === 'saurabhrai@sankaraeye.com' || cleanId === 'saurabh@sankaraeye.com' || cleanId.includes('saurabh')) {
-          matched = FIVE_S_DEFAULT_USERS.find((u) => u.email === 'saurabhrai@sankaraeye.com') || FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin');
-        } else if (cleanId === 'sudarshan@sankaraeye.com' || cleanId.includes('sudarshan')) {
-          matched = FIVE_S_DEFAULT_USERS.find((u) => u.email === 'sudarshan@sankaraeye.com') || FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin');
-        } else if (cleanId.includes('prabhanjan')) {
-          matched = FIVE_S_DEFAULT_USERS.find((u) => u.role === 'superadmin');
-        }
+        setError('Invalid credentials. Please verify your Email ID and Password.');
+        return;
       }
 
       if (password && password !== 'Sankara@123' && password !== 'password123' && password !== 'admin') {
@@ -67,18 +61,7 @@ export const FiveSLogin: React.FC<FiveSLoginProps> = ({ onLogin, onBackToPortal 
         return;
       }
 
-      if (matched) {
-        onLogin(matched);
-      } else {
-        const roleMatch = FIVE_S_DEFAULT_USERS.find(
-          (u) => cleanId.includes(u.role) || (cleanId.includes('admin') && u.role === 'superadmin')
-        );
-        if (roleMatch) {
-          onLogin(roleMatch);
-        } else {
-          setError('Invalid credentials. Please verify your Email ID and Password.');
-        }
-      }
+      onLogin(matched);
     }, 300);
   };
 
