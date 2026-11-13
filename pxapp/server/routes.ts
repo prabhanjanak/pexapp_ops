@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 import { pool, SANKARA_INITIAL_UNITS, SANKARA_INITIAL_USERS, SANKARA_INITIAL_UNIT_EMPLOYEES } from './db.js';
 
 export const router = Router();
@@ -2422,32 +2424,94 @@ router.post('/fives/send-audit-email', async (req: Request, res: Response) => {
       });
     }
 
-    // Convert base64 data URLs into inline CID attachments
+    // Check and attach official Sankara Emblem if available
+    const emblemCandidates = [
+      path.resolve(process.cwd(), 'public/sankara-emblem.png'),
+      path.resolve(process.cwd(), 'pxapp/public/sankara-emblem.png'),
+      path.resolve(process.cwd(), 'dist/sankara-emblem.png')
+    ];
+    let hasEmblem = false;
+    for (const c of emblemCandidates) {
+      if (fs.existsSync(c)) {
+        try {
+          attachments.push({
+            filename: 'sankara-emblem.png',
+            content: fs.readFileSync(c),
+            cid: 'sankara_emblem@sankara.org',
+            contentType: 'image/png'
+          });
+          hasEmblem = true;
+          break;
+        } catch (_) {}
+      }
+    }
+
+    // Convert photo URLs and base64 into properly framed CID attachments
     allPhotos.forEach((item, index) => {
+      let buffer: Buffer | null = null;
+      let mimeType = 'image/jpeg';
+      let ext = 'jpg';
+
       const match = item.url.match(/^data:(image\/[a-zA-Z0-9.+]+);base64,(.+)$/);
       if (match) {
+        mimeType = match[1];
+        ext = mimeType.split('/')[1] || 'jpg';
+        buffer = Buffer.from(match[2], 'base64');
+      } else if (typeof item.url === 'string' && (item.url.startsWith('/') || item.url.startsWith('./') || item.url.startsWith('pxapp/'))) {
+        const candidate = path.resolve(process.cwd(), item.url.replace(/^\//, ''));
+        if (fs.existsSync(candidate)) {
+          try {
+            buffer = fs.readFileSync(candidate);
+            ext = path.extname(candidate).replace('.', '') || 'jpg';
+            mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+          } catch (_) {}
+        }
+      }
+
+      if (buffer) {
         photoCounter++;
-        const mimeType = match[1];
-        const base64Data = match[2];
-        const ext = mimeType.split('/')[1] || 'jpeg';
         const cid = `audit_photo_${photoCounter}@sankara.org`;
 
         attachments.push({
           filename: `5S-Evidence-${photoCounter}.${ext}`,
-          content: Buffer.from(base64Data, 'base64'),
+          content: buffer,
           cid,
           contentType: mimeType
         });
 
         embeddedPhotoHtmls.push(`
-          <td style="padding: 8px; vertical-align: top; width: 33.33%;">
-            <div style="border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #ffffff;">
-              <img src="cid:${cid}" alt="${item.label}" style="width: 100%; height: 160px; object-fit: cover; display: block;" />
-              <div style="padding: 6px 8px; font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
-                ${item.label}
-              </div>
-            </div>
-          </td>
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); margin-bottom: 16px;">
+            <tr>
+              <td style="background: #f8fafc; padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td>
+                      <span style="font-size: 11px; font-weight: 800; color: #ea580c; text-transform: uppercase;">
+                        ${item.label || `Photo Finding #${photoCounter}`}
+                      </span>
+                    </td>
+                    <td align="right">
+                      <span style="font-size: 10px; font-weight: 700; color: #64748b; background: #e2e8f0; padding: 2px 8px; border-radius: 4px;">
+                        ON-SITE EVIDENCE
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px; background: #0f172a; text-align: center;">
+                <img src="cid:${cid}" alt="${item.label}" style="max-width: 100%; width: 100%; height: auto; max-height: 400px; object-fit: contain; display: block; margin: 0 auto; border-radius: 8px; border: 1px solid #334155;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 14px; background: #ffffff; border-top: 1px solid #e2e8f0;">
+                <div style="font-size: 11px; color: #475569;">
+                  Scope: <strong>${audit.unit || 'Hospital Unit'} • ${audit.department || 'Department'}</strong>
+                </div>
+              </td>
+            </tr>
+          </table>
         `);
       }
     });
@@ -2502,54 +2566,65 @@ router.post('/fives/send-audit-email', async (req: Request, res: Response) => {
         </tr>
       `;
 
-    // Photo gallery table formatting (up to 3 per row)
+    // Photo gallery formatting (executive framed cards)
     let photoGalleryHtml = '';
     if (embeddedPhotoHtmls.length > 0) {
-      const rows: string[] = [];
-      for (let i = 0; i < embeddedPhotoHtmls.length; i += 3) {
-        const rowCells = embeddedPhotoHtmls.slice(i, i + 3).join('');
-        rows.push(`<tr>${rowCells}</tr>`);
-      }
       photoGalleryHtml = `
-        <div style="margin-top: 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
-          <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-            📷 Photo Evidence & Audit Findings (${attachments.length} Image${attachments.length === 1 ? '' : 's'})
-          </h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            ${rows.join('')}
-          </table>
+        <div style="margin-top: 26px;">
+          <div style="margin-bottom: 12px;">
+            <span style="font-size: 14px; font-weight: 900; color: #0f172a;">
+              📷 Photographic Audit Evidence
+            </span>
+            <span style="font-size: 11px; color: #64748b; margin-left: 6px;">
+              (${embeddedPhotoHtmls.length} Captured Image${embeddedPhotoHtmls.length === 1 ? '' : 's'})
+            </span>
+          </div>
+          ${embeddedPhotoHtmls.join('')}
         </div>
       `;
     }
 
     const emailHtml = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>5S Audit Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5S Audit Official Report</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 0;">
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 32px 12px;">
     <tr>
       <td align="center">
         <!-- Main Email Container -->
-        <table width="680" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;">
+        <table width="640" border="0" cellspacing="0" cellpadding="0" style="max-width: 640px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #334155;">
           
+          <!-- Top Accent Line -->
+          <tr>
+            <td height="4" style="background: linear-gradient(90deg, #ea580c 0%, #f59e0b 50%, #ea580c 100%); line-height: 4px; font-size: 0;">&nbsp;</td>
+          </tr>
+
           <!-- Top Header Strip with Sankara Branding -->
           <tr>
-            <td style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); padding: 24px 28px; text-align: left;">
+            <td style="background: #ffffff; padding: 22px 28px 18px 28px; border-bottom: 1px solid #f1f5f9;">
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td>
-                    <div style="color: #ffffff; font-size: 20px; font-weight: 900; letter-spacing: -0.5px;">SANKARA EYE HOSPITAL</div>
-                    <div style="color: #fed7aa; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px;">
-                      Project Patient Experience (PPE) • 5S Workplace Excellence
+                  ${hasEmblem ? `
+                    <td width="56" valign="middle" style="padding-right: 16px;">
+                      <img src="cid:sankara_emblem@sankara.org" alt="Sankara Emblem" width="52" height="52" style="display: block; border-radius: 12px; border: 1px solid #fed7aa; padding: 2px; background: #fff7ed;">
+                    </td>
+                  ` : ''}
+                  <td valign="middle">
+                    <div style="font-size: 19px; font-weight: 900; color: #0f172a; letter-spacing: -0.3px; line-height: 1.2;">
+                      SANKARA EYE HOSPITAL
+                    </div>
+                    <div style="font-size: 11px; font-weight: 700; color: #ea580c; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 3px;">
+                      Project Patient Experience (PPE) • 5S Operational Excellence
                     </div>
                   </td>
-                  <td align="right">
-                    <span style="background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.35); color: #ffffff; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
-                      Official Audit Report
+                  <td align="right" valign="middle">
+                    <span style="display: inline-block; padding: 5px 12px; border-radius: 9999px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;">
+                      Official Report
                     </span>
                   </td>
                 </tr>
@@ -2559,25 +2634,25 @@ router.post('/fives/send-audit-email', async (req: Request, res: Response) => {
 
           <!-- Scope & Audit Overview Bar -->
           <tr>
-            <td style="padding: 20px 28px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+            <td style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 18px 28px; border-bottom: 1px solid #e2e8f0;">
               <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td width="55%">
-                    <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Hospital Unit & Scope</div>
+                  <td width="58%" valign="top">
+                    <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px;">Hospital Unit & Scope</div>
                     <div style="font-size: 16px; color: #0f172a; font-weight: 800; margin-top: 2px;">
                       ${audit.unit || 'Sankara Hospital Unit'}
                     </div>
-                    <div style="font-size: 13px; color: #334155; margin-top: 2px;">
-                      <strong>Zone:</strong> ${audit.zone || 'General'} • <strong>Dept:</strong> ${audit.department || 'All Areas'}
+                    <div style="font-size: 12px; color: #475569; margin-top: 3px;">
+                      <span style="color: #ea580c; font-weight: 700;">${audit.zone || 'Zone 1'}</span> • Department: <strong>${audit.department || 'All Areas'}</strong>
                     </div>
                   </td>
-                  <td width="45%" align="right">
-                    <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Audit Reference</div>
-                    <div style="font-size: 14px; color: #ea580c; font-weight: 800; margin-top: 2px;">
+                  <td width="42%" align="right" valign="top">
+                    <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px;">Audit Reference</div>
+                    <div style="font-size: 15px; color: #ea580c; font-weight: 800; margin-top: 2px;">
                       #${audit.auditNumber || 'AUD-' + Date.now().toString().slice(-6)}
                     </div>
-                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
-                      Date: <strong>${audit.auditDate || new Date().toISOString().split('T')[0]}</strong>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 3px;">
+                      Audit Date: <strong>${audit.auditDate || new Date().toISOString().split('T')[0]}</strong>
                     </div>
                   </td>
                 </tr>
