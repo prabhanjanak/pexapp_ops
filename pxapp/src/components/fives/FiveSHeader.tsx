@@ -9,7 +9,8 @@ import {
   MapPin,
   ArrowLeft,
   Sparkles,
-  Layers
+  Layers,
+  Users
 } from 'lucide-react';
 
 interface FiveSHeaderProps {
@@ -19,6 +20,7 @@ interface FiveSHeaderProps {
   onLogout: () => void;
   onBackToPortal?: () => void;
   onRoleSwitch?: (role: FiveSRole) => void;
+  onOpenDirectory?: () => void;
 }
 
 export const FiveSHeader: React.FC<FiveSHeaderProps> = ({
@@ -27,7 +29,8 @@ export const FiveSHeader: React.FC<FiveSHeaderProps> = ({
   onScreenChange,
   onLogout,
   onBackToPortal,
-  onRoleSwitch
+  onRoleSwitch,
+  onOpenDirectory
 }) => {
   const roleBadgeStyles: Record<FiveSRole, { bg: string; text: string; border: string }> = {
     auditor: { bg: 'bg-orange-50', text: 'text-orange-800', border: 'border-orange-200' },
@@ -132,6 +135,18 @@ export const FiveSHeader: React.FC<FiveSHeaderProps> = ({
               {currentUser.roleLabel}
             </span>
           </div>
+
+          {/* 5S Organizational Directory */}
+          {onOpenDirectory && (
+            <button
+              onClick={onOpenDirectory}
+              title="5S Organizational Email Directory & Contact Master"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 hover:text-orange-900 border border-orange-200 text-orange-800 text-xs font-bold transition-all cursor-pointer"
+            >
+              <Users className="w-3.5 h-3.5 text-orange-600" />
+              <span className="hidden md:inline">5S Directory</span>
+            </button>
+          )}
 
           {/* Switch to Bottleneck Portal Button */}
           {onBackToPortal && (

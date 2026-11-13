@@ -16,9 +16,13 @@ import {
   Building2,
   MapPin,
   Check,
-  X
+  X,
+  Mail,
+  Users
 } from 'lucide-react';
 import { NcReviewSection } from './NcReviewSection';
+import { Send5SAuditEmailModal } from './Send5SAuditEmailModal';
+import { FiveSDirectoryManagementModal } from './FiveSDirectoryManagementModal';
 
 interface AuditorDashboardProps {
   currentUser: FiveSUser;
@@ -40,6 +44,12 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
   onAuditSubmitted
 }) => {
   const [activeTab, setActiveTab] = useState<'conduct' | 'history' | 'nc_review'>('conduct');
+
+  // Email & Directory Modals State
+  const [selectedEmailAudit, setSelectedEmailAudit] = useState<FiveSAudit | null>(null);
+  const [selectedEmailNcs, setSelectedEmailNcs] = useState<FiveSNonConformity[]>([]);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
 
   // Hospital Units available to the auditor (defaults to all 14 network units)
   const availableUnits = React.useMemo(() => {
@@ -221,6 +231,12 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
       setIsSubmitting(false);
       onAuditSubmitted(newAudit, generatedNcs);
       setSubmissionSuccess(`Audit #${auditId} successfully submitted! ${generatedNcs.length} Non-Conformities were logged.`);
+      
+      // Auto-open 5S Email Dispatch Modal for review & delivery
+      setSelectedEmailAudit(newAudit);
+      setSelectedEmailNcs(generatedNcs);
+      setIsEmailModalOpen(true);
+
       setScores({});
       setComments({});
       setBeforePhotos({});
@@ -285,26 +301,38 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
           </button>
         </div>
 
-        {/* Live Completion Indicator */}
-        {activeTab === 'conduct' && (
-          <div className="hidden sm:flex items-center gap-3">
-            <div className="text-right">
-              <span className="text-xs text-slate-500 font-bold">Scored:</span>
-              <span className="ml-1.5 font-black text-slate-900">
-                {scoredCount} / {totalQuestions}
+        {/* Live Completion Indicator & 5S Directory Action */}
+        <div className="flex items-center gap-2.5">
+          {activeTab === 'conduct' && (
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-xs text-slate-500 font-bold">Scored:</span>
+                <span className="ml-1.5 font-black text-slate-900">
+                  {scoredCount} / {totalQuestions}
+                </span>
+              </div>
+              <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-600 to-amber-500 transition-all duration-300"
+                  style={{ width: `${(scoredCount / totalQuestions) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs font-black text-orange-800 bg-orange-100 px-2 py-0.5 rounded-md">
+                {currentPct}%
               </span>
             </div>
-            <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-              <div
-                className="h-full bg-gradient-to-r from-orange-600 to-amber-500 transition-all duration-300"
-                style={{ width: `${(scoredCount / totalQuestions) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs font-black text-orange-800 bg-orange-100 px-2 py-0.5 rounded-md">
-              {currentPct}%
-            </span>
-          </div>
-        )}
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsDirectoryModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
+            title="Manage 5S Department In-Charges, Unit Heads, and Zone Leads"
+          >
+            <Users className="w-3.5 h-3.5 text-orange-600" />
+            <span className="hidden sm:inline">5S Directory</span>
+          </button>
+        </div>
       </div>
 
       {submissionSuccess && (
@@ -710,6 +738,7 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
                   <th className="py-3 px-3">Score</th>
                   <th className="py-3 px-3">Compliance</th>
                   <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -732,6 +761,22 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
                         {a.status}
                       </span>
                     </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const auditNcs = ncs.filter(n => n.auditId === a.id || (n.unit === a.unit && n.department === a.department));
+                          setSelectedEmailAudit(a);
+                          setSelectedEmailNcs(auditNcs);
+                          setIsEmailModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold border border-orange-200 transition-colors cursor-pointer text-[11px]"
+                        title="Dispatch official audit report via email"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Email Report</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -751,6 +796,24 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
           subtitle="Review before/after remedial evidence, verify corrective & preventive actions, request additional clarifications/photographs, or confirm resolution."
         />
       )}
+
+      {/* 5S Email Dispatch Modal */}
+      <Send5SAuditEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => {
+          setIsEmailModalOpen(false);
+          setSelectedEmailAudit(null);
+        }}
+        audit={selectedEmailAudit}
+        ncs={selectedEmailNcs}
+      />
+
+      {/* 5S Directory Management Modal */}
+      <FiveSDirectoryManagementModal
+        isOpen={isDirectoryModalOpen}
+        onClose={() => setIsDirectoryModalOpen(false)}
+        canEdit={true}
+      />
 
     </div>
   );

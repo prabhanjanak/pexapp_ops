@@ -834,5 +834,57 @@ export const api = {
   // Audit Logs
   getAuditLogs: async (): Promise<AuditLog[]> => {
     return fetchJson<AuditLog[]>('/audit-logs');
+  },
+
+  // 5S Audit SMTP & Email Notifications
+  send5SAuditEmail: async (payload: {
+    audit: any;
+    ncs?: any[];
+    to: string | string[];
+    cc?: string | string[];
+    subject?: string;
+    customNotes?: string;
+    photos?: Array<{ photoUrl: string; label?: string; checkpointId?: string; area?: string }>;
+  }): Promise<{ success: boolean; messageId: string; toList: string[]; ccList?: string[]; attachmentsCount: number }> => {
+    return fetchJson('/fives/send-audit-email', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  test5SSmtp: async (email?: string): Promise<{ success: boolean; messageId: string; recipient: string }> => {
+    return fetchJson('/fives/test-smtp', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  },
+
+  // 5S Organizational Contacts Master
+  get5SContacts: async (): Promise<any[]> => {
+    try {
+      return await fetchJson<any[]>('/fives/contacts');
+    } catch (_) {
+      return [];
+    }
+  },
+
+  create5SContact: async (contact: any): Promise<any> => {
+    return fetchJson('/fives/contacts', {
+      method: 'POST',
+      body: JSON.stringify(contact)
+    });
+  },
+
+  update5SContact: async (id: string, contact: any): Promise<any> => {
+    return fetchJson(`/fives/contacts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(contact)
+    });
+  },
+
+  delete5SContact: async (id: string): Promise<{ success: boolean; deletedId: string }> => {
+    return fetchJson(`/fives/contacts/${id}`, {
+      method: 'DELETE'
+    });
   }
 };

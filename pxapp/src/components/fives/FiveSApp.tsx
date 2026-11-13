@@ -10,6 +10,8 @@ import { UnitHeadDashboard } from './UnitHeadDashboard';
 import { SuperAdminDashboard } from './SuperAdminDashboard';
 import { PresidentDashboard } from './PresidentDashboard';
 import { FiveSReportsView } from './FiveSReportsView';
+import { Send5SAuditEmailModal } from './Send5SAuditEmailModal';
+import { FiveSDirectoryManagementModal } from './FiveSDirectoryManagementModal';
 import { User } from '../../types';
 
 interface FiveSAppProps {
@@ -166,6 +168,10 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
   const [activeScreen, setActiveScreen] = useState<'dashboard' | 'reports'>('dashboard');
 
   // Master Data & Operations State
+  const [isGlobalDirectoryOpen, setIsGlobalDirectoryOpen] = useState(false);
+  const [pendingEmailAudit, setPendingEmailAudit] = useState<FiveSAudit | null>(null);
+  const [pendingEmailNcs, setPendingEmailNcs] = useState<FiveSNonConformity[]>([]);
+
   const [units, setUnits] = useState<FiveSUnitConfig[]>(() => {
     try {
       const saved = localStorage.getItem('sankara_5s_units');
@@ -259,6 +265,11 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
     if (newNcs.length > 0) {
       setNcs((prev) => [...newNcs, ...prev]);
     }
+    // Automatically prompt email dispatch if not submitted via AuditorDashboard (which handles its own local modal)
+    if (fivesUser?.role !== 'auditor') {
+      setPendingEmailAudit(newAudit);
+      setPendingEmailNcs(newNcs);
+    }
   };
 
   // Update Audit Handler
@@ -295,6 +306,7 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
         onLogout={handleLogout}
         onBackToPortal={onBackToPortal}
         onRoleSwitch={handleRoleSwitch}
+        onOpenDirectory={() => setIsGlobalDirectoryOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -406,6 +418,21 @@ export const FiveSApp: React.FC<FiveSAppProps> = ({ currentUser: portalUser, onB
           </span>
         </div>
       </footer>
+
+      {/* Global 5S Email Modal */}
+      <Send5SAuditEmailModal
+        isOpen={Boolean(pendingEmailAudit)}
+        onClose={() => setPendingEmailAudit(null)}
+        audit={pendingEmailAudit}
+        ncs={pendingEmailNcs}
+      />
+
+      {/* Global 5S Directory Management Modal */}
+      <FiveSDirectoryManagementModal
+        isOpen={isGlobalDirectoryOpen}
+        onClose={() => setIsGlobalDirectoryOpen(false)}
+        canEdit={fivesUser?.role === 'superadmin' || fivesUser?.role === 'auditor' || fivesUser?.role === 'unithead'}
+      />
 
     </div>
   );

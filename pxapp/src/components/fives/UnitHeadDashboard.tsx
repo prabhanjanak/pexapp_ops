@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiveSUser, FiveSUnitConfig, FiveSAudit, FiveSNonConformity } from './types';
 import { Record5SAuditModal } from './Record5SAuditModal';
+import { Send5SAuditEmailModal } from './Send5SAuditEmailModal';
 import {
   Building2,
   Lock,
@@ -21,7 +22,8 @@ import {
   ClipboardCheck,
   Edit2,
   Trash2,
-  Search
+  Search,
+  Mail
 } from 'lucide-react';
 import { NcReviewSection } from './NcReviewSection';
 
@@ -63,6 +65,11 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [editingAudit, setEditingAudit] = useState<FiveSAudit | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Email Modal State
+  const [emailAudit, setEmailAudit] = useState<FiveSAudit | null>(null);
+  const [emailNcs, setEmailNcs] = useState<FiveSNonConformity[]>([]);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Filter unit's NCs and audits
   const unitNcs = ncs.filter((n) => n.unit === targetUnitCode);
@@ -640,8 +647,21 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => setEditingAudit(a)}
+                          onClick={() => {
+                            const auditNcs = ncs.filter(n => n.auditId === a.id || (n.unit === a.unit && n.department === a.department));
+                            setEmailAudit(a);
+                            setEmailNcs(auditNcs);
+                            setIsEmailModalOpen(true);
+                          }}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[11px] transition-colors cursor-pointer border border-orange-200"
+                          title="Dispatch 5S Audit Report via Zoho SMTP"
+                        >
+                          <Mail className="w-3 h-3" />
+                          <span>Email</span>
+                        </button>
+                        <button
+                          onClick={() => setEditingAudit(a)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer border border-slate-200"
                           title="Edit Audit & Re-score"
                         >
                           <Edit2 className="w-3 h-3" />
@@ -712,6 +732,17 @@ export const UnitHeadDashboard: React.FC<UnitHeadDashboardProps> = ({
           }}
         />
       )}
+
+      {/* 5S Email Modal for Unit Head */}
+      <Send5SAuditEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => {
+          setIsEmailModalOpen(false);
+          setEmailAudit(null);
+        }}
+        audit={emailAudit}
+        ncs={emailNcs}
+      />
 
     </div>
   );

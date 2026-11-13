@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import nodemailer from 'nodemailer';
 import { pool, SANKARA_INITIAL_UNITS, SANKARA_INITIAL_USERS, SANKARA_INITIAL_UNIT_EMPLOYEES } from './db.js';
 
 export const router = Router();
@@ -2298,4 +2299,581 @@ router.delete('/departments/:id', async (req: Request, res: Response) => {
     await pool.query('DELETE FROM departments WHERE id = $1', [id]);
   } catch (error: any) { }
   res.json({ success: true, deletedId: id });
+});
+
+/* ========================================================================== */
+/* 5S AUDIT SMTP EMAIL NOTIFICATIONS & ORGANIZATIONAL CONTACT DIRECTORY       */
+/* ========================================================================== */
+
+// Configure Zoho SMTP Transporter
+const mailTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.zoho.com',
+  port: parseInt(process.env.SMTP_PORT || '465', 10),
+  secure: true, // port 465 uses SSL
+  auth: {
+    user: process.env.SMTP_USER || 'is.support@sankaraeye.com',
+    pass: process.env.SMTP_PASS || '3fKebcsUWLWr',
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Test SMTP connection endpoint
+router.post('/fives/test-smtp', async (req: Request, res: Response) => {
+  try {
+    const targetEmail = req.body.email || 'is.support@sankaraeye.com';
+    const info = await mailTransporter.sendMail({
+      from: process.env.SMTP_FROM || '"Sankara 5S Operations Desk" <is.support@sankaraeye.com>',
+      to: targetEmail,
+      subject: '✓ Sankara 5S Audit Email System - SMTP Service Verification',
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+          <div style="border-bottom: 3px solid #ea580c; padding-bottom: 12px; margin-bottom: 20px;">
+            <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">Sankara Eye Hospital • 5S Operations</h2>
+            <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Project Patient Experience (PPE) - Automated Notification Service</p>
+          </div>
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+            <p style="color: #166534; font-weight: 700; margin: 0 0 6px 0; font-size: 15px;">✓ SMTP Configuration Active & Verified</p>
+            <p style="color: #15803d; margin: 0; font-size: 13px;">Outgoing Server: <strong>smtp.zoho.com:465 (SSL)</strong><br>Sender: <strong>is.support@sankaraeye.com</strong></p>
+          </div>
+          <p style="color: #475569; font-size: 13px; line-height: 1.6;">
+            This test email confirms that the 5S Audit notification service is active and ready to dispatch official audit findings, non-conformities, and photo attachments to Department In-Charges, Unit Heads, and Zonal Leads across all 14 hospital units.
+          </p>
+          <div style="margin-top: 24px; pt: 16px; border-top: 1px solid #f1f5f9; color: #94a3b8; font-size: 11px;">
+            Timestamp: ${new Date().toISOString()} • Sankara Eye Care Institutions
+          </div>
+        </div>
+      `
+    });
+    return res.json({ success: true, messageId: info.messageId, recipient: targetEmail });
+  } catch (error: any) {
+    console.error('[SMTP Test Error]:', error);
+    return res.status(500).json({ error: error.message || 'Failed to send test email' });
+  }
+});
+
+// Send 5S Audit Report Email Endpoint
+router.post('/fives/send-audit-email', async (req: Request, res: Response) => {
+  try {
+    const {
+      audit,
+      ncs = [],
+      to,
+      cc,
+      subject,
+      customNotes,
+      photos = []
+    } = req.body;
+
+    if (!audit) {
+      return res.status(400).json({ error: 'Audit payload is required' });
+    }
+
+    // Clean recipients
+    const parseRecipients = (input: any): string[] => {
+      if (!input) return [];
+      if (Array.isArray(input)) {
+        return input.map((s: string) => String(s).trim()).filter(Boolean);
+      }
+      return String(input)
+        .split(/[,;]/)
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+    };
+
+    const toList = parseRecipients(to);
+    const ccList = parseRecipients(cc);
+
+    if (toList.length === 0) {
+      return res.status(400).json({ error: 'At least one recipient (TO) is required' });
+    }
+
+    // Process photo attachments
+    const attachments: any[] = [];
+    let photoCounter = 0;
+    const embeddedPhotoHtmls: string[] = [];
+
+    // Collect photos from explicit photos array or audit.beforePhotos
+    const allPhotos: Array<{ url: string; label: string }> = [];
+
+    if (Array.isArray(photos) && photos.length > 0) {
+      photos.forEach((p: any, idx: number) => {
+        if (p?.photoUrl) {
+          allPhotos.push({
+            url: p.photoUrl,
+            label: p.label || p.area || `Audit Photo ${idx + 1}`
+          });
+        }
+      });
+    }
+
+    if (audit.beforePhotos && typeof audit.beforePhotos === 'object') {
+      Object.entries(audit.beforePhotos).forEach(([chkId, url]) => {
+        if (typeof url === 'string' && url.length > 10) {
+          const alreadyAdded = allPhotos.some(ap => ap.url === url);
+          if (!alreadyAdded) {
+            allPhotos.push({
+              url,
+              label: `Checkpoint ${chkId.toUpperCase()} Finding`
+            });
+          }
+        }
+      });
+    }
+
+    // Convert base64 data URLs into inline CID attachments
+    allPhotos.forEach((item, index) => {
+      const match = item.url.match(/^data:(image\/[a-zA-Z0-9.+]+);base64,(.+)$/);
+      if (match) {
+        photoCounter++;
+        const mimeType = match[1];
+        const base64Data = match[2];
+        const ext = mimeType.split('/')[1] || 'jpeg';
+        const cid = `audit_photo_${photoCounter}@sankara.org`;
+
+        attachments.push({
+          filename: `5S-Evidence-${photoCounter}.${ext}`,
+          content: Buffer.from(base64Data, 'base64'),
+          cid,
+          contentType: mimeType
+        });
+
+        embeddedPhotoHtmls.push(`
+          <td style="padding: 8px; vertical-align: top; width: 33.33%;">
+            <div style="border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #ffffff;">
+              <img src="cid:${cid}" alt="${item.label}" style="width: 100%; height: 160px; object-fit: cover; display: block;" />
+              <div style="padding: 6px 8px; font-size: 11px; font-weight: 600; color: #475569; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+                ${item.label}
+              </div>
+            </div>
+          </td>
+        `);
+      }
+    });
+
+    // Score badge formatting
+    const pct = Number(audit.compliancePercent) || 0;
+    let scoreBadgeBg = '#dcfce7'; // green
+    let scoreBadgeText = '#15803d';
+    let scoreBadgeBorder = '#86efac';
+    let scoreStatus = 'EXCELLENT COMPLIANCE';
+
+    if (pct < 70) {
+      scoreBadgeBg = '#fee2e2'; // red
+      scoreBadgeText = '#b91c1c';
+      scoreBadgeBorder = '#fca5a5';
+      scoreStatus = 'ACTION REQUIRED (< 70%)';
+    } else if (pct < 85) {
+      scoreBadgeBg = '#fef3c7'; // amber
+      scoreBadgeText = '#b45309';
+      scoreBadgeBorder = '#fde68a';
+      scoreStatus = 'GOOD PROGRESS (70% - 84%)';
+    }
+
+    // NC rows HTML
+    const ncRowsHtml = Array.isArray(ncs) && ncs.length > 0
+      ? ncs.map((nc: any, i: number) => `
+        <tr style="border-bottom: 1px solid #e2e8f0; background: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+          <td style="padding: 10px 12px; font-size: 12px; font-weight: 700; color: #0f172a; text-align: center;">${i + 1}</td>
+          <td style="padding: 10px 12px; font-size: 12px; color: #1e293b;">
+            <div style="font-weight: 700; color: #ea580c;">${nc.section || '5S Checkpoint'}</div>
+            <div style="font-size: 11px; color: #64748b;">${nc.area || 'Hospital Area'}</div>
+          </td>
+          <td style="padding: 10px 12px; font-size: 12px; color: #334155;">
+            <div style="font-weight: 600;">${nc.checkpointText || ''}</div>
+            ${nc.auditorComment ? `<div style="font-size: 11px; color: #b91c1c; margin-top: 4px; font-style: italic;">Observation: "${nc.auditorComment}"</div>` : ''}
+          </td>
+          <td style="padding: 10px 12px; font-size: 12px; text-align: center;">
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700; background: ${nc.score === 0 ? '#fee2e2' : '#fef3c7'}; color: ${nc.score === 0 ? '#991b1b' : '#92400e'};">
+              ${nc.score === 0 ? 'Critical (0/3)' : 'Major (1/3)'}
+            </span>
+          </td>
+          <td style="padding: 10px 12px; font-size: 12px; font-weight: 700; color: #0f172a; text-align: center;">
+            ${nc.targetDays || 7} Days
+          </td>
+        </tr>
+      `).join('')
+      : `
+        <tr>
+          <td colspan="5" style="padding: 24px; text-align: center; color: #15803d; font-size: 13px; font-weight: 600; background: #f0fdf4;">
+            🎉 Zero Non-Conformities recorded! Outstanding adherence to 5S Workplace Organization Standards.
+          </td>
+        </tr>
+      `;
+
+    // Photo gallery table formatting (up to 3 per row)
+    let photoGalleryHtml = '';
+    if (embeddedPhotoHtmls.length > 0) {
+      const rows: string[] = [];
+      for (let i = 0; i < embeddedPhotoHtmls.length; i += 3) {
+        const rowCells = embeddedPhotoHtmls.slice(i, i + 3).join('');
+        rows.push(`<tr>${rowCells}</tr>`);
+      }
+      photoGalleryHtml = `
+        <div style="margin-top: 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+          <h3 style="color: #0f172a; margin: 0 0 12px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+            📷 Photo Evidence & Audit Findings (${attachments.length} Image${attachments.length === 1 ? '' : 's'})
+          </h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${rows.join('')}
+          </table>
+        </div>
+      `;
+    }
+
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>5S Audit Report</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 0;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container -->
+        <table width="680" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Header Strip with Sankara Branding -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); padding: 24px 28px; text-align: left;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <div style="color: #ffffff; font-size: 20px; font-weight: 900; letter-spacing: -0.5px;">SANKARA EYE HOSPITAL</div>
+                    <div style="color: #fed7aa; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px;">
+                      Project Patient Experience (PPE) • 5S Workplace Excellence
+                    </div>
+                  </td>
+                  <td align="right">
+                    <span style="background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.35); color: #ffffff; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Official Audit Report
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Scope & Audit Overview Bar -->
+          <tr>
+            <td style="padding: 20px 28px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td width="55%">
+                    <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Hospital Unit & Scope</div>
+                    <div style="font-size: 16px; color: #0f172a; font-weight: 800; margin-top: 2px;">
+                      ${audit.unit || 'Sankara Hospital Unit'}
+                    </div>
+                    <div style="font-size: 13px; color: #334155; margin-top: 2px;">
+                      <strong>Zone:</strong> ${audit.zone || 'General'} • <strong>Dept:</strong> ${audit.department || 'All Areas'}
+                    </div>
+                  </td>
+                  <td width="45%" align="right">
+                    <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">Audit Reference</div>
+                    <div style="font-size: 14px; color: #ea580c; font-weight: 800; margin-top: 2px;">
+                      #${audit.auditNumber || 'AUD-' + Date.now().toString().slice(-6)}
+                    </div>
+                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                      Date: <strong>${audit.auditDate || new Date().toISOString().split('T')[0]}</strong>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Compliance Scorecard Highlight Box -->
+          <tr>
+            <td style="padding: 24px 28px;">
+              <div style="background: #ffffff; border: 2px solid ${scoreBadgeBorder}; border-radius: 12px; padding: 18px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td>
+                      <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">
+                        5S Workplace Compliance Score
+                      </div>
+                      <div style="display: inline-block; margin-top: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 800; background: ${scoreBadgeBg}; color: ${scoreBadgeText}; border: 1px solid ${scoreBadgeBorder};">
+                        ${scoreStatus}
+                      </div>
+                    </td>
+                    <td align="right">
+                      <div style="font-size: 34px; font-weight: 900; color: ${scoreBadgeText}; line-height: 1;">
+                        ${pct}%
+                      </div>
+                      <div style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px;">
+                        Score: <strong>${audit.totalScore || 0}</strong> / ${audit.maxScore || 108} Points
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Stakeholders / Routing Info -->
+              <div style="margin-top: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 12px; line-height: 1.6;">
+                  <tr>
+                    <td width="33%">
+                      <strong style="color: #64748b; text-transform: uppercase; font-size: 10px;">Primary In-Charge (TO)</strong><br>
+                      <span style="color: #0f172a; font-weight: 700;">${toList[0] || 'Department Lead'}</span>
+                    </td>
+                    <td width="33%">
+                      <strong style="color: #64748b; text-transform: uppercase; font-size: 10px;">Executive In-Charge (CC)</strong><br>
+                      <span style="color: #0f172a; font-weight: 700;">${ccList.join(', ') || 'Unit Head & Zone Lead'}</span>
+                    </td>
+                    <td width="33%" align="right">
+                      <strong style="color: #64748b; text-transform: uppercase; font-size: 10px;">Lead 5S Auditor</strong><br>
+                      <span style="color: #ea580c; font-weight: 700;">${audit.auditorName || 'Internal Auditor'}</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Auditor Remarks / Directives Box (if provided) -->
+              ${customNotes ? `
+                <div style="margin-top: 18px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 14px 18px;">
+                  <div style="font-size: 11px; font-weight: 800; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px;">
+                    📝 Auditor Directives & Observations
+                  </div>
+                  <div style="font-size: 13px; color: #78350f; margin-top: 6px; line-height: 1.5; white-space: pre-line;">
+                    ${customNotes}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Non-Conformities (NC) Table -->
+              <div style="margin-top: 24px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                  <h3 style="color: #0f172a; margin: 0; font-size: 15px; font-weight: 800;">
+                    Action Items & Non-Conformities (${Array.isArray(ncs) ? ncs.length : 0})
+                  </h3>
+                </div>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <thead>
+                    <tr style="background: #0f172a; color: #ffffff; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      <th style="padding: 10px 12px; width: 40px; text-align: center;">#</th>
+                      <th style="padding: 10px 12px; width: 140px;">Pillar & Area</th>
+                      <th style="padding: 10px 12px;">Checkpoint Finding & Observation</th>
+                      <th style="padding: 10px 12px; width: 110px; text-align: center;">Severity</th>
+                      <th style="padding: 10px 12px; width: 80px; text-align: center;">Target</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${ncRowsHtml}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Photo Gallery (if photos attached) -->
+              ${photoGalleryHtml}
+
+              <!-- Action Plan & Closure Directive -->
+              <div style="margin-top: 24px; padding: 16px; background-color: #f1f5f9; border-radius: 8px; font-size: 12px; color: #475569; line-height: 1.6;">
+                <strong>Standard Operating Procedure for Closure:</strong>
+                <ol style="margin: 6px 0 0 0; padding-left: 20px;">
+                  <li>Department In-Charge must formulate Corrective Actions (CA) and Preventive Actions (PA) within the specified target days.</li>
+                  <li>After rectifying the non-conformity, upload the rectified photograph directly on the Sankara 5S Operations Portal.</li>
+                  <li>The Auditor / Unit Head will verify the submission and mark the NC as closed upon satisfactory inspection.</li>
+                </ol>
+              </div>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0f172a; color: #94a3b8; padding: 20px 28px; text-align: center; font-size: 11px; line-height: 1.6;">
+              <div style="color: #ffffff; font-weight: 700; font-size: 12px;">Sankara Eye Care Institutions India</div>
+              <div>Quality Assurance & 5S Operational Standards Cell • Project Patient Experience</div>
+              <div style="margin-top: 6px; color: #64748b;">
+                This is an automated notification sent via official Sankara Zoho SMTP service (is.support@sankaraeye.com).
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const defaultSubject = `[5S Audit Report] ${audit.unit || 'Unit'} - ${audit.department || 'Department'} (${audit.auditNumber || 'AUD'}) - Score: ${pct}%`;
+    const finalSubject = subject && String(subject).trim().length > 0 ? String(subject).trim() : defaultSubject;
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || '"Sankara 5S Operations Desk" <is.support@sankaraeye.com>',
+      to: toList,
+      cc: ccList.length > 0 ? ccList : undefined,
+      subject: finalSubject,
+      html: emailHtml,
+      attachments: attachments.length > 0 ? attachments : undefined
+    };
+
+    const info = await mailTransporter.sendMail(mailOptions);
+
+    // Record audit log
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (unit_id, bottleneck_id, action, details, user_role)
+         VALUES ($1, $2, 'SEND_5S_AUDIT_EMAIL', $3, '5S Auditor')`,
+        [
+          audit.unit || '5S',
+          audit.auditNumber || audit.id,
+          JSON.stringify({
+            auditNumber: audit.auditNumber,
+            unit: audit.unit,
+            department: audit.department,
+            to: toList,
+            cc: ccList,
+            score: pct,
+            ncCount: ncs.length,
+            photosCount: attachments.length,
+            messageId: info.messageId
+          })
+        ]
+      );
+    } catch (_) {}
+
+    return res.json({
+      success: true,
+      messageId: info.messageId,
+      toList,
+      ccList,
+      attachmentsCount: attachments.length
+    });
+  } catch (error: any) {
+    console.error('[Send 5S Audit Email Error]:', error);
+    return res.status(500).json({ error: error.message || 'Failed to dispatch 5S audit email' });
+  }
+});
+
+// 5S Contact Directory CRUD Endpoints
+router.get('/fives/contacts', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM five_s_contacts ORDER BY unit_code, zone_name, department_name`
+    );
+    return res.json(result.rows);
+  } catch (error: any) {
+    console.warn('[5S Contacts DB Query Warning]:', error.message);
+    return res.json([]);
+  }
+});
+
+router.post('/fives/contacts', async (req: Request, res: Response) => {
+  const {
+    id = `f5c-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    unitCode,
+    unitName,
+    zoneName = '',
+    zoneInchargeName = '',
+    zoneInchargeEmail = '',
+    zoneInchargeDesignation = '',
+    zoneInchargeEmpId = '',
+    departmentName,
+    deptInchargeName = '',
+    deptInchargeEmail = '',
+    deptInchargeDesignation = '',
+    deptInchargeEmpId = ''
+  } = req.body;
+
+  if (!unitCode || !departmentName) {
+    return res.status(400).json({ error: 'Unit code and Department name are required' });
+  }
+
+  try {
+    const insertRes = await pool.query(
+      `INSERT INTO five_s_contacts (
+        id, unit_code, unit_name, zone_name,
+        zone_incharge_name, zone_incharge_email, zone_incharge_designation, zone_incharge_emp_id,
+        department_name, dept_incharge_name, dept_incharge_email, dept_incharge_designation, dept_incharge_emp_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *`,
+      [
+        id, unitCode.toUpperCase(), unitName || unitCode, zoneName,
+        zoneInchargeName, zoneInchargeEmail, zoneInchargeDesignation, zoneInchargeEmpId,
+        departmentName, deptInchargeName, deptInchargeEmail, deptInchargeDesignation, deptInchargeEmpId
+      ]
+    );
+    return res.status(201).json(insertRes.rows[0]);
+  } catch (error: any) {
+    console.error('[5S Contact Create Error]:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/fives/contacts/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const {
+    unitCode,
+    unitName,
+    zoneName,
+    zoneInchargeName,
+    zoneInchargeEmail,
+    zoneInchargeDesignation,
+    zoneInchargeEmpId,
+    departmentName,
+    deptInchargeName,
+    deptInchargeEmail,
+    deptInchargeDesignation,
+    deptInchargeEmpId
+  } = req.body;
+
+  try {
+    const updateRes = await pool.query(
+      `UPDATE five_s_contacts SET
+        unit_code = COALESCE($1, unit_code),
+        unit_name = COALESCE($2, unit_name),
+        zone_name = COALESCE($3, zone_name),
+        zone_incharge_name = COALESCE($4, zone_incharge_name),
+        zone_incharge_email = COALESCE($5, zone_incharge_email),
+        zone_incharge_designation = COALESCE($6, zone_incharge_designation),
+        zone_incharge_emp_id = COALESCE($7, zone_incharge_emp_id),
+        department_name = COALESCE($8, department_name),
+        dept_incharge_name = COALESCE($9, dept_incharge_name),
+        dept_incharge_email = COALESCE($10, dept_incharge_email),
+        dept_incharge_designation = COALESCE($11, dept_incharge_designation),
+        dept_incharge_emp_id = COALESCE($12, dept_incharge_emp_id),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $13
+      RETURNING *`,
+      [
+        unitCode ? unitCode.toUpperCase() : null,
+        unitName,
+        zoneName,
+        zoneInchargeName,
+        zoneInchargeEmail,
+        zoneInchargeDesignation,
+        zoneInchargeEmpId,
+        departmentName,
+        deptInchargeName,
+        deptInchargeEmail,
+        deptInchargeDesignation,
+        deptInchargeEmpId,
+        id
+      ]
+    );
+
+    if (updateRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+    return res.json(updateRes.rows[0]);
+  } catch (error: any) {
+    console.error('[5S Contact Update Error]:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/fives/contacts/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM five_s_contacts WHERE id = $1', [id]);
+    return res.json({ success: true, deletedId: id });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
 });

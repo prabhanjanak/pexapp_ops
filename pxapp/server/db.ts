@@ -845,6 +845,29 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       CREATE INDEX IF NOT EXISTS idx_unit_employees_unit ON unit_employees(unit_id);
     `);
 
+    // 5S Organizational Contacts Table (supports dynamic additions, edits, and unit expansions)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS five_s_contacts (
+        id VARCHAR(64) PRIMARY KEY,
+        unit_code VARCHAR(32) NOT NULL,
+        unit_name VARCHAR(150) NOT NULL,
+        zone_name VARCHAR(150),
+        zone_incharge_name VARCHAR(150),
+        zone_incharge_email VARCHAR(255),
+        zone_incharge_designation VARCHAR(150),
+        zone_incharge_emp_id VARCHAR(64),
+        department_name VARCHAR(150) NOT NULL,
+        dept_incharge_name VARCHAR(150),
+        dept_incharge_email VARCHAR(255),
+        dept_incharge_designation VARCHAR(150),
+        dept_incharge_emp_id VARCHAR(64),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_fives_contacts_unit ON five_s_contacts(unit_code);
+      CREATE INDEX IF NOT EXISTS idx_fives_contacts_dept ON five_s_contacts(department_name);
+    `);
+
     // Ensure all modern bottleneck lifecycle columns exist
     await client.query(`
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS department VARCHAR(100);
