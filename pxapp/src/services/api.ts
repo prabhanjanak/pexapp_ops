@@ -886,5 +886,35 @@ export const api = {
     return fetchJson(`/fives/contacts/${id}`, {
       method: 'DELETE'
     });
+  },
+
+  // Super Admin Credential Manager (Protected with Master Passcode: Sankara_Admin@2026)
+  unlockCredentials: async (passcode: string): Promise<{ success: boolean; token: string; message: string }> => {
+    return fetchJson('/admin/credentials/unlock', {
+      method: 'POST',
+      body: JSON.stringify({ passcode })
+    });
+  },
+
+  getCredentials: async (passcode: string): Promise<{ smtp: any; system: any }> => {
+    return fetchJson(`/admin/credentials?passcode=${encodeURIComponent(passcode)}`, {
+      headers: {
+        'x-admin-passcode': passcode
+      }
+    });
+  },
+
+  saveCredentials: async (passcode: string, smtp: any, userEmail?: string): Promise<{ success: boolean; message: string; smtp: any }> => {
+    return fetchJson('/admin/credentials', {
+      method: 'POST',
+      body: JSON.stringify({ passcode, smtp, userEmail })
+    });
+  },
+
+  testAdminSmtp: async (passcode: string, email: string, config?: any): Promise<{ success: boolean; messageId: string; recipient: string }> => {
+    return fetchJson('/admin/credentials/test-smtp', {
+      method: 'POST',
+      body: JSON.stringify({ passcode, email, config })
+    });
   }
 };

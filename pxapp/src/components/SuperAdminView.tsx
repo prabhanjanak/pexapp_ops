@@ -8,6 +8,7 @@ import { CategoryDeptManager } from './CategoryDeptManager';
 import { BottleneckCommentModal } from './BottleneckCommentModal';
 import { AddBottleneckModal } from './AddBottleneckModal';
 import { BottleneckTaskChecklist } from './BottleneckTaskChecklist';
+import { CredentialManager } from './CredentialManager';
 import { api } from '../services/api';
 import { calculateUnitStats, getStatusBadgeStyle, getImpactBadgeStyle, normalizeStatus } from '../utils/calc';
 import {
@@ -747,6 +748,11 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                 <span>Database Reset Restricted (Super Admin Prabhanjan Only)</span>
               </div>
             )}
+          </div>
+
+          {/* Master Production Credential Manager */}
+          <div className="pt-6 border-t border-slate-100">
+            <CredentialManager currentUser={currentUser} />
           </div>
         </div>
       )}

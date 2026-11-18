@@ -868,6 +868,36 @@ export async function initializeDatabase(maxRetries = 10, retryDelayMs = 2000) {
       CREATE INDEX IF NOT EXISTS idx_fives_contacts_dept ON five_s_contacts(department_name);
     `);
 
+    // System Credentials & Configuration Table (Protected Production Credential Manager)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS system_credentials (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL,
+        category VARCHAR(50) DEFAULT 'general',
+        description VARCHAR(255),
+        updated_by VARCHAR(150),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Seed default credentials (on conflict do nothing so existing values are preserved)
+    const initialCredentials = [
+      ['SMTP_HOST', process.env.SMTP_HOST || 'smtp.zoho.com', 'smtp', 'Outgoing SMTP Server Hostname', 'System Init'],
+      ['SMTP_PORT', process.env.SMTP_PORT || '465', 'smtp', 'Outgoing SMTP Port (465 SSL / 587 TLS)', 'System Init'],
+      ['SMTP_SECURE', process.env.SMTP_SECURE || 'true', 'smtp', 'SSL Encryption Enabled', 'System Init'],
+      ['SMTP_USER', process.env.SMTP_USER || 'is.support@sankaraeye.com', 'smtp', 'Official SMTP Account / Username', 'System Init'],
+      ['SMTP_PASS', process.env.SMTP_PASS || '3fKebcsUWLWr', 'smtp', 'SMTP Application Password', 'System Init'],
+      ['SMTP_FROM', process.env.SMTP_FROM || '"Sankara 5S Operations Desk" <is.support@sankaraeye.com>', 'smtp', 'Default Sender Display Header', 'System Init']
+    ];
+
+    for (const [key, value, cat, desc, by] of initialCredentials) {
+      await client.query(`
+        INSERT INTO system_credentials (key, value, category, description, updated_by)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (key) DO NOTHING
+      `, [key, value, cat, desc, by]);
+    }
+
     // Ensure all modern bottleneck lifecycle columns exist
     await client.query(`
       ALTER TABLE bottlenecks ADD COLUMN IF NOT EXISTS department VARCHAR(100);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { HospitalUnit, User, Bottleneck, UnitEmployee } from '../types';
 import { api } from '../services/api';
 import { AddBottleneckModal } from './AddBottleneckModal';
+import { CredentialManager } from './CredentialManager';
 import {
   Building2,
   MapPin,
@@ -80,8 +81,8 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
   const [bedCapacity, setBedCapacity] = useState<number>(100);
   const [establishedYear, setEstablishedYear] = useState<number>(2010);
 
-  // Module View Mode: Unit Leadership & Facility Specs vs Unit Employee Master
-  const [mainTab, setMainTab] = useState<'specs' | 'employees'>('specs');
+  // Module View Mode: Unit Leadership & Facility Specs vs Unit Employee Master vs Credential Manager
+  const [mainTab, setMainTab] = useState<'specs' | 'employees' | 'credentials'>('specs');
 
   // Employee Master States
   const [employees, setEmployees] = useState<UnitEmployee[]>([]);
@@ -417,6 +418,24 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
             mainTab === 'employees' ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-800'
           }`}>
             {employees.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab('credentials')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+            mainTab === 'credentials'
+              ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-600/20'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <KeyRound className="w-4 h-4 text-orange-500" />
+          <span>Credential Manager</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+            mainTab === 'credentials' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800'
+          }`}>
+            Master Key
           </span>
         </button>
       </div>
@@ -760,6 +779,13 @@ export const UnitsManagementView: React.FC<UnitsManagementViewProps> = ({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Mode 3: Super Admin Master Credential Manager */}
+      {mainTab === 'credentials' && (
+        <div className="animate-in fade-in duration-150">
+          <CredentialManager currentUser={currentUser} />
         </div>
       )}
 

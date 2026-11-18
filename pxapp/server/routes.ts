@@ -2304,29 +2304,264 @@ router.delete('/departments/:id', async (req: Request, res: Response) => {
 });
 
 /* ========================================================================== */
-/* 5S AUDIT SMTP EMAIL NOTIFICATIONS & ORGANIZATIONAL CONTACT DIRECTORY       */
+/* SUPER ADMIN CREDENTIAL MANAGER & DYNAMIC SMTP CONFIGURATION                */
+/* Protected with Master Administrative Passcode: Sankara_Admin@2026          */
 /* ========================================================================== */
 
-// Configure Zoho SMTP Transporter
-const mailTransporter = nodemailer.createTransport({
+const MASTER_ADMIN_PASSCODE = 'Sankara_Admin@2026';
+
+let runtimeSmtpConfig = {
   host: process.env.SMTP_HOST || 'smtp.zoho.com',
   port: parseInt(process.env.SMTP_PORT || '465', 10),
-  secure: true, // port 465 uses SSL
-  auth: {
-    user: process.env.SMTP_USER || 'is.support@sankaraeye.com',
-    pass: process.env.SMTP_PASS || '3fKebcsUWLWr',
-  },
-  tls: {
-    rejectUnauthorized: false
+  secure: process.env.SMTP_SECURE === 'false' ? false : true,
+  user: process.env.SMTP_USER || 'is.support@sankaraeye.com',
+  pass: process.env.SMTP_PASS || '3fKebcsUWLWr',
+  from: process.env.SMTP_FROM || '"Sankara 5S Operations Desk" <is.support@sankaraeye.com>'
+};
+
+// Hydrate credentials from PostgreSQL system_credentials table if present
+async function hydrateCredentialsFromDb() {
+  try {
+    const res = await pool.query(`SELECT key, value FROM system_credentials WHERE category = 'smtp'`);
+    for (const row of res.rows) {
+      if (row.key === 'SMTP_HOST') runtimeSmtpConfig.host = row.value;
+      if (row.key === 'SMTP_PORT') runtimeSmtpConfig.port = parseInt(row.value, 10);
+      if (row.key === 'SMTP_SECURE') runtimeSmtpConfig.secure = row.value === 'true';
+      if (row.key === 'SMTP_USER') runtimeSmtpConfig.user = row.value;
+      if (row.key === 'SMTP_PASS') runtimeSmtpConfig.pass = row.value;
+      if (row.key === 'SMTP_FROM') runtimeSmtpConfig.from = row.value;
+    }
+  } catch (_) { }
+}
+hydrateCredentialsFromDb();
+
+function getActiveTransporter(customConfig?: Partial<typeof runtimeSmtpConfig>) {
+  const conf = { ...runtimeSmtpConfig, ...customConfig };
+  return nodemailer.createTransport({
+    host: conf.host,
+    port: conf.port,
+    secure: conf.secure,
+    auth: {
+      user: conf.user,
+      pass: conf.pass,
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+}
+
+// 1. Unlock Credential Manager with Master Passcode
+router.post('/admin/credentials/unlock', (req: Request, res: Response) => {
+  const { passcode } = req.body;
+  if (!passcode || String(passcode).trim() !== MASTER_ADMIN_PASSCODE) {
+    return res.status(401).json({ error: 'Invalid Administrative Security Passcode. Access Denied.' });
+  }
+
+  return res.json({
+    success: true,
+    token: `sankara-adm-${Date.now()}`,
+    message: 'Production Credential Manager Unlocked'
+  });
+});
+
+// 2. Fetch Active Credentials
+router.get('/admin/credentials', async (req: Request, res: Response) => {
+  const passcode = req.headers['x-admin-passcode'] || req.query.passcode;
+  if (passcode !== MASTER_ADMIN_PASSCODE) {
+    return res.status(401).json({ error: 'Administrative Passcode Required' });
+  }
+
+  await hydrateCredentialsFromDb();
+
+  return res.json({
+    smtp: {
+      host: runtimeSmtpConfig.host,
+      port: runtimeSmtpConfig.port,
+      secure: runtimeSmtpConfig.secure,
+      user: runtimeSmtpConfig.user,
+      pass: runtimeSmtpConfig.pass,
+      from: runtimeSmtpConfig.from
+    },
+    system: {
+      nodeEnv: process.env.NODE_ENV || 'production',
+      pgHost: process.env.PGHOST || 'localhost',
+      pgPort: process.env.PGPORT || '5432',
+      pgDatabase: process.env.PGDATABASE || 'sankara_px',
+      pgUser: process.env.PGUSER || 'postgres',
+      uptime: Math.round(process.uptime())
+    }
+  });
+});
+
+// 3. Save & Inject Credentials to Production
+router.post('/admin/credentials', async (req: Request, res: Response) => {
+  const { passcode, smtp, userEmail = 'prabhanjan@sankaraeye.com' } = req.body;
+
+  if (passcode !== MASTER_ADMIN_PASSCODE) {
+    return res.status(401).json({ error: 'Invalid Administrative Security Passcode. Access Denied.' });
+  }
+
+  if (!smtp || !smtp.host || !smtp.user || !smtp.pass) {
+    return res.status(400).json({ error: 'SMTP host, username, and password are required' });
+  }
+
+  // Update in-memory runtime config
+  runtimeSmtpConfig = {
+    host: String(smtp.host).trim(),
+    port: parseInt(String(smtp.port || '465'), 10),
+    secure: smtp.secure === true || String(smtp.secure) === 'true',
+    user: String(smtp.user).trim(),
+    pass: String(smtp.pass).trim(),
+    from: String(smtp.from || `"Sankara 5S Operations Desk" <${smtp.user}>`).trim()
+  };
+
+  // Update process.env
+  process.env.SMTP_HOST = runtimeSmtpConfig.host;
+  process.env.SMTP_PORT = String(runtimeSmtpConfig.port);
+  process.env.SMTP_SECURE = String(runtimeSmtpConfig.secure);
+  process.env.SMTP_USER = runtimeSmtpConfig.user;
+  process.env.SMTP_PASS = runtimeSmtpConfig.pass;
+  process.env.SMTP_FROM = runtimeSmtpConfig.from;
+
+  // Persist to PostgreSQL system_credentials table
+  try {
+    const credsToSave = [
+      ['SMTP_HOST', runtimeSmtpConfig.host, 'smtp', 'Outgoing SMTP Server Hostname'],
+      ['SMTP_PORT', String(runtimeSmtpConfig.port), 'smtp', 'Outgoing SMTP Port'],
+      ['SMTP_SECURE', String(runtimeSmtpConfig.secure), 'smtp', 'SSL Encryption'],
+      ['SMTP_USER', runtimeSmtpConfig.user, 'smtp', 'SMTP Account / Username'],
+      ['SMTP_PASS', runtimeSmtpConfig.pass, 'smtp', 'SMTP Application Password'],
+      ['SMTP_FROM', runtimeSmtpConfig.from, 'smtp', 'Default Sender Header']
+    ];
+
+    for (const [k, v, cat, desc] of credsToSave) {
+      await pool.query(`
+        INSERT INTO system_credentials (key, value, category, description, updated_by, updated_at)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET
+          value = EXCLUDED.value,
+          updated_by = EXCLUDED.updated_by,
+          updated_at = CURRENT_TIMESTAMP
+      `, [k, v, cat, desc, userEmail]);
+    }
+
+    // Log to audit trail
+    await pool.query(`
+      INSERT INTO audit_logs (unit_id, bottleneck_id, action, details, user_role)
+      VALUES ('SYSTEM', 'CREDENTIALS', 'UPDATE_PRODUCTION_CREDENTIALS', $1, 'Super Admin')
+    `, [JSON.stringify({ updatedBy: userEmail, smtpUser: runtimeSmtpConfig.user, host: runtimeSmtpConfig.host })]);
+
+  } catch (err: any) {
+    console.warn('[Credentials DB Persist Warning]:', err.message);
+  }
+
+  // Update .env files on disk if running on server with filesystem write permissions
+  try {
+    const envPaths = [
+      path.resolve(process.cwd(), '.env'),
+      path.resolve(process.cwd(), 'pxapp/.env')
+    ];
+    for (const p of envPaths) {
+      if (fs.existsSync(p)) {
+        let content = fs.readFileSync(p, 'utf-8');
+        const updateLine = (key: string, val: string) => {
+          const regex = new RegExp(`^${key}=.*$`, 'm');
+          if (regex.test(content)) {
+            content = content.replace(regex, `${key}=${val}`);
+          } else {
+            content += `\n${key}=${val}`;
+          }
+        };
+        updateLine('SMTP_HOST', runtimeSmtpConfig.host);
+        updateLine('SMTP_PORT', String(runtimeSmtpConfig.port));
+        updateLine('SMTP_SECURE', String(runtimeSmtpConfig.secure));
+        updateLine('SMTP_USER', runtimeSmtpConfig.user);
+        updateLine('SMTP_PASS', runtimeSmtpConfig.pass);
+        updateLine('SMTP_FROM', runtimeSmtpConfig.from);
+        fs.writeFileSync(p, content, 'utf-8');
+      }
+    }
+  } catch (_) { }
+
+  return res.json({
+    success: true,
+    message: '✓ Production credentials updated, saved to PostgreSQL, and injected into runtime environment successfully.',
+    smtp: {
+      host: runtimeSmtpConfig.host,
+      port: runtimeSmtpConfig.port,
+      secure: runtimeSmtpConfig.secure,
+      user: runtimeSmtpConfig.user,
+      from: runtimeSmtpConfig.from
+    }
+  });
+});
+
+// 4. Test SMTP with typed or active credentials
+router.post('/admin/credentials/test-smtp', async (req: Request, res: Response) => {
+  const { passcode, email, config } = req.body;
+  if (passcode !== MASTER_ADMIN_PASSCODE) {
+    return res.status(401).json({ error: 'Administrative Passcode Required' });
+  }
+
+  const targetEmail = email || runtimeSmtpConfig.user || 'is.support@sankaraeye.com';
+  const customConf = config ? {
+    host: config.host || runtimeSmtpConfig.host,
+    port: parseInt(config.port || runtimeSmtpConfig.port, 10),
+    secure: config.secure === true || String(config.secure) === 'true',
+    user: config.user || runtimeSmtpConfig.user,
+    pass: config.pass || runtimeSmtpConfig.pass,
+    from: config.from || runtimeSmtpConfig.from
+  } : undefined;
+
+  try {
+    const transporter = getActiveTransporter(customConf);
+    const info = await transporter.sendMail({
+      from: customConf?.from || runtimeSmtpConfig.from,
+      to: targetEmail,
+      subject: '✓ Sankara Production Credential Manager - SMTP Verification Test',
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+          <div style="border-bottom: 3px solid #ea580c; padding-bottom: 12px; margin-bottom: 18px;">
+            <h2 style="color: #0f172a; margin: 0; font-size: 19px; font-weight: 800;">Sankara Eye Hospital • Credential Manager</h2>
+            <p style="color: #64748b; margin: 3px 0 0 0; font-size: 12px;">Production Service Connectivity Verification</p>
+          </div>
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 18px;">
+            <p style="color: #166534; font-weight: 800; margin: 0 0 4px 0; font-size: 14px;">✓ SMTP Connection Verified & Live</p>
+            <p style="color: #15803d; margin: 0; font-size: 12px;">Host: <strong>${customConf?.host || runtimeSmtpConfig.host}:${customConf?.port || runtimeSmtpConfig.port}</strong><br>Account: <strong>${customConf?.user || runtimeSmtpConfig.user}</strong></p>
+          </div>
+          <p style="color: #475569; font-size: 12px; line-height: 1.6;">
+            This test confirms that your SMTP credentials have been successfully authenticated by the mail server and are active for all outbound audit notifications and bottleneck alerts across the Sankara hospital network.
+          </p>
+          <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #f1f5f9; color: #94a3b8; font-size: 10px;">
+            Timestamp: ${new Date().toISOString()} • Authorized via Production Credential Manager
+          </div>
+        </div>
+      `
+    });
+
+    return res.json({
+      success: true,
+      messageId: info.messageId,
+      recipient: targetEmail
+    });
+  } catch (error: any) {
+    console.error('[Admin SMTP Test Error]:', error);
+    return res.status(500).json({ error: error.message || 'SMTP Authentication failed' });
   }
 });
+
+/* ========================================================================== */
+/* 5S AUDIT SMTP EMAIL NOTIFICATIONS & ORGANIZATIONAL CONTACT DIRECTORY       */
+/* ========================================================================== */
 
 // Test SMTP connection endpoint
 router.post('/fives/test-smtp', async (req: Request, res: Response) => {
   try {
     const targetEmail = req.body.email || 'is.support@sankaraeye.com';
-    const info = await mailTransporter.sendMail({
-      from: process.env.SMTP_FROM || '"Sankara 5S Operations Desk" <is.support@sankaraeye.com>',
+    const transporter = getActiveTransporter();
+    const info = await transporter.sendMail({
+      from: runtimeSmtpConfig.from,
       to: targetEmail,
       subject: '✓ Sankara 5S Audit Email System - SMTP Service Verification',
       html: `
@@ -2337,7 +2572,7 @@ router.post('/fives/test-smtp', async (req: Request, res: Response) => {
           </div>
           <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
             <p style="color: #166534; font-weight: 700; margin: 0 0 6px 0; font-size: 15px;">✓ SMTP Configuration Active & Verified</p>
-            <p style="color: #15803d; margin: 0; font-size: 13px;">Outgoing Server: <strong>smtp.zoho.com:465 (SSL)</strong><br>Sender: <strong>is.support@sankaraeye.com</strong></p>
+            <p style="color: #15803d; margin: 0; font-size: 13px;">Outgoing Server: <strong>${runtimeSmtpConfig.host}:${runtimeSmtpConfig.port} (SSL: ${runtimeSmtpConfig.secure})</strong><br>Sender: <strong>${runtimeSmtpConfig.user}</strong></p>
           </div>
           <p style="color: #475569; font-size: 13px; line-height: 1.6;">
             This test email confirms that the 5S Audit notification service is active and ready to dispatch official audit findings, non-conformities, and photo attachments to Department In-Charges, Unit Heads, and Zonal Leads across all 14 hospital units.
@@ -2780,7 +3015,7 @@ router.post('/fives/send-audit-email', async (req: Request, res: Response) => {
     const finalSubject = subject && String(subject).trim().length > 0 ? String(subject).trim() : defaultSubject;
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || '"Sankara 5S Operations Desk" <is.support@sankaraeye.com>',
+      from: runtimeSmtpConfig.from || process.env.SMTP_FROM || '"Sankara 5S Operations Desk" <is.support@sankaraeye.com>',
       to: toList,
       cc: ccList.length > 0 ? ccList : undefined,
       subject: finalSubject,
@@ -2788,7 +3023,8 @@ router.post('/fives/send-audit-email', async (req: Request, res: Response) => {
       attachments: attachments.length > 0 ? attachments : undefined
     };
 
-    const info = await mailTransporter.sendMail(mailOptions);
+    const transporter = getActiveTransporter();
+    const info = await transporter.sendMail(mailOptions);
 
     // Record audit log
     try {
