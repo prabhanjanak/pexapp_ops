@@ -1,33 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { CategoryItem, DepartmentItem, User } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { CategoryItem, DepartmentItem, User, HospitalUnit } from '../types';
 import { api } from '../services/api';
 import {
   Tag,
   Building2,
   Plus,
   Trash2,
-  CheckCircle2,
-  AlertCircle,
-  FolderPlus,
+  Search,
+  ShieldCheck,
+  Eye,
+  Filter,
   Layers,
-  Sparkles,
-  RefreshCw,
-  Search
+  Activity,
+  CheckCircle2,
+  Info
 } from 'lucide-react';
 
 interface CategoryDeptManagerProps {
   currentUser: User;
+  units?: HospitalUnit[];
   onToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
   currentUser,
+  units = [],
   onToast
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'categories' | 'departments'>('categories');
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('ALL');
+
+  // President View-Only Mode check
+  const isPresident = currentUser.role === 'President' || 
+    currentUser.name.toLowerCase().includes('president') || 
+    currentUser.email.toLowerCase().includes('president');
+  const isReadOnly = isPresident || currentUser.role === 'Super Admin (View Only)';
 
   // New Category Form State
   const [catName, setCatName] = useState('');
@@ -66,9 +76,59 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
     loadData();
   }, []);
 
+  // Compute unit bottlenecks for selectedUnitId
+  const scopedBottlenecks = useMemo(() => {
+    if (!units || units.length === 0) return [];
+    if (selectedUnitId === 'ALL') {
+      return units.flatMap(u => (u.bottlenecks || []).map(b => ({ ...b, unitName: u.name, unitId: u.id })));
+    }
+    const targetUnit = units.find(u => u.id === selectedUnitId);
+    return targetUnit ? (targetUnit.bottlenecks || []).map(b => ({ ...b, unitName: targetUnit.name, unitId: targetUnit.id })) : [];
+  }, [units, selectedUnitId]);
+
+  // Bottleneck counts mapped by category name (case-insensitive)
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, { total: number; active: number; completed: number }> = {};
+    scopedBottlenecks.forEach(b => {
+      const catKey = (b.category || '').toLowerCase().trim();
+      if (!catKey) return;
+      if (!stats[catKey]) stats[catKey] = { total: 0, active: 0, completed: 0 };
+      stats[catKey].total += 1;
+      if (b.status === 'Completed' || b.percentComplete === 100) {
+        stats[catKey].completed += 1;
+      } else {
+        stats[catKey].active += 1;
+      }
+    });
+    return stats;
+  }, [scopedBottlenecks]);
+
+  // Bottleneck counts mapped by department name (case-insensitive)
+  const departmentStats = useMemo(() => {
+    const stats: Record<string, { total: number; active: number; completed: number }> = {};
+    scopedBottlenecks.forEach(b => {
+      const deptKey = (b.department || '').toLowerCase().trim();
+      if (!deptKey) return;
+      if (!stats[deptKey]) stats[deptKey] = { total: 0, active: 0, completed: 0 };
+      stats[deptKey].total += 1;
+      if (b.status === 'Completed' || b.percentComplete === 100) {
+        stats[deptKey].completed += 1;
+      } else {
+        stats[deptKey].active += 1;
+      }
+    });
+    return stats;
+  }, [scopedBottlenecks]);
+
+  const selectedUnitName = useMemo(() => {
+    if (selectedUnitId === 'ALL') return 'All 14 Hospital Units';
+    const found = units.find(u => u.id === selectedUnitId);
+    return found ? found.name : 'Selected Hospital Unit';
+  }, [units, selectedUnitId]);
+
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!catName.trim()) return;
+    if (isReadOnly || !catName.trim()) return;
 
     try {
       const created = await api.createCategory({
@@ -87,6 +147,7 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
   };
 
   const handleDeleteCategory = async (id: string, name: string) => {
+    if (isReadOnly) return;
     if (!window.confirm(`Delete category "${name}"?`)) return;
     try {
       await api.deleteCategory(id);
@@ -99,7 +160,7 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
 
   const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deptName.trim()) return;
+    if (isReadOnly || !deptName.trim()) return;
 
     try {
       const created = await api.createDepartment({
@@ -119,6 +180,7 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
   };
 
   const handleDeleteDepartment = async (id: string, name: string) => {
+    if (isReadOnly) return;
     if (!window.confirm(`Delete department "${name}"?`)) return;
     try {
       await api.deleteDepartment(id);
@@ -143,22 +205,32 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
     <div className="space-y-6 animate-in fade-in duration-200">
       
       {/* Header Banner */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-xs font-black uppercase tracking-wider mb-2">
-            <Tag className="w-3.5 h-3.5" />
-            Operations Taxonomy & Master Data
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-xs font-black uppercase tracking-wider">
+              <Tag className="w-3.5 h-3.5" />
+              Operations Taxonomy & Master Data
+            </div>
+            {isReadOnly && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-900 text-xs font-black uppercase tracking-wider border border-blue-200">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
+                President View-Only Mode
+              </div>
+            )}
           </div>
           <h2 className="text-2xl font-black text-slate-900">
-            Categories & Departments Management
+            Categories & Departments
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Configure dynamic clinical & operational taxonomy across all 14 hospital units.
+            {isReadOnly 
+              ? 'Executive view-only mode with multi-unit operational bottleneck filtering across all 14 hospital units.' 
+              : 'Configure dynamic clinical & operational taxonomy across all 14 hospital units.'}
           </p>
         </div>
 
         {/* Sub-tab Pill Switcher */}
-        <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-start sm:self-auto">
+        <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-start md:self-auto shrink-0">
           <button
             onClick={() => setActiveSubTab('categories')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -185,29 +257,65 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
       {/* Categories View */}
       {activeSubTab === 'categories' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search category or department..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            {/* Search and Unit Filter Controls */}
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search category or department..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              {/* Hospital Unit Filter Dropdown */}
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <Filter className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-500 shrink-0">Filter Unit:</span>
+                <select
+                  value={selectedUnitId}
+                  onChange={(e) => setSelectedUnitId(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer max-w-[240px] truncate"
+                >
+                  <option value="ALL">🏢 All 14 Hospital Units</option>
+                  {(units || []).map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedUnitId !== 'ALL' && (
+                <span className="text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-lg">
+                  Filtering for: <strong>{selectedUnitName}</strong>
+                </span>
+              )}
             </div>
 
-            <button
-              onClick={() => setIsAddingCat(!isAddingCat)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-orange-600/20 cursor-pointer transition-all self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{isAddingCat ? 'Cancel' : 'Add New Category'}</span>
-            </button>
+            {/* Actions: Add button (Only for non-view-only) or Read-Only Indicator */}
+            {!isReadOnly ? (
+              <button
+                onClick={() => setIsAddingCat(!isAddingCat)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-orange-600/20 cursor-pointer transition-all self-start lg:self-auto shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{isAddingCat ? 'Cancel' : 'Add New Category'}</span>
+              </button>
+            ) : (
+              <div className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold flex items-center gap-2 self-start lg:self-auto shrink-0">
+                <Eye className="w-4 h-4 text-blue-600" />
+                <span>President View-Only Mode</span>
+              </div>
+            )}
           </div>
 
-          {/* Add Category Form Box */}
-          {isAddingCat && (
+          {/* Add Category Form Box (Only visible if not read-only and toggled) */}
+          {!isReadOnly && isAddingCat && (
             <form onSubmit={handleCreateCategory} className="bg-orange-50/50 border border-orange-200 rounded-2xl p-5 animate-in slide-in-from-top-3 duration-200">
               <h4 className="text-xs font-black uppercase tracking-wider text-orange-800 mb-3">Create Operational Category</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -269,31 +377,62 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
 
           {/* Categories Grid Table */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCategories.map((c) => (
-              <div
-                key={c.id}
-                className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-300 transition-colors"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800">
-                      {c.department || 'General'}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteCategory(c.id, c.name)}
-                      className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
-                      title="Delete category"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            {filteredCategories.map((c) => {
+              const statKey = c.name.toLowerCase().trim();
+              const stats = categoryStats[statKey] || { total: 0, active: 0, completed: 0 };
+
+              return (
+                <div
+                  key={c.id}
+                  className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:border-orange-300 transition-colors"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800">
+                        {c.department || 'General'}
+                      </span>
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => handleDeleteCategory(c.id, c.name)}
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                          title="Delete category"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900">{c.name}</h4>
+                    {c.description && (
+                      <p className="text-xs text-slate-500 mt-1 font-normal">{c.description}</p>
+                    )}
                   </div>
-                  <h4 className="text-sm font-black text-slate-900">{c.name}</h4>
-                  {c.description && (
-                    <p className="text-xs text-slate-500 mt-1 font-normal">{c.description}</p>
-                  )}
+
+                  {/* Bottleneck Utilization Metrics for Selected Unit */}
+                  <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-500">
+                      {selectedUnitId === 'ALL' ? 'Network Count:' : 'Unit Count:'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {stats.active > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-200">
+                          {stats.active} Active
+                        </span>
+                      )}
+                      {stats.completed > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-extrabold text-[10px] border border-emerald-200">
+                          {stats.completed} Done
+                        </span>
+                      )}
+                      {stats.total === 0 && (
+                        <span className="text-slate-400 font-medium text-[10px]">
+                          0 logged
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -301,29 +440,65 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
       {/* Departments View */}
       {activeSubTab === 'departments' && (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search department..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            {/* Search and Unit Filter Controls */}
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search department..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              {/* Hospital Unit Filter Dropdown */}
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <Filter className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-500 shrink-0">Filter Unit:</span>
+                <select
+                  value={selectedUnitId}
+                  onChange={(e) => setSelectedUnitId(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer max-w-[240px] truncate"
+                >
+                  <option value="ALL">🏢 All 14 Hospital Units</option>
+                  {(units || []).map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedUnitId !== 'ALL' && (
+                <span className="text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-lg">
+                  Filtering for: <strong>{selectedUnitName}</strong>
+                </span>
+              )}
             </div>
 
-            <button
-              onClick={() => setIsAddingDept(!isAddingDept)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-orange-600/20 cursor-pointer transition-all self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{isAddingDept ? 'Cancel' : 'Add New Department'}</span>
-            </button>
+            {/* Actions: Add button (Only for non-view-only) or Read-Only Indicator */}
+            {!isReadOnly ? (
+              <button
+                onClick={() => setIsAddingDept(!isAddingDept)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-orange-600/20 cursor-pointer transition-all self-start lg:self-auto shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{isAddingDept ? 'Cancel' : 'Add New Department'}</span>
+              </button>
+            ) : (
+              <div className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold flex items-center gap-2 self-start lg:self-auto shrink-0">
+                <Eye className="w-4 h-4 text-blue-600" />
+                <span>President View-Only Mode</span>
+              </div>
+            )}
           </div>
 
-          {/* Add Department Form Box */}
-          {isAddingDept && (
+          {/* Add Department Form Box (Only visible if not read-only and toggled) */}
+          {!isReadOnly && isAddingDept && (
             <form onSubmit={handleCreateDepartment} className="bg-amber-50/50 border border-amber-200 rounded-2xl p-5 animate-in slide-in-from-top-3 duration-200">
               <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 mb-3">Create Hospital Department</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
@@ -382,29 +557,60 @@ export const CategoryDeptManager: React.FC<CategoryDeptManagerProps> = ({
 
           {/* Departments Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredDepartments.map((d) => (
-              <div
-                key={d.id}
-                className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:border-amber-300 transition-colors"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-200 text-slate-800">
-                      CODE: {d.code || 'GEN'}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteDepartment(d.id, d.name)}
-                      className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
-                      title="Delete department"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            {filteredDepartments.map((d) => {
+              const statKey = d.name.toLowerCase().trim();
+              const stats = departmentStats[statKey] || { total: 0, active: 0, completed: 0 };
+
+              return (
+                <div
+                  key={d.id}
+                  className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:border-amber-300 transition-colors"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-200 text-slate-800">
+                        CODE: {d.code || 'GEN'}
+                      </span>
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => handleDeleteDepartment(d.id, d.name)}
+                          className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                          title="Delete department"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900">{d.name}</h4>
+                    <p className="text-xs text-slate-400 mt-1 font-medium">{d.headContact || 'Hospital Leadership'}</p>
                   </div>
-                  <h4 className="text-sm font-black text-slate-900">{d.name}</h4>
-                  <p className="text-xs text-slate-400 mt-1 font-medium">{d.headContact || 'Hospital Leadership'}</p>
+
+                  {/* Bottleneck Utilization Metrics for Selected Unit */}
+                  <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-500">
+                      {selectedUnitId === 'ALL' ? 'Network Count:' : 'Unit Count:'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {stats.active > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-200">
+                          {stats.active} Active
+                        </span>
+                      )}
+                      {stats.completed > 0 && (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-extrabold text-[10px] border border-emerald-200">
+                          {stats.completed} Done
+                        </span>
+                      )}
+                      {stats.total === 0 && (
+                        <span className="text-slate-400 font-medium text-[10px]">
+                          0 logged
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
         </div>

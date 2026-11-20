@@ -493,12 +493,19 @@ export default function App() {
     );
   }
 
-  const isSuperAdminOrPresident = currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president');
+  const isPresident = currentUser.role === 'President' || 
+    currentUser.name.toLowerCase().includes('president') || 
+    currentUser.email.toLowerCase().includes('president');
+  const isSuperAdminOrPresident = currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin' || isPresident;
+
+  const effectiveAdminTab = isPresident && (activeAdminTab === 'units' || activeAdminTab === 'activity' || activeAdminTab === 'database')
+    ? 'dashboard'
+    : activeAdminTab;
 
   const currentTab = currentUser.role === 'Unit Head'
     ? activeUnitTab
     : isSuperAdminOrPresident
-    ? activeAdminTab
+    ? effectiveAdminTab
     : activeOpsTab;
 
   const handleTabChange = (tab: any) => {
@@ -506,7 +513,11 @@ export default function App() {
       if (tab === 'profile') setIsProfileModalOpen(true);
       else setActiveUnitTab(tab);
     } else if (isSuperAdminOrPresident) {
-      setActiveAdminTab(tab);
+      if (isPresident && (tab === 'units' || tab === 'activity' || tab === 'database')) {
+        setActiveAdminTab('dashboard');
+      } else {
+        setActiveAdminTab(tab);
+      }
     } else {
       setActiveOpsTab(tab);
     }
@@ -591,7 +602,7 @@ export default function App() {
           {isSuperAdminOrPresident && (
             <SuperAdminView
               units={units}
-              activeTab={activeAdminTab}
+              activeTab={effectiveAdminTab}
               currentUser={currentUser}
               dbHealth={dbHealth}
               selectedUnitId={selectedUnitId}

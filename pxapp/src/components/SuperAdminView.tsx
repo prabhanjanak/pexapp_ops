@@ -80,6 +80,9 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   onOpenAuditLogs,
   onRefreshUnits
 }) => {
+  const isPresident = currentUser.role === 'President' || 
+    currentUser.name.toLowerCase().includes('president') || 
+    currentUser.email.toLowerCase().includes('president');
   const [inspectedUnitId, setInspectedUnitId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isAddBottleneckModalOpen, setIsAddBottleneckModalOpen] = useState(false);
@@ -289,7 +292,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
       )}
 
       {/* 1b. 14 UNITS & UNIT HEADS DIRECTORY */}
-      {activeTab === 'units' && (
+      {activeTab === 'units' && !isPresident && (
         <UnitsManagementView
           units={units}
           currentUser={currentUser}
@@ -690,12 +693,13 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
       {activeTab === 'categories' && (
         <CategoryDeptManager
           currentUser={currentUser}
+          units={units}
           onToast={(msg, type) => showNotify(type === 'error' ? 'error' : 'success', msg)}
         />
       )}
 
       {/* 5. MASTER DATABASE CONTROLS TAB */}
-      {activeTab === 'database' && (
+      {activeTab === 'database' && !isPresident && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <Database className="w-5 h-5 text-orange-600" />
@@ -758,7 +762,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
       )}
 
       {/* 6. AUDIT LOGS TAB */}
-      {activeTab === 'activity' && (
+      {activeTab === 'activity' && !isPresident && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2.5">

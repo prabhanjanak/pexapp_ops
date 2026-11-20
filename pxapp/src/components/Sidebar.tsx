@@ -74,7 +74,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ];
     }
 
-    if (currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin' || currentUser.role === 'President' || currentUser.name.toLowerCase().includes('president') || currentUser.email.toLowerCase().includes('president')) {
+    const isPresident = currentUser.role === 'President' || 
+      currentUser.name.toLowerCase().includes('president') || 
+      currentUser.email.toLowerCase().includes('president');
+
+    if (isPresident) {
+      return [
+        { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
+        { id: 'bottlenecks', label: 'Active Bottlenecks', icon: Activity, count: activeCount, countColor: 'bg-amber-500 text-slate-950' },
+        { id: 'completed', label: 'Completed Archive', icon: CheckCircle2, count: completedCount, countColor: 'bg-emerald-500 text-white' },
+        { id: 'evidence', label: 'Photo Approvals', icon: Camera },
+        { id: 'categories', label: 'Categories & Depts', icon: Tag }
+      ];
+    }
+
+    if (currentUser.role === 'Super Admin' || currentUser.role === 'IT Admin') {
       return [
         { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
         { id: 'units', label: 'Unit Scopes & Settings', icon: Building2 },

@@ -776,6 +776,7 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
       {activeTab === 'categories' && (
         <CategoryDeptManager
           currentUser={currentUser}
+          units={units}
           onToast={(msg) => console.log(msg)}
         />
       )}
