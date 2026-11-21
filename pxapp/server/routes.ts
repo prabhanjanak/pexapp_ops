@@ -1457,7 +1457,9 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
       VERCEL_DEMO_BOTTLENECKS[foundIdx] = updated;
       return res.json(formatBottleneck(updated));
     }
-    return res.json(formatBottleneck({ id, ...req.body, last_updated: today }));
+    const newDemo = { id, unit_id: req.body.unitId || req.body.unit_id || 'unit-jaipur', ...req.body, last_updated: today };
+    VERCEL_DEMO_BOTTLENECKS.push(newDemo);
+    return res.json(formatBottleneck(newDemo));
   }
 
   let client: any = null;
@@ -1466,14 +1468,73 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     await client.query('BEGIN');
 
     const existingRes = await client.query('SELECT * FROM bottlenecks WHERE id = $1', [id]);
+    const today = new Date().toISOString().split('T')[0];
+    const updaterName = userName || userRole || 'User';
+
     if (existingRes.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: `Bottleneck ${id} not found` });
+      // Auto-insert / upsert bottleneck into database so offline/client bottlenecks can be updated seamlessly
+      const targetUnitId = req.body.unitId || req.body.unit_id || (id.startsWith('unit-') ? id.split('-').slice(0, 2).join('-') : 'unit-jaipur');
+      const insertRes = await client.query(
+        `INSERT INTO bottlenecks (
+          id, unit_id, title, category, department, status, percent_complete,
+          owner, impact_level, target_date, notes, remarks, before_photos, after_photos,
+          tasks, acknowledged_by, acknowledged_at, assigned_employee_id, assigned_employee_name,
+          assigned_employee_dept, assigned_employee_email, assigned_by, assigned_at,
+          requires_mhq_intervention, mhq_intervention_by, mhq_intervention_at,
+          resolved_by, resolved_at, history, last_updated, mhq_department, mhq_intervention_notes
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+          $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
+          $29, $30, $31, $32
+        ) RETURNING *`,
+        [
+          id,
+          targetUnitId,
+          title || 'Operational Bottleneck',
+          category || 'OPD Wait Time',
+          department || 'General Operations',
+          status || 'Pending Acknowledgement',
+          percentComplete !== undefined ? Number(percentComplete) : 0,
+          owner || 'Unit Team',
+          impactLevel || 'Medium',
+          targetDate || null,
+          notes || '',
+          remarks || '',
+          typeof beforePhotos === 'string' ? beforePhotos : JSON.stringify(beforePhotos || []),
+          typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos || []),
+          typeof tasks === 'string' ? tasks : JSON.stringify(tasks || []),
+          acknowledgedBy || null,
+          acknowledgedAt || null,
+          assignedEmployeeId || null,
+          assignedEmployeeName || null,
+          assignedEmployeeDept || null,
+          assignedEmployeeEmail || null,
+          assignedBy || null,
+          assignedAt || null,
+          Boolean(requiresMhqIntervention),
+          mhqInterventionBy || null,
+          mhqInterventionAt || null,
+          resolvedBy || null,
+          resolvedAt || null,
+          JSON.stringify([{
+            id: `hist-${Date.now()}-created`,
+            updatedBy: updaterName,
+            updatedRole: userRole,
+            field: 'Created',
+            previousValue: 'None',
+            updatedValue: status || 'Pending Acknowledgement',
+            timestamp: new Date().toISOString()
+          }]),
+          today,
+          mhqDepartment || null,
+          mhqInterventionNotes || null
+        ]
+      );
+      await client.query('COMMIT');
+      return res.json(formatBottleneck(insertRes.rows[0]));
     }
 
     const current = existingRes.rows[0];
-    const today = new Date().toISOString().split('T')[0];
-    const updaterName = userName || userRole || 'User';
 
     const updatedTitle = title !== undefined ? title : current.title;
     const updatedCategory = category !== undefined ? category : current.category;

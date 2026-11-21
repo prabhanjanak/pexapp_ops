@@ -19,10 +19,10 @@ export const pool = new Pool(
     ? {
       connectionString: process.env.DATABASE_URL,
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 3000,
-      query_timeout: 4000,
+      max: 30,
+      idleTimeoutMillis: 60000,
+      connectionTimeoutMillis: 15000,
+      query_timeout: 30000,
     }
     : {
       user: DB_USER,
@@ -31,10 +31,10 @@ export const pool = new Pool(
       password: DB_PASSWORD,
       port: DB_PORT,
       ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 3000,
-      query_timeout: 4000,
+      max: 30,
+      idleTimeoutMillis: 60000,
+      connectionTimeoutMillis: 15000,
+      query_timeout: 30000,
     }
 );
 

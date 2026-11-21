@@ -181,7 +181,7 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const maxDim = 1200;
+          const maxDim = 1000;
           let { width, height } = img;
           if (width > maxDim || height > maxDim) {
             if (width > height) {
@@ -196,7 +196,11 @@ export const EditBottleneckModal: React.FC<EditBottleneckModalProps> = ({
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.82));
+          let compressed = canvas.toDataURL('image/jpeg', 0.68);
+          if (compressed.length > 400000) {
+            compressed = canvas.toDataURL('image/jpeg', 0.50);
+          }
+          resolve(compressed);
         };
         img.onerror = () => resolve(event.target?.result as string);
         img.src = event.target?.result as string;

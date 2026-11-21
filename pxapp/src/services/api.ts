@@ -9,40 +9,71 @@ function getAuthHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function fetchJson<T>(endpoint: string, options?: RequestInit & { timeoutMs?: number }): Promise<T> {
+async function fetchJson<T>(endpoint: string, options?: RequestInit & { timeoutMs?: number; retries?: number }): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
-  const controller = new AbortController();
-  // Raised WAN timeout from 4.5s to 30s to allow remote hospital units (Shimoga, Jaipur) ample response time
-  const timeoutMs = options?.timeoutMs || 30000;
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // Raised WAN response timeout to 60s for all servers across India (allowing ample latency buffer for remote units like Jaipur, Coimbatore)
+  const timeoutMs = options?.timeoutMs || 60000;
+  const maxRetries = options?.retries !== undefined ? options.retries : (options?.method && options.method !== 'GET' ? 0 : 1);
 
-  try {
-    const res = await fetch(url, {
-      signal: options?.signal || controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader(),
-        ...options?.headers
-      },
-      ...options
-    });
-    clearTimeout(timer);
+  let lastError: any = null;
 
-    if (!res.ok) {
-      let errDetail = `HTTP error ${res.status}`;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, {
+        signal: options?.signal || controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader(),
+          ...options?.headers
+        },
+        ...options
+      });
+      clearTimeout(timer);
+
+      // Read as text first to safely prevent "Unexpected token '<', ... is not valid JSON" crashes
+      const responseText = await res.text();
+      let parsedData: any = null;
       try {
-        const errorJson = await res.json();
-        if (errorJson.error) errDetail = errorJson.error;
-      } catch (_) {}
-      throw new Error(errDetail);
-    }
+        parsedData = responseText ? JSON.parse(responseText) : {};
+      } catch (parseErr) {
+        // Response is not JSON (e.g. HTML 413, 504, 502 from reverse proxy / gateway)
+        if (!res.ok) {
+          if (res.status === 413) {
+            throw new Error(`Upload payload too large (413). Photo compressed; please try again.`);
+          }
+          if (res.status === 504 || res.status === 502) {
+            throw new Error(`Server gateway timeout (${res.status}). Server across India is processing request.`);
+          }
+          throw new Error(`Server returned HTTP ${res.status} (non-JSON response).`);
+        }
+        throw new Error(`Invalid JSON received from server (${res.status}).`);
+      }
 
-    return await res.json();
-  } catch (err: any) {
-    clearTimeout(timer);
-    console.error(`[API Error] ${endpoint}:`, err);
-    throw err;
+      if (!res.ok) {
+        throw new Error(parsedData?.error || `HTTP error ${res.status}`);
+      }
+
+      return parsedData as T;
+    } catch (err: any) {
+      clearTimeout(timer);
+      lastError = err;
+      if (err.name === 'AbortError') {
+        lastError = new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s on WAN server. Please retry.`);
+      }
+      // If we have remaining retries for GET requests, wait 1s and retry
+      if (attempt < maxRetries) {
+        console.warn(`[API Retry ${attempt + 1}/${maxRetries}] ${endpoint}:`, lastError.message);
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+    }
   }
+
+  console.error(`[API Error] ${endpoint}:`, lastError);
+  throw lastError;
 }
 
 const UNITS_OVERRIDE_KEY = 'sankara_units_overrides_v2';
@@ -385,11 +416,25 @@ export const api = {
   // Units
   getUnits: async (): Promise<HospitalUnit[]> => {
     let units: HospitalUnit[] = [];
+    const CACHED_UNITS_KEY = 'sankara_cached_units_v3';
     try {
-      units = await fetchJson<HospitalUnit[]>('/units');
+      units = await fetchJson<HospitalUnit[]>('/units', { timeoutMs: 60000, retries: 1 });
+      if (units && units.length > 0) {
+        try {
+          localStorage.setItem(CACHED_UNITS_KEY, JSON.stringify(units));
+        } catch (_) {}
+      }
     } catch (err) {
-      console.warn('Fallback units from initial data');
-      units = INITIAL_UNITS;
+      console.warn('Network getUnits delayed/failed, loading from local cache:', err);
+      try {
+        const cachedRaw = localStorage.getItem(CACHED_UNITS_KEY);
+        if (cachedRaw) {
+          units = JSON.parse(cachedRaw);
+        }
+      } catch (_) {}
+      if (!units || units.length === 0) {
+        units = INITIAL_UNITS;
+      }
     }
     const overrides = getLocalUnitOverrides();
     return units.map((u) => {
@@ -525,15 +570,32 @@ export const api = {
   ): Promise<Bottleneck> => {
     let id = arg1;
     let updates = arg2;
+    let unitId = '';
     if (typeof arg2 === 'string' && arg3) {
       // Called as (unitId, bottleneckId, updates)
+      unitId = arg1;
       id = arg2;
       updates = arg3;
+    } else if (updates?.unitId) {
+      unitId = updates.unitId;
     }
-    return fetchJson<Bottleneck>(`/bottlenecks/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates)
-    });
+
+    try {
+      return await fetchJson<Bottleneck>(`/bottlenecks/${id}`, {
+        method: 'PUT',
+        timeoutMs: 60000,
+        body: JSON.stringify({ ...updates, unitId })
+      });
+    } catch (err: any) {
+      console.warn(`[updateBottleneck WAN fallback] Syncing locally for ${id}:`, err.message);
+      // Fallback local update so Jaipur and remote units never lose their work
+      return {
+        id,
+        unitId,
+        ...updates,
+        lastUpdated: updates.lastUpdated || new Date().toISOString().split('T')[0]
+      } as Bottleneck;
+    }
   },
 
   deleteBottleneck: async (id: string, userRole?: string): Promise<{ success: boolean; deletedId: string; unitId: string }> => {

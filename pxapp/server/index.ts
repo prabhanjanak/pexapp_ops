@@ -31,6 +31,7 @@ app.use((req, res, next) => {
     try {
       const payload = typeof body === 'string' ? body : JSON.stringify(body);
       if (Buffer.byteLength(payload) < 1024) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
         return originalSend(payload);
       }
       zlib.gzip(Buffer.from(payload), (err, compressed) => {
@@ -117,6 +118,11 @@ async function startServer() {
       console.log(`[Server] Units Endpoint:  http://localhost:${PORT}/api/units`);
       console.log('====================================================\n');
     });
+
+    // Configure resilient timeouts for hospital WAN connections across India
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
+    server.requestTimeout = 120000; // 120 seconds response / waiting time
 
     server.on('error', (err: any) => {
       if (err.code === 'EADDRINUSE') {

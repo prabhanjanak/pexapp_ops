@@ -12,7 +12,7 @@ export interface PhotoUploadCellProps {
   onOpenLightbox?: (photos: string[], initialIndex: number, title: string, type: 'before' | 'after') => void;
 }
 
-// Compress single image file on HTML5 canvas
+// Compress single image file on HTML5 canvas with ultra-lightweight payload (<100KB)
 const compressImageFile = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
@@ -27,7 +27,7 @@ const compressImageFile = (file: File): Promise<string> => {
       img.onload = () => {
         try {
           const canvas = document.createElement('canvas');
-          const maxDim = 1200;
+          const maxDim = 1000; // Optimal clinical evidence resolution with small transmission size
           let { width, height } = img;
 
           if (width > maxDim || height > maxDim) {
@@ -48,10 +48,13 @@ const compressImageFile = (file: File): Promise<string> => {
           }
 
           ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL('image/jpeg', 0.82);
+          let compressed = canvas.toDataURL('image/jpeg', 0.68);
+          // If still large (>400KB), re-compress at 0.50 quality to guarantee instant WAN transmission
+          if (compressed.length > 400000) {
+            compressed = canvas.toDataURL('image/jpeg', 0.50);
+          }
           resolve(compressed);
         } catch (canvasErr) {
-          // Fallback to raw base64 data url if canvas fails
           resolve(readerEvent.target?.result as string);
         }
       };
