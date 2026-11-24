@@ -13,20 +13,29 @@
 ---
 
 ## What Has Been Updated in This Release
-1. **Network WAN Timeouts Extended Across India:**
+1. **Universal Photo Upload Pipeline Across All Units (HEIC, HEIF, JPG, JPEG, PNG, WEBP):**
+   * Installed `heic2any` dynamic client processor and universal `imageUtils.ts`.
+   * Automatically decodes and converts iPhone/iOS `.heic` and `.heif` camera captures (even 48MP/108MP mobile camera shots) into high-fidelity compressed progressive JPEGs (<120KB).
+   * Fixed PostgreSQL `invalid input syntax for type json` HTTP 500 error by ensuring all `JSONB` photo payloads (`before_photos`, `after_photos`) are strictly parsed and serialized.
+   * Full multi-photo upload integrated across Bottlenecks (Add & Edit), Photo Upload Cell, and 5S Audit Checkpoints.
+2. **Institutional Redesign of Portal Login Page:**
+   * Features high-resolution Sankara Eye Foundation Logo and Golden Emblem.
+   * Prominently highlights *Sri Kanchi Kamakoti Medical Trust (Est. 1977)* and the 14 Hospital Units Pan-India Network.
+   * Includes one-click Quick Role Demonstration Assistant (Super Admin, President, Unit Head - Coimbatore, Unit Head - Jaipur, Operations Team, 5S Auditor).
+   * Enterprise-grade 256-bit SSL encryption indicator and clean hospital aesthetics.
+3. **Network WAN Timeouts Extended Across India:**
    * PostgreSQL database pool timeout raised from 4s to 30s (`query_timeout: 30000ms`, `connectionTimeoutMillis: 15000ms`, pool size increased to 30).
    * Node.js / Express HTTP server request timeout raised to 120s (`requestTimeout: 120000ms`).
    * Frontend HTTP request timeout raised to 60s with automatic single-retry for remote units (Jaipur, Coimbatore, Shimoga, etc.).
-2. **Fixed Photo Upload "Invalid JSON" Error:**
-   * Automatic client-side canvas compression now scales phone images to max 1000px and compresses to lightweight JPEGs (~60KB–90KB), eliminating 413 Payload Too Large and non-JSON reverse proxy response crashes.
-3. **Fixed Jaipur Unit Head Update Issue:**
+4. **Fixed Jaipur Unit Head Update Issue:**
    * Backend `PUT /bottlenecks/:id` now automatically inserts/upserts client or offline-created bottlenecks into PostgreSQL, preventing 404 "Bottleneck not found" errors.
-4. **Fixed Coimbatore Bottlenecks Loading Issue:**
-   * Added resilient `localStorage` caching (`sankara_cached_units_v3`) so that during momentary hospital WAN latency spikes, cached bottlenecks load immediately without showing a blank list.
-5. **President View Customization:**
+5. **Fixed Coimbatore & Remote Units Loading Glitch:**
+   * Resolved `Cannot read properties of undefined (reading 'toLowerCase')` crash when filtering bottlenecks with unassigned departments.
+   * Added resilient `localStorage` caching so during hospital WAN latency spikes, bottlenecks load instantly without showing a blank list.
+6. **President View Customization:**
    * Hidden tabs: *Audit Logs*, *DB Health*, and *Unit Scopes & Settings*.
    * *Categories & Department* tab is retained in **View-Only Mode** with a multi-unit dropdown filter.
-6. **Super Admin Credential Manager:**
+7. **Super Admin Credential Manager:**
    * Secure UI under Super Admin settings protected with passcode `Sankara_Admin@2026` to configure SMTP, Zoho Mail, and database credentials without modifying environment files manually.
 
 ---
