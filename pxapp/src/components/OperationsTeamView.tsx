@@ -155,13 +155,13 @@ export const OperationsTeamView: React.FC<OperationsTeamViewProps> = ({
         if (viewScope === 'completed' && norm !== 'Completed') continue;
         if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
 
-        const q = searchQuery.toLowerCase();
+        const q = (searchQuery || '').toLowerCase();
         if (
           q &&
-          !b.title.toLowerCase().includes(q) &&
-          !b.category.toLowerCase().includes(q) &&
-          !u.name.toLowerCase().includes(q) &&
-          !b.owner.toLowerCase().includes(q) &&
+          !(b.title || '').toLowerCase().includes(q) &&
+          !(b.category || '').toLowerCase().includes(q) &&
+          !(u.name || '').toLowerCase().includes(q) &&
+          !(b.owner || '').toLowerCase().includes(q) &&
           !(b.department && b.department.toLowerCase().includes(q)) &&
           !(b.assignedEmployeeName && b.assignedEmployeeName.toLowerCase().includes(q))
         ) {

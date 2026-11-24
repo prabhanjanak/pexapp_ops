@@ -201,7 +201,7 @@ export default function App() {
             if (unit.id !== unitId) return unit;
             return {
               ...unit,
-              bottlenecks: unit.bottlenecks.map((b) => (b.id === bottleneckId ? serverUpdated : b))
+              bottlenecks: unit.bottlenecks.map((b) => (b.id === bottleneckId ? { ...b, ...serverUpdated } : b))
             };
           })
         );

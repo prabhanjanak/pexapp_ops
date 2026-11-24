@@ -172,13 +172,14 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
         if (viewScope === 'completed' && norm !== 'Completed') continue;
         if (selectedUnitFilter !== 'ALL' && u.id !== selectedUnitFilter) continue;
 
-        const q = searchQuery.toLowerCase();
+        const q = (searchQuery || '').toLowerCase();
         if (
           q &&
-          !b.title.toLowerCase().includes(q) &&
-          !b.category.toLowerCase().includes(q) &&
-          !u.name.toLowerCase().includes(q) &&
-          !b.owner.toLowerCase().includes(q)
+          !(b.title || '').toLowerCase().includes(q) &&
+          !(b.category || '').toLowerCase().includes(q) &&
+          !(u.name || '').toLowerCase().includes(q) &&
+          !(b.owner || '').toLowerCase().includes(q) &&
+          !(b.department && b.department.toLowerCase().includes(q))
         ) {
           continue;
         }

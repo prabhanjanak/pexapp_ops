@@ -184,13 +184,23 @@ export const UnitHeadView: React.FC<UnitHeadViewProps> = ({
     if (!currentUnit || !currentUnit.bottlenecks) return [];
 
     let list = currentUnit.bottlenecks.filter((item) => {
-      const query = searchQuery.toLowerCase();
+      if (!item) return false;
+      const query = (searchQuery || '').toLowerCase();
+      const title = (item.title || '').toLowerCase();
+      const category = (item.category || '').toLowerCase();
+      const owner = (item.owner || '').toLowerCase();
+      const notes = (item.notes || '').toLowerCase();
+      const remarks = (item.remarks || '').toLowerCase();
+      const dept = (item.department || '').toLowerCase();
+
       const matchesSearch =
-        item.title.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query) ||
-        item.owner.toLowerCase().includes(query) ||
-        (item.notes && item.notes.toLowerCase().includes(query)) ||
-        (item.remarks && item.remarks.toLowerCase().includes(query));
+        !query ||
+        title.includes(query) ||
+        category.includes(query) ||
+        owner.includes(query) ||
+        dept.includes(query) ||
+        notes.includes(query) ||
+        remarks.includes(query);
 
       const norm = normalizeStatus(item.status, item.percentComplete);
       

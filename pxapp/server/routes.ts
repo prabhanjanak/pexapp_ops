@@ -200,6 +200,25 @@ export const VERCEL_DEMO_BOTTLENECKS: any[] = [
   }
 ];
 
+function safeJsonString(val: any, fallback: string = '[]'): string {
+  if (val === undefined || val === null) return fallback;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed) return fallback;
+    try {
+      JSON.parse(trimmed);
+      return trimmed;
+    } catch (_) {
+      return JSON.stringify([trimmed]);
+    }
+  }
+  try {
+    return JSON.stringify(val);
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function formatBottleneck(row: any) {
   let beforePhotos: string[] = [];
   let afterPhotos: string[] = [];
@@ -1500,9 +1519,9 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
           targetDate || null,
           notes || '',
           remarks || '',
-          typeof beforePhotos === 'string' ? beforePhotos : JSON.stringify(beforePhotos || []),
-          typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos || []),
-          typeof tasks === 'string' ? tasks : JSON.stringify(tasks || []),
+          safeJsonString(beforePhotos),
+          safeJsonString(afterPhotos),
+          safeJsonString(tasks),
           acknowledgedBy || null,
           acknowledgedAt || null,
           assignedEmployeeId || null,
@@ -1546,15 +1565,15 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
     const updatedTarget = targetDate !== undefined ? targetDate : current.target_date;
     const updatedNotes = notes !== undefined ? notes : current.notes;
     const updatedRemarks = remarks !== undefined ? remarks : current.remarks;
-    const updatedBeforePhotos = beforePhotos !== undefined
-      ? (typeof beforePhotos === 'string' ? beforePhotos : JSON.stringify(beforePhotos))
-      : current.before_photos;
-    const updatedAfterPhotos = afterPhotos !== undefined
-      ? (typeof afterPhotos === 'string' ? afterPhotos : JSON.stringify(afterPhotos))
-      : current.after_photos;
-    const updatedTasks = tasks !== undefined
-      ? (typeof tasks === 'string' ? tasks : JSON.stringify(tasks))
-      : current.tasks;
+    const updatedBeforePhotos = safeJsonString(
+      beforePhotos !== undefined ? beforePhotos : current.before_photos
+    );
+    const updatedAfterPhotos = safeJsonString(
+      afterPhotos !== undefined ? afterPhotos : current.after_photos
+    );
+    const updatedTasks = safeJsonString(
+      tasks !== undefined ? tasks : current.tasks
+    );
 
     const updatedAckBy = acknowledgedBy !== undefined ? acknowledgedBy : current.acknowledged_by;
     const updatedAckAt = acknowledgedAt !== undefined ? acknowledgedAt : current.acknowledged_at;
@@ -1698,7 +1717,7 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
         updatedRemarks,
         updatedBeforePhotos,
         updatedAfterPhotos,
-        updatedTasks || '[]',
+        updatedTasks,
         updatedAckBy,
         updatedAckAt,
         updatedEmpId,
@@ -1712,7 +1731,7 @@ router.put('/bottlenecks/:id', async (req: Request, res: Response) => {
         updatedMhqAt,
         updatedResolvedBy,
         updatedResolvedAt,
-        JSON.stringify(updatedHistory),
+        safeJsonString(updatedHistory),
         today,
         updatedMhqDept,
         updatedMhqNotes,

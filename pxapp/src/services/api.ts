@@ -592,6 +592,11 @@ export const api = {
       return {
         id,
         unitId,
+        title: updates.title || 'Operational Bottleneck',
+        category: updates.category || 'OPD Wait Time',
+        owner: updates.owner || 'Unit Team',
+        status: updates.status || 'Pending Acknowledgement',
+        percentComplete: updates.percentComplete !== undefined ? Number(updates.percentComplete) : 0,
         ...updates,
         lastUpdated: updates.lastUpdated || new Date().toISOString().split('T')[0]
       } as Bottleneck;
