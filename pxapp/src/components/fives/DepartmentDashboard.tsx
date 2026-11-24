@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiveSUser, FiveSNonConformity, FiveSAudit } from './types';
+import { processAndCompressImage, IMAGE_INPUT_ACCEPT } from '../../utils/imageUtils';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -61,6 +62,15 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
 
   const handleSupportingAnswerChange = (id: string, text: string) => {
     setEditingAnswers((prev) => ({ ...prev, [id]: text }));
+  };
+
+  const handleRealAfterPhotoUpload = async (ncId: string, file: File) => {
+    try {
+      const dataUrl = await processAndCompressImage(file);
+      setAfterPhotos((prev) => ({ ...prev, [ncId]: dataUrl }));
+    } catch (err) {
+      console.error('Failed to process corrective photo:', err);
+    }
   };
 
   const handleAfterPhotoUpload = (ncId: string) => {
@@ -314,13 +324,34 @@ export const DepartmentDashboard: React.FC<DepartmentDashboardProps> = ({
                           <Camera className="w-6 h-6 text-orange-600 mb-1" />
                           <span className="text-xs font-bold text-slate-900">Upload Corrective Photo</span>
                           <span className="text-[10px] text-slate-500 mt-0.5">Show standard restored</span>
-                          <button
-                            type="button"
-                            onClick={() => handleAfterPhotoUpload(nc.id)}
-                            className="mt-2.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white text-xs font-bold shadow-xs cursor-pointer"
-                          >
-                            Upload Photo
-                          </button>
+                          <input
+                            id={`dept-after-photo-${nc.id}`}
+                            type="file"
+                            accept={IMAGE_INPUT_ACCEPT}
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleRealAfterPhotoUpload(nc.id, f);
+                              e.target.value = '';
+                            }}
+                          />
+                          <div className="flex items-center gap-2 mt-2.5">
+                            <label
+                              htmlFor={`dept-after-photo-${nc.id}`}
+                              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1"
+                            >
+                              <Camera className="w-3.5 h-3.5" />
+                              <span>Upload Photo</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => handleAfterPhotoUpload(nc.id)}
+                              className="text-[10px] text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                              title="Sample image"
+                            >
+                              sample
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

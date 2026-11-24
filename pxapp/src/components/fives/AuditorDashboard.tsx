@@ -23,6 +23,7 @@ import {
 import { NcReviewSection } from './NcReviewSection';
 import { Send5SAuditEmailModal } from './Send5SAuditEmailModal';
 import { FiveSDirectoryManagementModal } from './FiveSDirectoryManagementModal';
+import { processAndCompressImage, IMAGE_INPUT_ACCEPT } from '../../utils/imageUtils';
 
 interface AuditorDashboardProps {
   currentUser: FiveSUser;
@@ -143,6 +144,15 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
 
   const handleCommentChange = (checkpointId: string, text: string) => {
     setComments((prev) => ({ ...prev, [checkpointId]: text }));
+  };
+
+  const handleRealPhotoUpload = async (checkpointId: string, file: File) => {
+    try {
+      const dataUrl = await processAndCompressImage(file);
+      setBeforePhotos((prev) => ({ ...prev, [checkpointId]: dataUrl }));
+    } catch (err) {
+      console.error('Failed to process auditor photo:', err);
+    }
   };
 
   const handlePhotoUploadSim = (checkpointId: string) => {
@@ -642,18 +652,38 @@ export const AuditorDashboard: React.FC<AuditorDashboardProps> = ({
                                   </button>
                                 </div>
                               ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handlePhotoUploadSim(cp.id)}
-                                  className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
-                                    hasNC
-                                      ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
-                                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                                  }`}
-                                >
-                                  <Camera className="w-3.5 h-3.5" />
-                                  <span>📷 Upload Before Photo</span>
-                                </button>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <input
+                                    id={`auditor-photo-${cp.id}`}
+                                    type="file"
+                                    accept={IMAGE_INPUT_ACCEPT}
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) handleRealPhotoUpload(cp.id, f);
+                                      e.target.value = '';
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor={`auditor-photo-${cp.id}`}
+                                    className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                      hasNC
+                                        ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                                        : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                                    }`}
+                                  >
+                                    <Camera className="w-3.5 h-3.5" />
+                                    <span>Upload Photo</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePhotoUploadSim(cp.id)}
+                                    className="text-[10px] text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                                    title="Sample preview"
+                                  >
+                                    sample
+                                  </button>
+                                </div>
                               )}
                             </div>
 

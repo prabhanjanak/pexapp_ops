@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Camera, Plus, Trash2, Maximize2, X, Loader2, Link2, UploadCloud, Check } from 'lucide-react';
+import { processAndCompressImage, IMAGE_INPUT_ACCEPT } from '../utils/imageUtils';
 
 export interface PhotoUploadCellProps {
   photos?: string[];
@@ -11,58 +12,6 @@ export interface PhotoUploadCellProps {
   onViewPhoto?: (index: number) => void;
   onOpenLightbox?: (photos: string[], initialIndex: number, title: string, type: 'before' | 'after') => void;
 }
-
-// Compress single image file on HTML5 canvas with ultra-lightweight payload (<100KB)
-const compressImageFile = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      return reject(new Error('Selected file is not an image'));
-    }
-
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.onload = (readerEvent) => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Failed to decode image data'));
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const maxDim = 1000; // Optimal clinical evidence resolution with small transmission size
-          let { width, height } = img;
-
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            return resolve(readerEvent.target?.result as string);
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-          let compressed = canvas.toDataURL('image/jpeg', 0.68);
-          // If still large (>400KB), re-compress at 0.50 quality to guarantee instant WAN transmission
-          if (compressed.length > 400000) {
-            compressed = canvas.toDataURL('image/jpeg', 0.50);
-          }
-          resolve(compressed);
-        } catch (canvasErr) {
-          resolve(readerEvent.target?.result as string);
-        }
-      };
-      img.src = readerEvent.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-};
 
 export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
   photos = [],
@@ -104,7 +53,7 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
     try {
       const fileList: File[] = Array.from(files);
       const compressedDataUrls = await Promise.all(
-        fileList.map((file: File) => compressImageFile(file))
+        fileList.map((file: File) => processAndCompressImage(file))
       );
 
       const validPhotos = compressedDataUrls.filter(Boolean);
@@ -157,7 +106,7 @@ export const PhotoUploadCell: React.FC<PhotoUploadCellProps> = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp"
+          accept={IMAGE_INPUT_ACCEPT}
           multiple
           className="hidden"
           onChange={handleFileChange}

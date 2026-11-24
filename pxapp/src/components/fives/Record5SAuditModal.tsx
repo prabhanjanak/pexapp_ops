@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { FiveSUser, FiveSUnitConfig, FiveSAudit, FiveSNonConformity } from './types';
 import { FIVE_S_CHECKLIST } from './seedData';
+import { processAndCompressImage, IMAGE_INPUT_ACCEPT } from '../../utils/imageUtils';
 import {
   X,
   ClipboardCheck,
@@ -146,6 +147,15 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
 
   const handleScoreSelect = (checkpointId: string, val: number) => {
     setScores((prev) => ({ ...prev, [checkpointId]: val }));
+  };
+
+  const handleRealPhotoUpload = async (checkpointId: string, file: File) => {
+    try {
+      const dataUrl = await processAndCompressImage(file);
+      setBeforePhotos((prev) => ({ ...prev, [checkpointId]: dataUrl }));
+    } catch (err) {
+      console.error('Failed to process audit photo:', err);
+    }
   };
 
   const handlePhotoUploadSim = (checkpointId: string) => {
@@ -530,14 +540,36 @@ export const Record5SAuditModal: React.FC<Record5SAuditModalProps> = ({
                               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                               Non-Conformity Detected (Score {currentVal}) — Requires Photo & Remarks
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => handlePhotoUploadSim(cp.id)}
-                              className="flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-white px-2.5 py-1 rounded-lg border border-amber-300 hover:bg-amber-100 cursor-pointer shadow-2xs"
-                            >
-                              <Camera className="w-3.5 h-3.5" />
-                              <span>{hasPhoto ? 'Photo Attached' : 'Attach Photo'}</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <input
+                                id={`audit-photo-${cp.id}`}
+                                type="file"
+                                accept={IMAGE_INPUT_ACCEPT}
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleRealPhotoUpload(cp.id, f);
+                                  e.target.value = '';
+                                }}
+                              />
+                              <label
+                                htmlFor={`audit-photo-${cp.id}`}
+                                className="flex items-center gap-1 text-[11px] font-bold text-amber-900 bg-white px-2.5 py-1 rounded-lg border border-amber-300 hover:bg-amber-100 cursor-pointer shadow-2xs transition-all"
+                              >
+                                <Camera className="w-3.5 h-3.5 text-amber-700" />
+                                <span>{hasPhoto ? 'Change Photo' : 'Upload Evidence Photo'}</span>
+                              </label>
+                              {!hasPhoto && (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePhotoUploadSim(cp.id)}
+                                  className="text-[10px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                                  title="Insert sample image for fast testing"
+                                >
+                                  sample
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <input

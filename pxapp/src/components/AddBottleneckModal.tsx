@@ -3,6 +3,7 @@ import { Bottleneck, BottleneckCategory, BottleneckStatus, HospitalUnit, STATUS_
 import { CATEGORIES } from '../data/seedData';
 import { api } from '../services/api';
 import { X, PlusCircle, Camera, Image as ImageIcon, Trash2, Building2 } from 'lucide-react';
+import { processAndCompressImage, IMAGE_INPUT_ACCEPT } from '../utils/imageUtils';
 
 interface AddBottleneckModalProps {
   isOpen: boolean;
@@ -81,49 +82,13 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
     setTasks(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const compressSingleFile = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const maxDim = 1000;
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          let compressed = canvas.toDataURL('image/jpeg', 0.68);
-          if (compressed.length > 400000) {
-            compressed = canvas.toDataURL('image/jpeg', 0.50);
-          }
-          resolve(compressed);
-        };
-        img.onerror = () => resolve(event.target?.result as string);
-        img.src = event.target?.result as string;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'before' | 'after') => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsProcessingPhotos(true);
     try {
-      const urls = await Promise.all(Array.from(files).map(compressSingleFile));
+      const urls = await Promise.all(Array.from(files).map((file) => processAndCompressImage(file)));
       const valid = urls.filter(Boolean);
       if (target === 'before') {
         setBeforePhotos((prev) => [...prev, ...valid]);
@@ -330,7 +295,7 @@ export const AddBottleneckModal: React.FC<AddBottleneckModalProps> = ({
             <input
               ref={beforeInputRef}
               type="file"
-              accept="image/*"
+              accept={IMAGE_INPUT_ACCEPT}
               multiple
               className="hidden"
               onChange={(e) => handlePhotoUpload(e, 'before')}
